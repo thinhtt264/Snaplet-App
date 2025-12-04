@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Transparent 1x1 pixel for splash screen - no visible icon -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <size
+        android:width="1dp"
+        android:height="1dp" />
+    <solid android:color="@android:color/transparent" />
+</shape>
+

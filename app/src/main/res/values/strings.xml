@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name" translatable="false">Snaplet</string>
+
+    <string name="onboarding_subtitle">Ảnh trực tiếp từ bạn bè,\nngay trên màn hình chính</string>
+    <string name="create_account">Tạo một tài khoản</string>
+    <string name="login">Đăng nhập</string>
+    <string name="camera_unavailable">Máy ảnh không khả dụng</string>
+    <string name="approve_camera">Cho phép Snaplet truy cập camera của bạn để chụp ảnh</string>
+    <string name="approve">Cho phép</string>
+    <string name="recent_photos">Ảnh gần đây</string>
+</resources>

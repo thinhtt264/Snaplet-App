@@ -1,0 +1,9 @@
+<resources>
+    <string name="onboarding_subtitle">Live photos from your friends,\nright on your home screen</string>
+    <string name="create_account">Create an account</string>
+    <string name="login">Log in</string>
+    <string name="camera_unavailable">Camera unavailable</string>
+    <string name="approve_camera">Allow Snaplet to access your camera to take photos</string>
+    <string name="approve">Allow</string>
+    <string name="recent_photos">Recent Photos</string>
+</resources>
