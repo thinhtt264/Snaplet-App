@@ -14,3 +14,7 @@
 .cxx
 local.properties
 .idea
+.kotlin
+# Keystore files
+*.jks
+*.keystore

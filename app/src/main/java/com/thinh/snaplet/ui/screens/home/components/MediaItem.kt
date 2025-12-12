@@ -10,17 +10,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.data.model.MediaItem
 import com.thinh.snaplet.ui.components.ImageSize
 import com.thinh.snaplet.ui.components.OptimizedAsyncImage
 
-/**
- * Full-screen TikTok-style media page Optimized for vertical paging
- * experience
- */
 @Composable
 fun MediaItemPage(
     media: MediaItem,
@@ -28,20 +23,7 @@ fun MediaItemPage(
     modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onDoubleTap = {
-                        // Future: Like animation on double tap
-                        onMediaClick(media)
-                    },
-                    onTap = {
-                        // Future: Toggle UI controls
-                        onMediaClick(media)
-                    }
-                )
-            },
+        modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
         // Full-screen image/video
