@@ -32,13 +32,8 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
     
-    /**
-     * Base URL for API
-     * In production, use BuildConfig for different environments
-     */
-    private const val BASE_URL = "https://api.snaplet.com/v1/"
+    private const val BASE_URL = "http://10.0.2.2:3000/api/v1/"
     
-    // Alternative: Use BuildConfig for environment-specific URLs
     // private val BASE_URL = when (BuildConfig.BUILD_TYPE) {
     //     "debug" -> "https://api-dev.snaplet.com/v1/"
     //     "staging" -> "https://api-staging.snaplet.com/v1/"
@@ -89,7 +84,7 @@ object NetworkModule {
             
             // Get auth token (from SharedPreferences, DataStore, etc.)
             // val token = authManager.getToken()
-            val token = "your_auth_token_here" // Placeholder
+            val token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTQyMmYzOTI0NTUxYjQyZWM4Y2IzYjgiLCJpYXQiOjE3NjU5NjE1NjAsImV4cCI6MTc2NjU2NjM2MH0.5guoIpdvsuV_CFv6AhWpwtRNuePNPc3L1QIlECJrFfs"
             
             val newRequest = originalRequest.newBuilder()
                 .addHeader("Authorization", "Bearer $token")

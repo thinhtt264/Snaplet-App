@@ -135,7 +135,6 @@ private fun CameraPlaceholderOverlay(
 }
 
 private fun createPreviewView(context: Context): PreviewView {
-    Logger.d("Creating PreviewView...")
     return PreviewView(context).apply {
         layoutParams = ViewGroup.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -198,7 +197,6 @@ private fun bindCameraUseCases(
         .build()
 
     onImageCaptureReady(imageCapture)
-    Logger.d("ImageCapture ready callback sent")
 
     // Create viewport and use case group
     val aspectRatio = Rational(width, height)
@@ -216,7 +214,6 @@ private fun bindCameraUseCases(
 
     cameraProvider.unbindAll()
     cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, useCaseGroup)
-    Logger.d("Camera successfully bound to lifecycle")
 
     // Monitor streaming state
     observeStreamingState(previewView, lifecycleOwner, onStreamingStateChanged)
@@ -236,7 +233,6 @@ private fun observeStreamingState(
                     previewView.postDelayed({
                         isStreamingReady = true
                         onStreamingStateChanged(true)
-                        Logger.d("🎥 Camera streaming ready")
                     }, STREAMING_READY_DELAY)
                 }
             }

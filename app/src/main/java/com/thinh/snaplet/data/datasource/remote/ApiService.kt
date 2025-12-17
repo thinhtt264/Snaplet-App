@@ -1,6 +1,8 @@
 package com.thinh.snaplet.data.datasource.remote
 
+import com.thinh.snaplet.data.model.FeedData
 import com.thinh.snaplet.data.model.MediaItem
+import com.thinh.snaplet.data.model.StandardResponse
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -14,14 +16,14 @@ import retrofit2.http.*
 interface ApiService {
     
     /**
-     * Get media feed
-     * GET /api/media/feed
+     * Get media feed from posts endpoint
+     * GET /posts/feed
      */
-    @GET("media/feed")
+    @GET("posts/feed")
     suspend fun getMediaFeed(
-        @Query("page") page: Int? = null,
-        @Query("per_page") perPage: Int? = null
-    ): Response<List<MediaItem>>
+        @Query("limit") limit: Int = 10,
+        @Query("offset") offset: Int = 0
+    ): Response<StandardResponse<FeedData>>
     
     /**
      * Get single media item by ID

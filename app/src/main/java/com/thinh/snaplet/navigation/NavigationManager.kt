@@ -2,10 +2,6 @@ package com.thinh.snaplet.navigation
 
 import androidx.navigation.NavController
 
-/**
- * NavigationManager - Helper class để quản lý navigation
- * Có thể mở rộng để thêm các navigation logic phức tạp
- */
 class NavigationManager(private val navController: NavController) {
 
     /**

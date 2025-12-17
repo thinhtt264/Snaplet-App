@@ -4,6 +4,9 @@ import android.net.Uri
 import com.thinh.snaplet.data.model.MediaItem
 import com.thinh.snaplet.utils.Logger
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 /**
@@ -16,6 +19,8 @@ import javax.inject.Inject
  * - Easy testing
  */
 class FakeMediaRepository @Inject constructor() : MediaRepository {
+    
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
     
     // Mock photo URLs from Pexels
     private val mockUrls = listOf(
@@ -31,6 +36,19 @@ class FakeMediaRepository @Inject constructor() : MediaRepository {
         "https://images.pexels.com/photos/164005/pexels-photo-164005.jpeg"
     )
     
+    private val mockCaptions = listOf(
+        "Beautiful sunset",
+        "Amazing view",
+        "Morning vibes",
+        "City lights",
+        "Nature at its best",
+        "Peaceful moment",
+        "Adventure time",
+        "Good vibes only",
+        "Making memories",
+        "Just chilling"
+    )
+    
     override suspend fun getMediaFeed(): Result<List<MediaItem>> {
         return try {
             Logger.d("🎭 FakeMediaRepository: getMediaFeed() called - DI is working!")
@@ -40,10 +58,19 @@ class FakeMediaRepository @Inject constructor() : MediaRepository {
             
             // Convert mock URLs to MediaItem.Photo
             val photos = mockUrls.mapIndexed { index, url ->
+                val timestamp = System.currentTimeMillis() - (index * 3600000L) // 1 hour apart
                 MediaItem.Photo(
                     id = "mock_photo_$index",
+                    userId = "mock_user_${index % 3}",
+                    username = "user${index % 3}",
+                    displayName = "User ${index % 3}",
+                    avatarUrl = "https://example.com/avatar/user${index % 3}.jpg",
                     url = url,
-                    timestamp = System.currentTimeMillis() - (index * 3600000L) // 1 hour apart
+                    caption = mockCaptions[index],
+                    visibility = if (index % 2 == 0) "all" else "friend-only",
+                    createdAt = dateFormat.format(Date(timestamp)),
+                    isOwnPost = index % 4 == 0,
+                    timestamp = timestamp
                 )
             }
             
@@ -56,11 +83,20 @@ class FakeMediaRepository @Inject constructor() : MediaRepository {
     override suspend fun uploadPhoto(uri: Uri): Result<MediaItem> {
         // Fake upload - simulate API response
         delay(1000)
+        val timestamp = System.currentTimeMillis()
         return Result.success(
             MediaItem.Photo(
-                id = "uploaded_${System.currentTimeMillis()}",
-                url = uri.toString(), // In real API: server returns CDN URL
-                timestamp = System.currentTimeMillis()
+                id = "uploaded_$timestamp",
+                userId = "current_user",
+                username = "me",
+                displayName = "Current User",
+                avatarUrl = "https://example.com/avatar/me.jpg",
+                url = uri.toString(),
+                caption = "Just uploaded!",
+                visibility = "all",
+                createdAt = dateFormat.format(Date(timestamp)),
+                isOwnPost = true,
+                timestamp = timestamp
             )
         )
     }

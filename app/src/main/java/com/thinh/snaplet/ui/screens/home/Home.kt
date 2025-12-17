@@ -133,7 +133,6 @@ private fun rememberCameraCallbacks(
         CameraCallbacks(
             onImageCaptureReady = { imageCapture ->
                 viewModel.setImageCapture(imageCapture)
-                Logger.d("ImageCapture ready and set to ViewModel")
             },
             onSnapshotHandlerReady = { handler ->
                 onSnapshotHandlerChanged(handler)
