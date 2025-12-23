@@ -26,12 +26,41 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.Snaplet.Splash">
+            android:theme="@style/Theme.Snaplet.Splash"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            
+            <!-- Deep Link: snaplet://app?userName=xxx -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+                <data 
+                    android:scheme="snaplet"
+                    android:host="app" />
+            </intent-filter>
+            
+            <!-- App Links (HTTPS) - Optional for production -->
+            <!-- Uncomment khi đã setup domain và assetlinks.json -->
+            <!--
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+                <data 
+                    android:scheme="https"
+                    android:host="snaplet.app"
+                    android:pathPrefix="/user" />
+            </intent-filter>
+            -->
         </activity>
         
         <!-- Service for per-app language preferences -->
