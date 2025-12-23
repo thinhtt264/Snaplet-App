@@ -10,6 +10,7 @@ import com.google.gson.annotations.SerializedName
  */
 sealed class MediaItem {
     abstract val id: String
+    abstract val url: String
 
     /** Photo media item with full post information */
     data class Photo(
@@ -29,7 +30,7 @@ sealed class MediaItem {
         val avatarUrl: String? = null,
 
         @SerializedName("imageUrl")
-        val imageUrl: String,
+        override val url: String,
 
         @SerializedName("caption")
         val caption: String? = null,
@@ -51,7 +52,7 @@ sealed class MediaItem {
         override val id: String,
 
         @SerializedName("video_url")
-        val videoUrl: String,
+        override val url: String,
 
         @SerializedName("thumbnail_url")
         val thumbnailUrl: String,

@@ -13,6 +13,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,7 +35,7 @@ fun PrimaryButton(
     val buttonColors = colors ?: ButtonDefaults.buttonColors(containerColor = Color.Transparent)
     val containerColor = if (enabled) buttonColors.containerColor else buttonColors.disabledContainerColor
     val contentColor = if (enabled) buttonColors.contentColor else buttonColors.disabledContentColor
-    val finalShape = shape ?: ButtonDefaults.shape
+    val finalShape = shape ?: RoundedCornerShape(24.dp)
     val finalContentPadding = contentPadding ?: ButtonDefaults.ContentPadding
     val tonalElevation = if (enabled && elevation != null) 2.dp else 0.dp
 
@@ -57,7 +58,7 @@ fun PrimaryButton(
             ) {
                 AppText(
                     text = title,
-                    typography = typography.titleMedium,
+                    typography = typography.titleLarge,
                     color = titleColor,
                     fontWeight = FontWeight.SemiBold
                 )

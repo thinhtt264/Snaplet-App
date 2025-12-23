@@ -68,9 +68,9 @@ fun Onboarding(
                         onNavigateToHome("New User")
                     },
                     title = stringResource(R.string.create_account),
-                    contentPadding = PaddingValues(vertical = 14.dp, horizontal = 16.dp),
+                    contentPadding = PaddingValues(vertical = 16.dp, horizontal = 18.dp),
                     titleColor = Color.Black,
-                    colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary)
+                    colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary),
                 )
                 Spacer(Modifier.height(6.dp))
                 PrimaryButton(
