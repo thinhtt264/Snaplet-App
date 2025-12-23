@@ -44,19 +44,7 @@ class MainActivity : AppCompatActivity() {
             val data = intent.data
 
             if (data != null) {
-                Logger.d("🔗 Full URI: $data")
-                Logger.d("🔗 Scheme: ${data.scheme}")
-                Logger.d("🔗 Host: ${data.host}")
-                Logger.d("🔗 Path: ${data.path}")
-
                 val userName = data.getQueryParameter("userName")
-
-                if (userName != null) {
-                    Logger.d("✅ Received userName: $userName")
-
-                } else {
-                    Logger.w("⚠️ userName parameter not found")
-                }
 
                 data.queryParameterNames.forEach { paramName ->
                     val paramValue = data.getQueryParameter(paramName)
