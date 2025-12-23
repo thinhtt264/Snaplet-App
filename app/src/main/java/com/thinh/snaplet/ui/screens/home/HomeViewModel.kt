@@ -55,7 +55,6 @@ class HomeViewModel @Inject constructor(
     val imageCapture: ImageCapture? get() = _imageCapture.value
 
     init {
-        // Load media feed on initialization
         loadMediaFeed()
     }
 

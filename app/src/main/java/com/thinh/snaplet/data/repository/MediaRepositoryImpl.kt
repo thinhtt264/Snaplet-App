@@ -6,15 +6,11 @@ import com.thinh.snaplet.data.model.MediaItem
 import com.thinh.snaplet.utils.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Locale
 import javax.inject.Inject
 
 class MediaRepositoryImpl @Inject constructor(
     private val apiService: ApiService
 ) : MediaRepository {
-
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
 
     override suspend fun getMediaFeed(): Result<List<MediaItem>> = withContext(Dispatchers.IO) {
         try {
@@ -39,18 +35,7 @@ class MediaRepositoryImpl @Inject constructor(
             }
 
             // Get media items directly from response
-            val mediaItems = body.data.data.map { photo ->
-                // Parse timestamp from createdAt string
-                val timestamp = try {
-                    dateFormat.parse(photo.createdAt)?.time ?: System.currentTimeMillis()
-                } catch (e: Exception) {
-                    Logger.e(e, "Failed to parse date: ${photo.createdAt}")
-                    System.currentTimeMillis()
-                }
-
-                // Return photo with parsed timestamp
-                photo.copy(timestamp = timestamp)
-            }
+            val mediaItems = body.data.data.map { photo -> photo.copy() }
             Result.success(mediaItems)
         } catch (e: Exception) {
             Logger.e(e, "❌ Failed to fetch media feed")
@@ -63,7 +48,6 @@ class MediaRepositoryImpl @Inject constructor(
         try {
             Logger.d("📤 Uploading photo: $uri")
 
-            // TODO: Implement upload logic when API is ready
             Result.failure(Exception("Upload not implemented yet"))
 
         } catch (e: Exception) {

@@ -65,12 +65,11 @@ class FakeMediaRepository @Inject constructor() : MediaRepository {
                     username = "user${index % 3}",
                     displayName = "User ${index % 3}",
                     avatarUrl = "https://example.com/avatar/user${index % 3}.jpg",
-                    url = url,
+                    imageUrl = url,
                     caption = mockCaptions[index],
                     visibility = if (index % 2 == 0) "all" else "friend-only",
                     createdAt = dateFormat.format(Date(timestamp)),
                     isOwnPost = index % 4 == 0,
-                    timestamp = timestamp
                 )
             }
             
@@ -91,12 +90,11 @@ class FakeMediaRepository @Inject constructor() : MediaRepository {
                 username = "me",
                 displayName = "Current User",
                 avatarUrl = "https://example.com/avatar/me.jpg",
-                url = uri.toString(),
+                imageUrl = uri.toString(),
                 caption = "Just uploaded!",
                 visibility = "all",
                 createdAt = dateFormat.format(Date(timestamp)),
                 isOwnPost = true,
-                timestamp = timestamp
             )
         )
     }
