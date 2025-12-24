@@ -1,7 +1,9 @@
 package com.thinh.snaplet.di
 
+import com.thinh.snaplet.data.repository.FakeUserRepository
 import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.data.repository.MediaRepositoryImpl
+import com.thinh.snaplet.data.repository.UserRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -25,9 +27,15 @@ abstract class RepositoryModule {
      * DEVELOPMENT MODE: Switch back to fake data if needed
      * Uncomment this and comment out the above:
      */
-    // @Binds
-    // @Singleton
-    // abstract fun bindMediaRepository(
-    //     fakeRepository: FakeMediaRepository
-    // ): MediaRepository
+
+    
+    /**
+     * DEVELOPMENT MODE: Using FakeUserRepository (mock data)
+     * TODO: Replace with real API implementation when ready
+     */
+    @Binds
+    @Singleton
+    abstract fun bindUserRepository(
+        fakeRepository: FakeUserRepository
+    ): UserRepository
 }

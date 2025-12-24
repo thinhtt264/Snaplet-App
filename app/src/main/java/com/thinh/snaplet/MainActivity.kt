@@ -7,15 +7,37 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import com.thinh.snaplet.ui.screens.MainScreen
 import com.thinh.snaplet.ui.screens.splash.SplashViewModel
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.deeplink.DeepLinkEvent
+import com.thinh.snaplet.utils.deeplink.DeepLinkManager
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+/**
+ * MainActivity - Entry point of the application
+ *
+ * Responsibilities:
+ * - Handle deeplink intents
+ * - Trigger overlay screens via DeepLinkManager
+ * - Setup splash screen
+ * - Setup edge-to-edge display
+ *
+ * Enterprise Pattern:
+ * - Dependency injection with Hilt
+ * - Separation of concerns (Activity handles Android lifecycle, Manager handles business logic)
+ * - Clean architecture principles
+ */
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private val splashViewModel: SplashViewModel by viewModels()
+
+    @Inject
+    lateinit var deepLinkManager: DeepLinkManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen().apply {
@@ -44,11 +66,29 @@ class MainActivity : AppCompatActivity() {
             val data = intent.data
 
             if (data != null) {
+                Logger.d("🔗 DeepLink received: $data")
+                
+                // Extract userName parameter
                 val userName = data.getQueryParameter("userName")
 
+                // Log all parameters for debugging
                 data.queryParameterNames.forEach { paramName ->
                     val paramValue = data.getQueryParameter(paramName)
                     Logger.d("📝 Param: $paramName = $paramValue")
+                }
+
+                // Emit event if userName is present
+                if (!userName.isNullOrBlank()) {
+                    Logger.d("👤 Emitting friend request event for: $userName")
+
+                    // Launch coroutine to emit event
+                    lifecycleScope.launch {
+                        deepLinkManager.emitEvent(
+                            DeepLinkEvent.FriendRequest(userName)
+                        )
+                    }
+                } else {
+                    Logger.w("⚠️ DeepLink missing userName parameter")
                 }
             }
         }
