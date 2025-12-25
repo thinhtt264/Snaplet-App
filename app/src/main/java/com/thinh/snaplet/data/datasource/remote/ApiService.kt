@@ -2,8 +2,10 @@ package com.thinh.snaplet.data.datasource.remote
 
 import com.thinh.snaplet.data.model.FeedData
 import com.thinh.snaplet.data.model.StandardResponse
+import com.thinh.snaplet.data.model.UserProfile
 import retrofit2.Response
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ApiService {
@@ -13,4 +15,9 @@ interface ApiService {
         @Query("limit") limit: Int = 10,
         @Query("offset") offset: Int = 0
     ): Response<StandardResponse<FeedData>>
+    
+    @GET("users/profile/{username}")
+    suspend fun getUserProfile(
+        @Path("username") username: String
+    ): Response<StandardResponse<UserProfile>>
 }

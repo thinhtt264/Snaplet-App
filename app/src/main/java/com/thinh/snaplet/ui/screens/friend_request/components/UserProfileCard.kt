@@ -8,33 +8,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.thinh.snaplet.R
 import com.thinh.snaplet.data.model.UserProfile
 import com.thinh.snaplet.ui.components.AppText
 import com.thinh.snaplet.ui.components.PrimaryButton
 
-/**
- * UserProfileCard - Internal component for user profile section
- *
- * Displays:
- * - Profile avatar
- * - Display name
- * - Resend request button
- *
- * @param userProfile User profile data
- * @param onResendRequest Callback for resend action
- * @param modifier Optional modifier
- */
 @Composable
 internal fun UserProfileCard(
     userProfile: UserProfile,
-    onResendRequest: () -> Unit,
+    onSendRequest: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -46,7 +35,6 @@ internal fun UserProfileCard(
             .padding(vertical = 32.dp, horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Avatar
         ProfileAvatar(
             avatarUrl = userProfile.avatarUrl,
             displayName = userProfile.displayName ?: userProfile.userName
@@ -54,7 +42,6 @@ internal fun UserProfileCard(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Display name
         AppText(
             text = userProfile.displayName ?: userProfile.userName,
             typography = MaterialTheme.typography.headlineSmall,
@@ -65,13 +52,13 @@ internal fun UserProfileCard(
         Spacer(modifier = Modifier.height(16.dp))
 
         PrimaryButton(
-            onClick = onResendRequest,
-            title = "Gửi lại yêu cầu",
+            onClick = onSendRequest,
+            title = stringResource(R.string.send_request),
             typography = MaterialTheme.typography.bodyLarge,
             modifier = Modifier
                 .height(50.dp)
                 .padding(horizontal = 8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             titleColor = Color.Black,
         )
     }

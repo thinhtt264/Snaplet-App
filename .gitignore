@@ -15,6 +15,7 @@
 local.properties
 .idea
 .kotlin
+app/release
 # Keystore files
 *.jks
 *.keystore

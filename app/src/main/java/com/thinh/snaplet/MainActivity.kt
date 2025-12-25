@@ -54,7 +54,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        Logger.d("🔗 onNewIntent called")
 
         setIntent(intent)
 
@@ -70,12 +69,6 @@ class MainActivity : AppCompatActivity() {
                 
                 // Extract userName parameter
                 val userName = data.getQueryParameter("userName")
-
-                // Log all parameters for debugging
-                data.queryParameterNames.forEach { paramName ->
-                    val paramValue = data.getQueryParameter(paramName)
-                    Logger.d("📝 Param: $paramName = $paramValue")
-                }
 
                 // Emit event if userName is present
                 if (!userName.isNullOrBlank()) {

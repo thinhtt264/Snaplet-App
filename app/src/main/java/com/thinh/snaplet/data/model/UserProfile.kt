@@ -1,12 +1,30 @@
 package com.thinh.snaplet.data.model
 
-/**
- * User profile data model
- * Represents user information displayed in overlay
- */
+import com.google.gson.annotations.SerializedName
+
 data class UserProfile(
+    @SerializedName("id")
+    val id: String,
+    
+    @SerializedName("username")
     val userName: String,
-    val displayName: String? = null,
-    val avatarUrl: String? = null
-)
+    
+    @SerializedName("firstName")
+    val firstName: String,
+    
+    @SerializedName("lastName")
+    val lastName: String,
+    
+    @SerializedName("avatarUrl")
+    val avatarUrl: String? = null,
+    
+    @SerializedName("email")
+    val email: String,
+    
+    @SerializedName("createdAt")
+    val createdAt: String
+) {
+    val displayName: String
+        get() = "$firstName $lastName".trim()
+}
 

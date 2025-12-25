@@ -12,18 +12,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.thinh.snaplet.R
 import com.thinh.snaplet.ui.components.AppText
 import com.thinh.snaplet.ui.theme.GoldenPollen
 
 /**
  * ActionButtons - Internal component for bottom action button
- * 
+ *
  * Features:
  * - Single centered close/dismiss button
  * - Clean, minimal design matching UI mockup
- * 
+ *
  * @param onDismiss Callback when close button is tapped
  * @param modifier Optional modifier
  */
@@ -56,7 +58,7 @@ internal fun ActionButtons(
                 modifier = Modifier.fillMaxSize()
             ) {
                 AppText(
-                    text = "Đóng",
+                    text = stringResource(R.string.close),
                     typography = MaterialTheme.typography.labelLarge,
                     color = Color.White,
                     fontWeight = FontWeight.SemiBold

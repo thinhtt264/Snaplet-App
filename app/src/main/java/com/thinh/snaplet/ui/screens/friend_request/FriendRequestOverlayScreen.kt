@@ -38,8 +38,8 @@ fun FriendRequestOverlayScreen(
             FriendRequestOverlayContent(
                 isVisible = true,
                 state = state,
-                onResendRequest = {
-                    viewModel.onResendFriendRequest()
+                onSendRequest = {
+                    viewModel.onSendFriendRequest()
                 },
                 onDismiss = {
                     viewModel.onDismiss()
@@ -65,12 +65,10 @@ fun FriendRequestOverlayScreen(
 }
 
 /**
- * FriendRequestOverlayContent - Internal content composable Handles the
- * animated overlay layout
  *
  * @param isVisible Whether overlay is visible
  * @param state Current UI state with user profile data
- * @param onResendRequest Callback for resend action
+ * @param onRendRequest Callback for resend action
  * @param onDismiss Callback for dismiss action
  * @param modifier Optional modifier
  */
@@ -78,7 +76,7 @@ fun FriendRequestOverlayScreen(
 private fun FriendRequestOverlayContent(
     isVisible: Boolean,
     state: FriendRequestUiState.Visible,
-    onResendRequest: () -> Unit,
+    onSendRequest: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -100,7 +98,7 @@ private fun FriendRequestOverlayContent(
             ) {
                 OverlayCard(
                     state = state,
-                    onResendRequest = onResendRequest,
+                    onSendRequest = onSendRequest,
                     onDismiss = onDismiss
                 )
             }
@@ -108,19 +106,10 @@ private fun FriendRequestOverlayContent(
     }
 }
 
-/**
- * OverlayCard - Internal card layout composable Contains the profile card
- * and action buttons
- *
- * @param state UI state with user profile
- * @param onResendRequest Callback for resend action
- * @param onDismiss Callback for dismiss action
- * @param modifier Optional modifier
- */
 @Composable
 private fun OverlayCard(
     state: FriendRequestUiState.Visible,
-    onResendRequest: () -> Unit,
+    onSendRequest: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -137,7 +126,7 @@ private fun OverlayCard(
         // User Profile Card
         UserProfileCard(
             userProfile = state.userProfile,
-            onResendRequest = onResendRequest
+            onSendRequest = onSendRequest
         )
 
         Spacer(modifier = Modifier.height(32.dp))

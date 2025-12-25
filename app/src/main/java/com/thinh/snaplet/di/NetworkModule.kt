@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.thinh.snaplet.BuildConfig
 import com.thinh.snaplet.data.datasource.remote.ApiService
+import com.thinh.snaplet.data.datasource.remote.ResponseNormalizeInterceptor
 import com.thinh.snaplet.utils.Logger
 import dagger.Module
 import dagger.Provides
@@ -17,22 +18,11 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
-/**
- * Network Module for Dependency Injection
- * Provides Retrofit, OkHttp, and related dependencies
- * 
- * Production-ready configuration with:
- * - Logging interceptor
- * - Authentication interceptor
- * - Timeout configuration
- * - Error handling
- * - SSL pinning (optional)
- */
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
     
-    private const val BASE_URL = "http://10.0.2.2:3000/api/v1/"
+    private const val BASE_URL = "http://10.0.2.2:4040/api/v1/"
     
     // private val BASE_URL = when (BuildConfig.BUILD_TYPE) {
     //     "debug" -> "https://api-dev.snaplet.com/v1/"
@@ -48,7 +38,6 @@ object NetworkModule {
     @Singleton
     fun provideGson(): Gson {
         return GsonBuilder()
-            .setLenient()
             .serializeNulls() // Include null fields in JSON
             .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") // ISO 8601
             .create()
@@ -70,6 +59,16 @@ object NetworkModule {
                 HttpLoggingInterceptor.Level.BASIC // Minimal logs in release
             }
         }
+    }
+    
+    /**
+     * Provide Response Normalize Interceptor
+     * Normalizes error responses to match StandardResponse format
+     */
+    @Provides
+    @Singleton
+    fun provideResponseNormalizeInterceptor(): ResponseNormalizeInterceptor {
+        return ResponseNormalizeInterceptor()
     }
     
     /**
@@ -99,17 +98,22 @@ object NetworkModule {
     /**
      * Provide OkHttpClient
      * Configures HTTP client with interceptors and timeouts
+     * 
      */
     @Provides
     @Singleton
     fun provideOkHttpClient(
         loggingInterceptor: HttpLoggingInterceptor,
-        authInterceptor: Interceptor
+        authInterceptor: Interceptor,
+        responseNormalizeInterceptor: ResponseNormalizeInterceptor
     ): OkHttpClient {
         return OkHttpClient.Builder()
-            // Interceptors
+            // 1. Auth headers
             .addInterceptor(authInterceptor)
+            // 2. Logging
             .addInterceptor(loggingInterceptor)
+            // 3. Normalize error responses (must be last to process response body)
+            .addInterceptor(responseNormalizeInterceptor)
             
             // Timeouts
             .connectTimeout(30, TimeUnit.SECONDS)

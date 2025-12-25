@@ -13,6 +13,7 @@ import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.permission.Permission
 import com.thinh.snaplet.utils.permission.PermissionManager
+import com.thinh.snaplet.utils.safeMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -80,7 +81,7 @@ class HomeViewModel @Inject constructor(
                         isLoadingMedia = false, error = error.message
                     )
                 }
-                emitEvent(HomeUiEvent.ShowError(error.message ?: "Unknown error"))
+                emitEvent(HomeUiEvent.ShowError(error.safeMessage))
             }
         }
     }
