@@ -6,4 +6,6 @@
     <string name="approve_camera">Allow Snaplet to access your camera to take photos</string>
     <string name="approve">Allow</string>
     <string name="recent_photos">Recent Photos</string>
+    <string name="send_request">Send request</string>
+    <string name="close">Close</string>
 </resources>
