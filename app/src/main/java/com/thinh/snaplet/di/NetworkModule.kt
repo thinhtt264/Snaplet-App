@@ -63,7 +63,7 @@ object NetworkModule {
     
     /**
      * Provide Response Normalize Interceptor
-     * Normalizes error responses to match StandardResponse format
+     * Normalizes error responses to match BaseResponse format
      */
     @Provides
     @Singleton

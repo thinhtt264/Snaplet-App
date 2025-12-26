@@ -37,13 +37,13 @@ internal fun UserProfileCard(
     ) {
         ProfileAvatar(
             avatarUrl = userProfile.avatarUrl,
-            displayName = userProfile.displayName ?: userProfile.userName
+            displayName = userProfile.displayName
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         AppText(
-            text = userProfile.displayName ?: userProfile.userName,
+            text = userProfile.displayName,
             typography = MaterialTheme.typography.headlineSmall,
             color = Color.White,
             fontWeight = FontWeight.Bold

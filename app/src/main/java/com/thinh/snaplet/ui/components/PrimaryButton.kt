@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import pressScaleClickable
 
 @Composable
 fun PrimaryButton(
@@ -42,12 +43,8 @@ fun PrimaryButton(
     val finalContentPadding = contentPadding ?: ButtonDefaults.ContentPadding
     val tonalElevation = if (enabled && elevation != null) 2.dp else 0.dp
 
-
-    AnimatedButton(
-        onClick = onClick,
-        modifier = modifier,
-        enabled = enabled,
-        interactionSource = interactionSource
+    Box(
+        modifier = modifier.pressScaleClickable(enabled, interactionSource, onClick = onClick)
     ) {
         Surface(
             shape = finalShape,
@@ -55,7 +52,7 @@ fun PrimaryButton(
             contentColor = contentColor,
             tonalElevation = tonalElevation,
             shadowElevation = 0.dp,
-            border = border
+            border = border,
         ) {
             Box(
                 modifier = Modifier.padding(finalContentPadding)

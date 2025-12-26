@@ -123,7 +123,6 @@ private fun OverlayCard(
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // User Profile Card
         UserProfileCard(
             userProfile = state.userProfile,
             onSendRequest = onSendRequest
@@ -131,7 +130,6 @@ private fun OverlayCard(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Action Buttons
         ActionButtons(
             onDismiss = onDismiss
         )

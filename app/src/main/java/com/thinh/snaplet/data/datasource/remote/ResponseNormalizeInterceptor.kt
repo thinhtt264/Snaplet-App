@@ -1,16 +1,14 @@
 package com.thinh.snaplet.data.datasource.remote
 
-import com.google.gson.Gson
-import com.thinh.snaplet.data.model.ResponseStatus
-import com.thinh.snaplet.data.model.StandardResponse
 import okhttp3.Interceptor
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.json.JSONObject
 import java.io.IOException
 
+private const val DEFAULT_ERROR_MESSAGE = "Lỗi không xác định"
+
 class ResponseNormalizeInterceptor : Interceptor {
-    private val gson = Gson()
 
     override fun intercept(chain: Interceptor.Chain): Response {
         return try {
@@ -19,56 +17,40 @@ class ResponseNormalizeInterceptor : Interceptor {
             if (response.isSuccessful) return response
 
             val body = response.body ?: return response
+
             val rawJson = body.string()
 
-            val normalizedJson = normalizeError(
-                rawJson = rawJson,
-                httpCode = response.code
-            )
+            val errorMessage = createErrorMessage(response.code, rawJson)
 
             response.newBuilder()
-                .body(normalizedJson.toResponseBody(body.contentType()))
+                .body(rawJson.toResponseBody(body.contentType()))
+                .message(errorMessage)
                 .build()
         } catch (_: IOException) {
             val request = chain.request()
+            val errorMessage = createErrorMessage(500)
             return Response.Builder()
                 .request(request)
                 .protocol(okhttp3.Protocol.HTTP_1_1)
                 .code(500)
                 .body("".toResponseBody())
-                .message(createErrorMessage(500))
+                .message(errorMessage)
                 .build()
         }
     }
 
     private fun createErrorMessage(httpCode: Int, rawJson: String? = null): String {
-        return mapHttpMessage(httpCode) ?: extractMessage(rawJson) ?: "Lỗi không xác định"
+        return mapHttpMessage(httpCode) ?: extractMessage(rawJson) ?: DEFAULT_ERROR_MESSAGE
     }
 
-    private fun normalizeError(rawJson: String, httpCode: Int): String {
-        val message = createErrorMessage(httpCode, rawJson)
-
-        val standardError = StandardResponse(
-            status = ResponseStatus(
-                code = httpCode,
-                message = message
-            ),
-            data = null
-        )
-
-        return gson.toJson(standardError)
-    }
-
-    private fun extractMessage(rawJson: String?): String? {
-        return try {
-            rawJson?.let {
-                val obj = JSONObject(it)
-                obj.optJSONObject("status")?.optString("message")
-            }
-        } catch (_: Exception) {
-            null
-        }
-    }
+    private fun extractMessage(rawJson: String?): String? =
+        runCatching {
+            rawJson
+                ?.let(::JSONObject)
+                ?.optJSONObject("status")
+                ?.optString("message")
+                ?.takeIf { it.isNotBlank() }
+        }.getOrNull()
 
     private fun mapHttpMessage(code: Int): String? = when (code) {
         400 -> "Yêu cầu không hợp lệ"

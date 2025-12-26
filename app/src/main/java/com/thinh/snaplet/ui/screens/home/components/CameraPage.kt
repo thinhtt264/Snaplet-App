@@ -32,11 +32,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.R
-import com.thinh.snaplet.ui.components.AnimatedButton
 import com.thinh.snaplet.ui.components.AppText
 import com.thinh.snaplet.ui.components.CameraPreview
 import com.thinh.snaplet.ui.components.PrimaryButton
 import com.thinh.snaplet.ui.screens.home.CameraState
+import kotlinx.coroutines.delay
+import pressScaleClickable
 
 private val CAPTURE_BUTTON_TOP_PADDING = 56.dp
 private val CAPTURE_BUTTON_SIZE = 80.dp
@@ -170,20 +171,21 @@ private fun CaptureButton(
             ),
         contentAlignment = Alignment.Center
     ) {
-        AnimatedButton(
-            modifier = Modifier.size(CAPTURE_BUTTON_INNER_SIZE),
-            onClick = onClick,
-            scaleOnPress = CAPTURE_BUTTON_SCALE,
-            interactionSource = interactionSource
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        color = backgroundColor,
-                        shape = CircleShape
-                    )
-            )
-        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .size(CAPTURE_BUTTON_INNER_SIZE)
+                .background(
+                    color = backgroundColor,
+                    shape = CircleShape
+                )
+                .pressScaleClickable(
+                    onClick = {
+                        delay(2000)
+                        onClick() },
+                    scaleOnPress = CAPTURE_BUTTON_SCALE,
+                    interactionSource = interactionSource
+                )
+        )
     }
 }

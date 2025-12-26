@@ -54,7 +54,6 @@ class FriendRequestViewModel @Inject constructor(
         })
     }
 
-    /** Handle resend friend request action Calls repository and handles result */
     fun onSendFriendRequest() {
         viewModelScope.launch {
             val currentState = _uiState.value
@@ -65,8 +64,8 @@ class FriendRequestViewModel @Inject constructor(
 
                 val result = userRepository.sendFriendRequest(userId)
 
-                result.fold(onSuccess = {
-                    Logger.d("✅ Friend request sent successfully")
+                result.fold(onSuccess = { relationship ->
+                    Logger.d("✅ Friend request sent successfully - Relationship: ${relationship.id}, Status: ${relationship.status}")
                     _uiState.value = FriendRequestUiState.Hidden
                 }, onFailure = { error ->
                     Logger.e("❌ Failed to send friend request: ${error.message}")
@@ -76,7 +75,6 @@ class FriendRequestViewModel @Inject constructor(
         }
     }
 
-    /** Handle dismiss overlay action */
     fun onDismiss() {
         Logger.d("❌ Dismissing friend request overlay")
         _uiState.value = FriendRequestUiState.Hidden
