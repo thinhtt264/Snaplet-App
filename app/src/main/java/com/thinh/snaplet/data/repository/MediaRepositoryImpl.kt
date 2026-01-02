@@ -28,13 +28,11 @@ class MediaRepositoryImpl @Inject constructor(
                 return@withContext Result.failure(Exception("Empty response from server"))
             }
 
-            // Check status code
             if (body.status.code != 200) {
                 Logger.e("❌ API error: ${body.status.message}")
                 return@withContext Result.failure(Exception(body.status.message))
             }
 
-            // Get media items directly from response
             val mediaItems = body.data.data.map { photo -> photo.copy() }
             Result.success(mediaItems)
         } catch (e: Exception) {
@@ -43,7 +41,6 @@ class MediaRepositoryImpl @Inject constructor(
         }
     }
 
-    /** Upload photo to server */
     override suspend fun uploadPhoto(uri: Uri): Result<MediaItem> = withContext(Dispatchers.IO) {
         try {
             Logger.d("📤 Uploading photo: $uri")
@@ -56,7 +53,6 @@ class MediaRepositoryImpl @Inject constructor(
         }
     }
 
-    /** Load more media for pagination */
     override suspend fun loadMoreMedia(lastId: String): Result<List<MediaItem>> =
         withContext(Dispatchers.IO) {
             try {

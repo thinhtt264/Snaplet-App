@@ -1,43 +1,31 @@
 package com.thinh.snaplet.data.datasource.remote
 
+import com.thinh.snaplet.data.model.BaseResponse
 import com.thinh.snaplet.data.model.FeedData
-import com.thinh.snaplet.data.model.MediaItem
-import com.thinh.snaplet.data.model.StandardResponse
+import com.thinh.snaplet.data.model.Relationship
+import com.thinh.snaplet.data.model.UserProfile
 import retrofit2.Response
-import retrofit2.http.*
+import retrofit2.http.Body
+import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
 
-/**
- * Retrofit API Service
- * Defines all API endpoints
- * 
- * Simplified approach: Return domain models directly
- * No DTO layer for small apps
- */
 interface ApiService {
     
-    /**
-     * Get media feed from posts endpoint
-     * GET /posts/feed
-     */
     @GET("posts/feed")
     suspend fun getMediaFeed(
         @Query("limit") limit: Int = 10,
         @Query("offset") offset: Int = 0
-    ): Response<StandardResponse<FeedData>>
+    ): Response<BaseResponse<FeedData>>
     
-    /**
-     * Get single media item by ID
-     */
-    @GET("media/{id}")
-    suspend fun getMediaById(
-        @Path("id") mediaId: String
-    ): Response<MediaItem>
+    @GET("users/profile/{username}")
+    suspend fun getUserProfile(
+        @Path("username") username: String
+    ): Response<BaseResponse<UserProfile>>
     
-    /**
-     * Delete media item
-     */
-    @DELETE("media/{id}")
-    suspend fun deleteMedia(
-        @Path("id") mediaId: String
-    ): Response<Unit>
+    @POST("relationships")
+    suspend fun sendFriendRequest(
+        @Body body: Map<String, String>
+    ): Response<BaseResponse<Relationship>>
 }

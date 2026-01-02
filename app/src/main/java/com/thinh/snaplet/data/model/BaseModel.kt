@@ -13,7 +13,7 @@ data class ResponseStatus(
     val message: String
 )
 
-data class StandardResponse<T>(
+data class BaseResponse<T>(
     @SerializedName("status")
     val status: ResponseStatus,
     
@@ -25,30 +25,10 @@ data class StandardResponse<T>(
  * Pagination metadata
  */
 data class Pagination(
-    @SerializedName("total")
-    val total: Int,
-    
     @SerializedName("offset")
     val offset: Int,
     
     @SerializedName("limit")
     val limit: Int,
-    
-    @SerializedName("hasNextPage")
-    val hasNextPage: Boolean,
-    
-    @SerializedName("hasPreviousPage")
-    val hasPreviousPage: Boolean
-)
-
-/**
- * Feed response containing media items and pagination
- */
-data class FeedData(
-    @SerializedName("data")
-    val data: List<MediaItem.Photo>,
-    
-    @SerializedName("pagination")
-    val pagination: Pagination
 )
 

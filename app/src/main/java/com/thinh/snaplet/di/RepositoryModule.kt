@@ -1,7 +1,10 @@
 package com.thinh.snaplet.di
 
+import com.thinh.snaplet.data.repository.FakeMediaRepository
 import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.data.repository.MediaRepositoryImpl
+import com.thinh.snaplet.data.repository.UserRepository
+import com.thinh.snaplet.data.repository.UserRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -12,22 +15,15 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
 
-    /**
-     * PRODUCTION MODE: Using MediaRepositoryImpl (real API)
-     */
     @Binds
     @Singleton
     abstract fun bindMediaRepository(
-        realRepository: MediaRepositoryImpl  // ← Now using REAL API
+        repository: FakeMediaRepository
     ): MediaRepository
     
-    /**
-     * DEVELOPMENT MODE: Switch back to fake data if needed
-     * Uncomment this and comment out the above:
-     */
-    // @Binds
-    // @Singleton
-    // abstract fun bindMediaRepository(
-    //     fakeRepository: FakeMediaRepository
-    // ): MediaRepository
+    @Binds
+    @Singleton
+    abstract fun bindUserRepository(
+        repository: UserRepositoryImpl
+    ): UserRepository
 }

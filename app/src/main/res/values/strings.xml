@@ -8,4 +8,6 @@
     <string name="approve_camera">Cho phép Snaplet truy cập camera của bạn để chụp ảnh</string>
     <string name="approve">Cho phép</string>
     <string name="recent_photos">Ảnh gần đây</string>
+    <string name="send_request">Gửi yêu cầu</string>
+    <string name="close">Đóng</string>
 </resources>
