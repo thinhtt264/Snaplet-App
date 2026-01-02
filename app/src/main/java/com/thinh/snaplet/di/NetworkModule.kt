@@ -3,6 +3,7 @@ package com.thinh.snaplet.di
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.thinh.snaplet.BuildConfig
+import com.thinh.snaplet.data.datasource.local.datastore.DataStoreManager
 import com.thinh.snaplet.data.datasource.remote.ApiService
 import com.thinh.snaplet.data.datasource.remote.ResponseNormalizeInterceptor
 import com.thinh.snaplet.utils.Logger
@@ -73,23 +74,27 @@ object NetworkModule {
     
     /**
      * Provide Authentication Interceptor
-     * Adds auth token to all requests
+     * Adds auth token to all requests from cache (non-blocking)
      */
     @Provides
     @Singleton
-    fun provideAuthInterceptor(): Interceptor {
+    fun provideAuthInterceptor(
+        dataStoreManager: DataStoreManager
+    ): Interceptor {
         return Interceptor { chain ->
             val originalRequest = chain.request()
             
-            // Get auth token (from SharedPreferences, DataStore, etc.)
-            // val token = authManager.getToken()
-            val token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OTQyMmYzOTI0NTUxYjQyZWM4Y2IzYjgiLCJpYXQiOjE3NjU5NjE1NjAsImV4cCI6MTc2NjU2NjM2MH0.5guoIpdvsuV_CFv6AhWpwtRNuePNPc3L1QIlECJrFfs"
+            val token = dataStoreManager.getAccessToken()
             
-            val newRequest = originalRequest.newBuilder()
-                .addHeader("Authorization", "Bearer $token")
+            val requestBuilder = originalRequest.newBuilder()
                 .addHeader("Accept", "application/json")
                 .addHeader("Content-Type", "application/json")
-                .build()
+            
+            if (!token.isNullOrBlank()) {
+                requestBuilder.addHeader("Authorization", "Bearer $token")
+            }
+            
+            val newRequest = requestBuilder.build()
             
             chain.proceed(newRequest)
         }

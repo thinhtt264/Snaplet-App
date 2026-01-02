@@ -32,7 +32,7 @@ import com.thinh.snaplet.utils.Logger
 @Composable
 fun Onboarding(
     modifier: Modifier = Modifier,
-    onNavigateToHome: (userName: String) -> Unit = {}
+    onNavigateToLogin: () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -64,9 +64,7 @@ fun Onboarding(
                 modifier = Modifier.weight(1f)
             ) {
                 PrimaryButton(
-                    onClick = {
-                        onNavigateToHome("New User")
-                    },
+                    onClick = {},
                     title = stringResource(R.string.create_account),
                     contentPadding = PaddingValues(vertical = 16.dp, horizontal = 18.dp),
                     titleColor = Color.Black,
@@ -74,9 +72,7 @@ fun Onboarding(
                 )
                 Spacer(Modifier.height(6.dp))
                 PrimaryButton(
-                    onClick = {
-                        onNavigateToHome("Existing User")
-                    },
+                    onClick = onNavigateToLogin,
                     title = stringResource(R.string.login)
                 )
             }

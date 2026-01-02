@@ -8,4 +8,18 @@
     <string name="recent_photos">Recent Photos</string>
     <string name="send_request">Send request</string>
     <string name="close">Close</string>
+
+    <!-- Login Screen -->
+    <string name="login_email_title">What\'s your email?</string>
+    <string name="login_password_title">Choose a password</string>
+    <string name="login_subtitle">Connect with your friends</string>
+    <string name="email">Email</string>
+    <string name="email_placeholder">your.email@example.com</string>
+    <string name="password">Password</string>
+    <string name="password_placeholder">Password</string>
+    <string name="password_requirement">Your password must be at least 8 characters</string>
+    <string name="forgot_password">Forgot password?</string>
+    <string name="dont_have_account">Don\'t have an account?</string>
+    <string name="sign_up">Sign up</string>
+    <string name="continue_text">Continue</string>
 </resources>

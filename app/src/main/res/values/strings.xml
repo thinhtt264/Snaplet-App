@@ -10,4 +10,18 @@
     <string name="recent_photos">Ảnh gần đây</string>
     <string name="send_request">Gửi yêu cầu</string>
     <string name="close">Đóng</string>
+
+    <!-- Login Screen -->
+    <string name="login_email_title">Email của bạn là gì?</string>
+    <string name="login_password_title">Chọn mật khẩu</string>
+    <string name="login_subtitle">Kết nối với bạn bè của bạn</string>
+    <string name="email">Email</string>
+    <string name="email_placeholder">your.email@example.com</string>
+    <string name="password">Mật khẩu</string>
+    <string name="password_placeholder">Mật khẩu</string>
+    <string name="password_requirement">Mật khẩu phải có ít nhất 8 ký tự</string>
+    <string name="forgot_password">Quên mật khẩu?</string>
+    <string name="dont_have_account">Chưa có tài khoản?</string>
+    <string name="sign_up">Đăng ký</string>
+    <string name="continue_text">Tiếp tục</string>
 </resources>
