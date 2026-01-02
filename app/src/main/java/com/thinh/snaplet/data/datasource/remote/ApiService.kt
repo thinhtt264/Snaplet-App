@@ -1,5 +1,7 @@
 package com.thinh.snaplet.data.datasource.remote
 
+import com.thinh.snaplet.data.model.LoginRequest
+import com.thinh.snaplet.data.model.LoginResponse
 import com.thinh.snaplet.data.model.BaseResponse
 import com.thinh.snaplet.data.model.FeedData
 import com.thinh.snaplet.data.model.Relationship
@@ -7,11 +9,18 @@ import com.thinh.snaplet.data.model.UserProfile
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ApiService {
+    
+    @POST("auth/login")
+    suspend fun login(
+        @Header("X-Device-Id") deviceId: String ="default-device-id",
+        @Body body: LoginRequest
+    ): Response<BaseResponse<LoginResponse>>
     
     @GET("posts/feed")
     suspend fun getMediaFeed(

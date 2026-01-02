@@ -1,24 +1,27 @@
 package com.thinh.snaplet.data.repository
 
+import com.thinh.snaplet.data.datasource.local.datastore.DataStoreManager
 import com.thinh.snaplet.data.datasource.remote.ApiService
 import com.thinh.snaplet.data.model.Relationship
 import com.thinh.snaplet.data.model.UserProfile
 import com.thinh.snaplet.utils.Logger
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class UserRepositoryImpl @Inject constructor(
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val dataStoreManager: DataStoreManager,
 ) : UserRepository {
-    
+
     override suspend fun getUserProfile(userName: String): Result<UserProfile> {
         return try {
-            Logger.d("👤 Fetching user profile for: $userName")
-            
             val response = apiService.getUserProfile(userName)
-            
+
             if (response.isSuccessful) {
                 val body = response.body()
-                
+
                 if (body != null && body.status.code == 200) {
                     val userProfile = body.data
                     Result.success(userProfile)
@@ -28,7 +31,6 @@ class UserRepositoryImpl @Inject constructor(
                 }
             } else {
                 val errorMsg = "HTTP ${response.code()}: ${response.message()}"
-                Logger.e("❌ HTTP error: $errorMsg")
                 Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
@@ -36,17 +38,17 @@ class UserRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
-    
+
     override suspend fun sendFriendRequest(userId: String): Result<Relationship> {
         return try {
             Logger.d("📤 Sending friend request to user ID: $userId")
-            
+
             val requestBody = mapOf("targetUserId" to userId)
             val response = apiService.sendFriendRequest(requestBody)
-            
+
             if (response.isSuccessful) {
                 val body = response.body()
-                
+
                 if (body != null && body.status.code == 200) {
                     val relationship = body.data
                     Logger.d("✅ Friend request sent successfully. Relationship ID: ${relationship.id}, Status: ${relationship.status}")
@@ -58,13 +60,16 @@ class UserRepositoryImpl @Inject constructor(
                 }
             } else {
                 val errorMsg = "HTTP ${response.code()}: ${response.message()}"
-                Logger.e("❌ HTTP error: $errorMsg")
                 Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
             Logger.e("❌ Failed to send friend request: ${e.message}")
             Result.failure(e)
         }
+    }
+
+    override fun observeMyUserProfile(): Flow<UserProfile?> {
+        return dataStoreManager.getUserProfileFlow()
     }
 }
 

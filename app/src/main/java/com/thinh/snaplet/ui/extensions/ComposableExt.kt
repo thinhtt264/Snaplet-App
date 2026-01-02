@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -25,6 +26,14 @@ fun Modifier.thenIf(
 
 fun Modifier.showIf(condition: Boolean): Modifier {
     return if (condition) this else Modifier.size(0.dp)
+}
+
+fun Modifier.animateVisibility(isVisible: Boolean): Modifier {
+    return if (isVisible) {
+        this.alpha(1f)
+    } else {
+        this.alpha(0f)
+    }
 }
 
 fun Modifier.pressScaleClickable(

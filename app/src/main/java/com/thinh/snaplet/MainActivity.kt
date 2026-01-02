@@ -8,8 +8,8 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
+import com.thinh.snaplet.ui.app.AppViewModel
 import com.thinh.snaplet.ui.screens.MainScreen
-import com.thinh.snaplet.ui.screens.splash.SplashViewModel
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.deeplink.DeepLinkEvent
 import com.thinh.snaplet.utils.deeplink.DeepLinkManager
@@ -34,14 +34,14 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
-    private val splashViewModel: SplashViewModel by viewModels()
+    private val appViewModel: AppViewModel by viewModels()
 
     @Inject
     lateinit var deepLinkManager: DeepLinkManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen().apply {
-            setKeepOnScreenCondition { splashViewModel.isLoading.value }
+            setKeepOnScreenCondition { appViewModel.isLoading.value }
         }
 
         super.onCreate(savedInstanceState)
@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
         handleDeepLink(intent)
 
         enableEdgeToEdge()
-        setContent { MainScreen() }
+        setContent { MainScreen(appViewModel) }
     }
 
     override fun onNewIntent(intent: Intent) {

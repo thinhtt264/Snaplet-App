@@ -6,7 +6,6 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.data.repository.MediaRepository
@@ -29,12 +28,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
     private val permissionManager: PermissionManager,
     private val mediaRepository: MediaRepository
 ) : ViewModel() {
-
-    val userName: String? = savedStateHandle["userName"] ?: "Unknown user"
 
     private val _uiState = MutableStateFlow(
         HomeUiState(

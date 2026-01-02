@@ -19,10 +19,7 @@ data class UserProfile(
     val avatarUrl: String? = null,
     
     @SerializedName("email")
-    val email: String,
-    
-    @SerializedName("createdAt")
-    val createdAt: String
+    val email: String
 ) {
     val displayName: String
         get() = "$firstName $lastName".trim()

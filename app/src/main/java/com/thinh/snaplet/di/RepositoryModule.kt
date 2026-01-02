@@ -1,5 +1,7 @@
 package com.thinh.snaplet.di
 
+import com.thinh.snaplet.data.repository.auth.AuthRepository
+import com.thinh.snaplet.data.repository.auth.AuthRepositoryImpl
 import com.thinh.snaplet.data.repository.FakeMediaRepository
 import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.data.repository.MediaRepositoryImpl
@@ -26,4 +28,10 @@ abstract class RepositoryModule {
     abstract fun bindUserRepository(
         repository: UserRepositoryImpl
     ): UserRepository
+    
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(
+        repository: AuthRepositoryImpl
+    ): AuthRepository
 }
