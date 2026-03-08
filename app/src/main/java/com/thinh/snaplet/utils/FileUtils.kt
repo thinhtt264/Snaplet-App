@@ -1,16 +1,23 @@
 package com.thinh.snaplet.utils
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapRegionDecoder
 import android.graphics.Matrix
+import android.graphics.Rect
 import android.graphics.RectF
+import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
+import com.thinh.snaplet.utils.FileUtils.MAX_DIMENSION
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.roundToInt
 
 object FileUtils {
 
-    private const val JPEG_QUALITY = 90
+    private const val JPEG_QUALITY = 95
+
     /**
      * Max dimension (long edge) before downscaling. Chosen to match feed display:
      * MediaPage shows post image in 400.dp height × full width (~1000–1200px × 1080–1440px).
@@ -20,7 +27,6 @@ object FileUtils {
 
     /**
      * Applies orientation (EXIF + optional horizontal flip), downscales if over [MAX_DIMENSION], keeps JPEG.
-     * Decodes at reduced size via [inSampleSize] first to save memory and time (no full-size decode).
      *
      * @param file Source image (e.g. JPEG from camera)
      * @param flipHorizontal true = mirror (front camera), false = EXIF normalization only
@@ -35,8 +41,7 @@ object FileUtils {
             val (boundsW, boundsH) = decodeBounds(path) ?: return null
             val exif = ExifInterface(path)
             val orientation = exif.getAttributeInt(
-                ExifInterface.TAG_ORIENTATION,
-                ExifInterface.ORIENTATION_NORMAL
+                ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL
             )
             val matrix = matrixForExifOrientation(orientation)
             if (flipHorizontal) matrix.postScale(-1f, 1f)
@@ -48,7 +53,8 @@ object FileUtils {
             val inSampleSize = computeInSampleSize(maxOf(outWidth, outHeight), MAX_DIMENSION)
 
             val bitmap = decodeWithSampleSize(path, inSampleSize) ?: return null
-            val result = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            val result =
+                Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
             bitmap.recycle()
 
             FileOutputStream(outputFile).use { out ->
@@ -59,8 +65,7 @@ object FileUtils {
 
             ExifInterface(outputFile.absolutePath).apply {
                 setAttribute(
-                    ExifInterface.TAG_ORIENTATION,
-                    ExifInterface.ORIENTATION_NORMAL.toString()
+                    ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString()
                 )
                 saveAttributes()
             }
@@ -111,6 +116,92 @@ object FileUtils {
             }
         }
         return matrix
+    }
+
+    /**
+     * Maps the frame position back to original image coordinates,
+     * then applies rotation + flip via Matrix to match what user sees in the frame.
+     *
+     * Since graphicsLayer scales from center:
+     *   scaledImgTop      = (displayH - displayH * scale) / 2
+     *   frameTopInDisplay = (frameTop - scaledImgTop) / scale
+     *   srcTop            = frameTopInDisplay * (origH / displayH)
+     */
+    fun cropImageRegion(
+        context: Context,
+        uri: Uri,
+        displayImageW: Int,
+        displayImageH: Int,
+        displayScale: Float,
+        frameTop: Float,
+        framePx: Float,
+        rotationDeg: Int = 0,
+        isFlippedH: Boolean = false,
+        isFlippedV: Boolean = false,
+    ): Bitmap? {
+        return try {
+            // Read original dimensions (header only, no pixel load)
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, opts)
+            }
+            val origW = opts.outWidth
+            val origH = opts.outHeight
+
+            // Map frame coordinates back to original image space
+            val scaledH = displayImageH * displayScale
+            val scaledImgTop = (displayImageH - scaledH) / 2f
+
+            val frameTopInDisplay = (frameTop - scaledImgTop) / displayScale
+            val frameBottomInDisplay = frameTopInDisplay + framePx / displayScale
+
+            val ratioH = origH.toFloat() / displayImageH
+
+            val srcLeft = 0
+            val srcTop = (frameTopInDisplay * ratioH).roundToInt().coerceIn(0, origH)
+            val srcRight = origW
+            val srcBottom = (frameBottomInDisplay * ratioH).roundToInt().coerceIn(0, origH)
+
+            if (srcBottom <= srcTop) return null
+
+            // Decode only the required region
+            val region = context.contentResolver.openInputStream(uri)?.use { stream ->
+                val decoder = BitmapRegionDecoder.newInstance(stream, false)
+                decoder?.decodeRegion(
+                    Rect(srcLeft, srcTop, srcRight, srcBottom),
+                    BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.ARGB_8888 })
+                    .also { decoder?.recycle() }
+            } ?: return null
+
+            // Apply rotation + flip via Matrix to match what user sees in the frame
+            val needTransform = rotationDeg != 0 || isFlippedH || isFlippedV
+            if (!needTransform) return region
+
+            val matrix = Matrix().apply {
+                if (rotationDeg != 0) postRotate(rotationDeg.toFloat())
+                if (isFlippedH) postScale(-1f, 1f, region.width / 2f, region.height / 2f)
+                if (isFlippedV) postScale(1f, -1f, region.width / 2f, region.height / 2f)
+            }
+
+            Bitmap.createBitmap(region, 0, 0, region.width, region.height, matrix, true)
+                .also { region.recycle() }
+        } catch (e: Exception) {
+            Logger.d("Crop region failed: ${e.message}")
+            null
+        }
+    }
+
+    fun saveBitmapToCache(context: Context, bitmap: Bitmap): Uri? {
+        return try {
+            val file = File(context.cacheDir, "${System.currentTimeMillis()}.jpg")
+            file.outputStream().use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+            }
+            Uri.fromFile(file)
+        } catch (e: Exception) {
+            Logger.d("Save bitmap to cache failed: ${e.message}")
+            null
+        }
     }
 
     /** Deletes the file at [filePath]. Returns true if deleted. */

@@ -31,7 +31,6 @@ class MyProfileViewModel @Inject constructor(
     private val photoPickerManager: PhotoPickerManager,
     private val uploadAvatarUseCase: UploadAvatarUseCase,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(
         MyProfileUiState(
             widgetChainEnabled = true,
@@ -66,10 +65,9 @@ class MyProfileViewModel @Inject constructor(
     }
 
     fun onPhotoPicked(uri: Uri) {
+        _uiState.update { it.copy(isAvatarChanging = true) }
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isAvatarChanging = true) }
-
                 val processedUri = photoPickerManager.processPickedImage(uri)
                 val imagePath = processedUri?.path
                 if (!imagePath.isNullOrBlank()) {

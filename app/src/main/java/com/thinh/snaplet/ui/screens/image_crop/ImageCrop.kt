@@ -1,16 +1,13 @@
 package com.thinh.snaplet.ui.screens.image_crop
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.BitmapRegionDecoder
-import android.graphics.Rect
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,18 +16,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.RotateRight
+import androidx.compose.material.icons.outlined.Flip
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +44,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
@@ -55,49 +61,189 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.thinh.snaplet.ui.components.BaseText
-import com.thinh.snaplet.utils.Logger
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
+import com.thinh.snaplet.ui.theme.Typography
+
+val FRAME_SIZE = 400.dp
 
 @Composable
 fun ImageCrop(
-    cropImageCropViewModel: ImageCropViewModel = hiltViewModel(),
-    onCropDone: (Bitmap) -> Unit = { bitmap -> Logger.d("done: $bitmap") }
+    onCropDone: (Uri) -> Unit = {},
+    onBack: () -> Unit = {},
+    cropImageViewModel: ImageCropViewModel = hiltViewModel(),
 ) {
-    val uiState by cropImageCropViewModel.uiState.collectAsStateWithLifecycle()
-    val imageUri: Uri? = (uiState.imageUri)?.toUri()
+    val uiState by cropImageViewModel.uiState.collectAsStateWithLifecycle()
+    val imageUri: Uri? = uiState.imageUri?.toUri()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF111827)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val framePx = with(density) { FRAME_SIZE.toPx() }
+
+    var rotationDeg by remember { mutableIntStateOf(0) }
+    var isFlippedH by remember { mutableStateOf(false) }
+    var isFlippedV by remember { mutableStateOf(false) }
+    var cropTrigger by remember { mutableIntStateOf(0) }
+
+    BackHandler(enabled = true, onBack = {})
+
+    LaunchedEffect(uiState.croppedUri) {
+        uiState.croppedUri?.let { uri ->
+            onCropDone(uri)
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+
+        ImageCropHeader(
+            isCropping = uiState.isCropping,
+            isFlippedH = isFlippedH,
+            isFlippedV = isFlippedV,
+            onBack = onBack,
+            onRotate = { rotationDeg = (rotationDeg + 90) % 360 },
+            onFlipH = { isFlippedH = !isFlippedH },
+            onFlipV = { isFlippedV = !isFlippedV },
+            onCrop = { cropTrigger++ }
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
             if (imageUri != null) {
                 key(imageUri) {
                     ImageCropper(
-                        uri = imageUri, frameSize = 400.dp, onCropDone = onCropDone
+                        uri = imageUri,
+                        frameSize = FRAME_SIZE,
+                        rotationDeg = rotationDeg,
+                        isFlippedH = isFlippedH,
+                        isFlippedV = isFlippedV,
+                        cropTrigger = cropTrigger,
+                        onCropReady = { w, h, scale, frameTop ->
+                            cropImageViewModel.cropImage(
+                                context = context,
+                                uri = imageUri,
+                                displayImageW = w,
+                                displayImageH = h,
+                                displayScale = scale,
+                                frameTop = frameTop,
+                                framePx = framePx,
+                                rotationDeg = rotationDeg,
+                                isFlippedH = isFlippedH,
+                                isFlippedV = isFlippedV,
+                            )
+                        }
                     )
                 }
-                Spacer(Modifier.height(12.dp))
             }
         }
     }
 }
 
 @Composable
+fun ImageCropHeader(
+    isCropping: Boolean,
+    isFlippedH: Boolean,
+    isFlippedV: Boolean,
+    onBack: () -> Unit,
+    onRotate: () -> Unit,
+    onFlipH: () -> Unit,
+    onFlipV: () -> Unit,
+    onCrop: () -> Unit,
+) {
+    val accentColor = MaterialTheme.colorScheme.primary
+    var showFlipMenu by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White
+            )
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        IconButton(onClick = onRotate) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.RotateRight,
+                contentDescription = "Rotate",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        Box {
+            IconButton(onClick = { showFlipMenu = true }) {
+                Icon(
+                    imageVector = Icons.Outlined.Flip,
+                    contentDescription = "Flip",
+                    tint = if (isFlippedH || isFlippedV) accentColor else Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            DropdownMenu(
+                expanded = showFlipMenu,
+                onDismissRequest = { showFlipMenu = false },
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            "Lật theo chiều ngang",
+                            color = if (isFlippedH) accentColor else Color.White
+                        )
+                    },
+                    onClick = { onFlipH(); showFlipMenu = false }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            "Lật theo chiều dọc",
+                            color = if (isFlippedV) accentColor else Color.White
+                        )
+                    },
+                    onClick = { onFlipV(); showFlipMenu = false }
+                )
+            }
+        }
+
+        TextButton(onClick = onCrop, enabled = !isCropping) {
+            if (isCropping) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White
+                )
+            } else {
+                BaseText("CẮT", color = Color.White, typography = Typography.titleSmall)
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ImageCropper
+// ─────────────────────────────────────────────────────────────
+
+@Composable
 fun ImageCropper(
     modifier: Modifier = Modifier,
     uri: Uri,
-    frameSize: Dp = 400.dp,
-    onCropDone: (Bitmap) -> Unit,
+    frameSize: Dp = FRAME_SIZE,
+    rotationDeg: Int = 0,
+    isFlippedH: Boolean = false,
+    isFlippedV: Boolean = false,
+    cropTrigger: Int = 0,
+    onCropReady: (w: Int, h: Int, scale: Float, frameTop: Float) -> Unit = { _, _, _, _ -> },
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val scope = rememberCoroutineScope()
 
     var imageWidthPx by remember { mutableIntStateOf(0) }
     var imageHeightPx by remember { mutableIntStateOf(0) }
@@ -107,190 +253,98 @@ fun ImageCropper(
     var frameOffsetY by remember { mutableFloatStateOf(0f) }
     var imageScale by remember { mutableFloatStateOf(1f) }
 
-    // minScale: ảnh landscape (height < framePx) cần scale lên để phủ frame
-    fun computeMinScale(imgH: Int): Float {
-        if (imgH == 0) return 1f
-        return maxOf(framePx / imgH, 1f)
+    val isSwapped = rotationDeg == 90 || rotationDeg == 270
+    val effectiveW = if (isSwapped) imageHeightPx else imageWidthPx
+    val effectiveH = if (isSwapped) imageWidthPx else imageHeightPx
+
+    fun computeMinScale(): Float {
+        if (effectiveH == 0) return 1f
+        return maxOf(framePx / effectiveH, 1f)
     }
 
-    // Clamp frame trong boundary ảnh GỐC — không nhân scale.
-    // Box có clip() nên graphicsLayer không tràn ra ngoài viewport gốc.
-    // → frame chỉ scroll trong vùng ảnh gốc, không mở rộng theo zoom.
     fun clampFrame(offset: Float): Float {
-        if (imageHeightPx == 0) return 0f
+        if (effectiveH == 0) return 0f
         val halfFrame = framePx / 2f
-        val halfImg = imageHeightPx / 2f
+        val halfImg = effectiveH / 2f
         if (halfImg <= halfFrame) return 0f
         return offset.coerceIn(-(halfImg - halfFrame), halfImg - halfFrame)
     }
 
-    val frameTop = imageHeightPx / 2f - framePx / 2f + frameOffsetY
+    LaunchedEffect(rotationDeg) {
+        val minScale = computeMinScale()
+        if (imageScale < minScale) imageScale = minScale
+        frameOffsetY = 0f
+    }
 
-    var isCropping by remember { mutableStateOf(false) }
+    val frameTop = effectiveH / 2f - framePx / 2f + frameOffsetY
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    LaunchedEffect(cropTrigger) {
+        if (cropTrigger > 0 && imageWidthPx > 0 && imageHeightPx > 0) {
+            onCropReady(imageWidthPx, imageHeightPx, imageScale, frameTop)
+        }
+    }
 
-        Box(
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .clip(RectangleShape)
+            .pointerInput(rotationDeg) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    if (zoom != 1f) {
+                        val minScale = computeMinScale()
+                        imageScale = (imageScale * zoom).coerceIn(minScale, minScale * 5f)
+                    } else {
+                        frameOffsetY = clampFrame(frameOffsetY + pan.y)
+                    }
+                }
+            }
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(context).data(uri).crossfade(true).build(),
+            contentDescription = null,
+            contentScale = ContentScale.FillWidth,
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
-                // clip: ảnh zoom to bị giữ trong boundary Box gốc
-                // → Canvas overlay cùng size → dim đúng, không có pixel tràn ra ngoài sáng
-                .clip(RectangleShape)
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        if (zoom != 1f) {
-                            // Zoom: visual only — boundary frame KHÔNG đổi theo scale
-                            val minScale = computeMinScale(imageHeightPx)
-                            val newScale = (imageScale * zoom).coerceIn(minScale, minScale * 5f)
-                            imageScale = newScale
-                            // KHÔNG re-clamp frameOffsetY — boundary luôn là ảnh gốc
-                        } else {
-                            // Pan: frame scroll trong boundary ảnh gốc
-                            frameOffsetY = clampFrame(frameOffsetY + pan.y)
+                .align(Alignment.Center)
+                .onGloballyPositioned { coords ->
+                    val newH = coords.size.height
+                    val newW = coords.size.width
+                    if (newH != imageHeightPx || newW != imageWidthPx) {
+                        imageWidthPx = newW
+                        imageHeightPx = newH
+                        val minScale = computeMinScale()
+                        if (imageScale < minScale) {
+                            imageScale = minScale
+                            frameOffsetY = 0f
                         }
                     }
                 }
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(context).data(uri).crossfade(true).build(),
-                contentDescription = null,
-                contentScale = ContentScale.FillWidth,
+                .graphicsLayer {
+                    scaleX = imageScale * if (isFlippedH) -1f else 1f
+                    scaleY = imageScale * if (isFlippedV) -1f else 1f
+                    rotationZ = rotationDeg.toFloat()
+                    transformOrigin = TransformOrigin(0.5f, 0.5f)
+                }
+        )
+
+        if (imageHeightPx > 0) {
+            Canvas(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .onGloballyPositioned { coords ->
-                        val newH = coords.size.height
-                        val newW = coords.size.width
-                        if (newH != imageHeightPx || newW != imageWidthPx) {
-                            imageWidthPx = newW
-                            imageHeightPx = newH
-                            // Apply minScale ngay khi đo được (ảnh landscape tự scale lên)
-                            val minScale = computeMinScale(newH)
-                            if (imageScale < minScale) {
-                                imageScale = minScale
-                                frameOffsetY = 0f
-                            }
-                        }
-                    }
-                    .graphicsLayer {
-                        scaleX = imageScale
-                        scaleY = imageScale
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
-                    }
-            )
-
-            if (imageHeightPx > 0) {
-                Canvas(
-                    modifier = Modifier
-                        .width(with(density) { imageWidthPx.toDp() })
-                        .height(with(density) { imageHeightPx.toDp() })
-                ) {
-                    drawDimRects(frameTop, framePx)
-                    drawGrid(frameTop, framePx)
-                    drawCornerHandles(frameTop, framePx)
-                }
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                val snapImageScale = imageScale
-                val snapImageW = imageWidthPx
-                val snapImageH = imageHeightPx
-                val snapFrameTop = frameTop
-
-                isCropping = true
-                scope.launch {
-                    val result = withContext(Dispatchers.IO) {
-                        cropRegion(
-                            context = context,
-                            uri = uri,
-                            displayImageW = snapImageW,
-                            displayImageH = snapImageH,
-                            displayScale = snapImageScale,
-                            frameTop = snapFrameTop,
-                            framePx = framePx
-                        )
-                    }
-                    isCropping = false
-                    if (result != null) onCropDone(result)
-                }
-            },
-            enabled = !isCropping && imageHeightPx > 0,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
-        ) {
-            if (isCropping) {
-                CircularProgressIndicator(
-                    color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp
-                )
-            } else {
-                BaseText("✂  Cắt ảnh")
+                    .width(with(density) { effectiveW.toDp() })
+                    .height(with(density) { effectiveH.toDp() })
+                    .align(Alignment.Center)
+            ) {
+                drawDimRects(frameTop, framePx)
+                drawGrid(frameTop, framePx)
+                drawCornerHandles(frameTop, framePx)
             }
         }
     }
 }
 
 // ─────────────────────────────────────────────────────────────
-//  Crop logic
-// ─────────────────────────────────────────────────────────────
-
-private fun cropRegion(
-    context: Context,
-    uri: Uri,
-    displayImageW: Int,
-    displayImageH: Int,
-    displayScale: Float,
-    frameTop: Float,
-    framePx: Float
-): Bitmap? {
-    return try {
-        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        context.contentResolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, opts)
-        }
-        val origW = opts.outWidth
-        val origH = opts.outHeight
-
-        val scaledH = displayImageH * displayScale
-        val scaledImgTop = (displayImageH - scaledH) / 2f
-
-        val frameTopInScaled = frameTop - scaledImgTop
-        val frameBottomInScaled = frameTopInScaled + framePx
-
-        val frameTopInDisplay = frameTopInScaled / displayScale
-        val frameBottomInDisplay = frameBottomInScaled / displayScale
-
-        val ratioH = origH.toFloat() / displayImageH
-
-        val srcLeft = 0
-        val srcTop = (frameTopInDisplay * ratioH).roundToInt().coerceIn(0, origH)
-        val srcRight = origW
-        val srcBottom = (frameBottomInDisplay * ratioH).roundToInt().coerceIn(0, origH)
-
-        if (srcBottom <= srcTop) return null
-
-        val srcRect = Rect(srcLeft, srcTop, srcRight, srcBottom)
-        context.contentResolver.openInputStream(uri)?.use { stream ->
-            val decoder = BitmapRegionDecoder.newInstance(stream, false)
-            decoder?.decodeRegion(srcRect, BitmapFactory.Options().apply {
-                inPreferredConfig = Bitmap.Config.ARGB_8888
-            }).also { decoder?.recycle() }
-        }
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
-    }
-}
-
-// ─────────────────────────────────────────────────────────────
-//  Drawing helpers
+//  Drawing
 // ─────────────────────────────────────────────────────────────
 
 private fun DrawScope.drawDimRects(frameTop: Float, frameH: Float) {
@@ -308,13 +362,21 @@ private fun DrawScope.drawDimRects(frameTop: Float, frameH: Float) {
 
 private fun DrawScope.drawGrid(frameTop: Float, frameH: Float) {
     clipRect(0f, frameTop, size.width, frameTop + frameH) {
-        val color = Color.White.copy(alpha = .22f)
-        val stroke = 1.dp.toPx()
+        val color = Color.White.copy(alpha = .55f)
+        val stroke = 2.dp.toPx()
+        val frameBottom = frameTop + frameH
+        val right = size.width
+
+        drawLine(color, Offset(0f, frameTop), Offset(right, frameTop), strokeWidth = stroke)
+        drawLine(color, Offset(0f, frameBottom), Offset(right, frameBottom), strokeWidth = stroke)
+        drawLine(color, Offset(0f, frameTop), Offset(0f, frameBottom), strokeWidth = stroke)
+        drawLine(color, Offset(right, frameTop), Offset(right, frameBottom), strokeWidth = stroke)
+
         for (i in 1..2) {
-            val x = size.width * i / 3f
+            val x = right * i / 3f
             val y = frameTop + frameH * i / 3f
-            drawLine(color, Offset(x, frameTop), Offset(x, frameTop + frameH), strokeWidth = stroke)
-            drawLine(color, Offset(0f, y), Offset(size.width, y), strokeWidth = stroke)
+            drawLine(color, Offset(x, frameTop), Offset(x, frameBottom), strokeWidth = stroke)
+            drawLine(color, Offset(0f, y), Offset(right, y), strokeWidth = stroke)
         }
     }
 }
@@ -322,26 +384,22 @@ private fun DrawScope.drawGrid(frameTop: Float, frameH: Float) {
 private fun DrawScope.drawCornerHandles(frameTop: Float, frameH: Float) {
     val color = Color.White
     val stroke = 3.dp.toPx()
-    val len = 24.dp.toPx()
+    val len = 16.dp.toPx()
+    val inset = 2.dp.toPx()
     val frameBottom = frameTop + frameH
     val right = size.width
 
-    drawLine(color, Offset(0f, frameTop), Offset(len, frameTop), strokeWidth = stroke)
-    drawLine(color, Offset(0f, frameTop), Offset(0f, frameTop + len), strokeWidth = stroke)
-    drawLine(color, Offset(right, frameTop), Offset(right - len, frameTop), strokeWidth = stroke)
-    drawLine(color, Offset(right, frameTop), Offset(right, frameTop + len), strokeWidth = stroke)
-    drawLine(color, Offset(0f, frameBottom), Offset(len, frameBottom), strokeWidth = stroke)
-    drawLine(color, Offset(0f, frameBottom), Offset(0f, frameBottom - len), strokeWidth = stroke)
-    drawLine(
-        color,
-        Offset(right, frameBottom),
-        Offset(right - len, frameBottom),
-        strokeWidth = stroke
-    )
-    drawLine(
-        color,
-        Offset(right, frameBottom),
-        Offset(right, frameBottom - len),
-        strokeWidth = stroke
-    )
+    val l = inset
+    val t = frameTop + inset
+    val b = frameBottom - inset
+    val r = right - inset
+
+    drawLine(color, Offset(l, t), Offset(l + len, t), strokeWidth = stroke)
+    drawLine(color, Offset(l, t), Offset(l, t + len), strokeWidth = stroke)
+    drawLine(color, Offset(r, t), Offset(r - len, t), strokeWidth = stroke)
+    drawLine(color, Offset(r, t), Offset(r, t + len), strokeWidth = stroke)
+    drawLine(color, Offset(l, b), Offset(l + len, b), strokeWidth = stroke)
+    drawLine(color, Offset(l, b), Offset(l, b - len), strokeWidth = stroke)
+    drawLine(color, Offset(r, b), Offset(r - len, b), strokeWidth = stroke)
+    drawLine(color, Offset(r, b), Offset(r, b - len), strokeWidth = stroke)
 }

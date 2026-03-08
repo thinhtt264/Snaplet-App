@@ -52,9 +52,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thinh.snaplet.R
+import com.thinh.snaplet.navigation.CollectNavResult
+import com.thinh.snaplet.navigation.NavResultKeys
 import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.theme.DarkGray
@@ -125,7 +128,7 @@ private data class ProfileStrings(
 fun MyProfile(
     modifier: Modifier = Modifier,
     onBackClick: () -> Unit,
-    onNavigateToImageCrop: (android.net.Uri) -> Unit,
+    onNavigateToImageCrop: (Uri) -> Unit,
     viewModel: MyProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -139,6 +142,10 @@ fun MyProfile(
         } else {
             viewModel.onPhotoPickerDismissed()
         }
+    }
+
+    CollectNavResult(NavResultKeys.CroppedUri) { uriStr ->
+        viewModel.onPhotoPicked(uriStr.toUri())
     }
 
     LaunchedEffect(uiState.showPhotoPicker) {

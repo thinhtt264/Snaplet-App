@@ -1,44 +1,42 @@
 package com.thinh.snaplet.navigation
 
 import android.net.Uri
-import android.util.Base64
 import androidx.navigation.NavHostController
-import java.nio.charset.StandardCharsets
 
 class NavActions(
     private val nav: NavHostController
 ) {
+    fun <T : Any> sendResultToPreviousScreen(key: NavResultKey<T>, value: T) {
+        nav.previousBackStackEntry?.savedStateHandle?.set(key.key, value)
+    }
+
     fun navigateToMyProfile() {
-        nav.navigate(NavScreen.MyProfile.route)
+        nav.navigate(MyProfile)
     }
 
     fun navigateToImageCrop(uri: Uri) {
-        val encoded = Base64.encodeToString(
-            uri.toString().toByteArray(StandardCharsets.UTF_8),
-            Base64.URL_SAFE or Base64.NO_WRAP
-        )
-        nav.navigate("image_crop/$encoded")
+        nav.navigate(ImageCrop(sourceUri = uri.toString()))
     }
 
     fun popBackStack(): Boolean = nav.popBackStack()
 
     fun navigateToLoginReplacingOnboarding() {
-        nav.navigate(NavScreen.Login.route) {
-            popUpTo(NavScreen.Onboarding.route) { inclusive = true }
+        nav.navigate(Login) {
+            popUpTo<Onboarding> { inclusive = true }
         }
     }
 
     fun navigateToRegisterReplacingOnboarding() {
-        nav.navigate(NavScreen.Register.route) {
-            popUpTo(NavScreen.Onboarding.route) { inclusive = true }
+        nav.navigate(Register) {
+            popUpTo<Onboarding> { inclusive = true }
         }
     }
 
     fun navigateToRegister() {
-        nav.navigate(NavScreen.Register.route)
+        nav.navigate(Register)
     }
 
     fun navigateToLogin() {
-        nav.navigate(NavScreen.Login.route)
+        nav.navigate(Login)
     }
 }
