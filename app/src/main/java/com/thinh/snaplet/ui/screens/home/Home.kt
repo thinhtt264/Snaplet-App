@@ -175,7 +175,11 @@ private fun CameraBindingEffect(
                 }
 
                 Lifecycle.Event.ON_RESUME -> {
-                    if (currentIsOnCameraPage && !currentShouldBindCamera) {
+                    if (currentIsOnCameraPage) {
+                        if (currentShouldBindCamera) {
+                            // Force a rebind by toggling the camera binding state
+                            currentOnCameraPageHidden()
+                        }
                         currentOnCameraPageVisible()
                     }
                 }
