@@ -38,7 +38,6 @@ import com.thinh.snaplet.domain.user.RemoveRelationshipUseCase
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.platform.permission.PermissionManager
 import com.thinh.snaplet.platform.share.ShareApp
-import com.thinh.snaplet.platform.share.ShareContent
 import com.thinh.snaplet.platform.share.ShareManager
 import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
@@ -87,10 +86,6 @@ class HomeViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val shareManager: ShareManager
 ) : ViewModel() {
-
-    companion object {
-        private const val INVITE_BASE_URL = "https://snaplet-cam.netlify.app/"
-    }
 
     private val _uiState = MutableStateFlow(
         HomeUiState(
@@ -232,27 +227,18 @@ class HomeViewModel @Inject constructor(
 
     fun shareToApp(app: ShareApp) {
         viewModelScope.launch {
-            val content = buildInviteShareContent()
+            val userName = userRepository.getCurrentUserProfile()?.userName?.takeIf { it.isNotBlank() }
+            val content = shareManager.buildInviteShareContent(userName)
             shareManager.shareToApp(app.packageName, content)
         }
     }
 
     fun shareOther() {
         viewModelScope.launch {
-            val content = buildInviteShareContent()
+            val userName = userRepository.getCurrentUserProfile()?.userName?.takeIf { it.isNotBlank() }
+            val content = shareManager.buildInviteShareContent(userName)
             shareManager.openSystemChooser(content)
         }
-    }
-
-    private suspend fun buildInviteShareContent(): ShareContent {
-        val profile = userRepository.getCurrentUserProfile()
-        val userName = profile?.userName?.takeIf { it.isNotBlank() }
-        val inviteUrl = if (userName != null) {
-            "${INVITE_BASE_URL}?userName=${Uri.encode(userName)}"
-        } else {
-            INVITE_BASE_URL
-        }
-        return ShareContent(str = inviteUrl)
     }
 
     private fun loadNewsfeed(isLoadMore: Boolean = false) {

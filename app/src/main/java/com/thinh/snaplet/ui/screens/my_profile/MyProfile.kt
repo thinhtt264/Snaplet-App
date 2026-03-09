@@ -201,7 +201,7 @@ fun MyProfile(
         inviteFriendsTitle = strings.inviteFriendsTitle,
         onBackClick = onBackClick,
         onEditPhotoClick = viewModel::onEditPhoto,
-        onShareInviteClick = { },
+        onShareInviteClick = viewModel::onInviteShareClick,
         modifier = modifier
     )
 

@@ -10,6 +10,7 @@ import com.thinh.snaplet.data.repository.auth.AuthRepository
 import com.thinh.snaplet.domain.model.UploadAvatarResult
 import com.thinh.snaplet.domain.user.UploadAvatarUseCase
 import com.thinh.snaplet.platform.photo_picker.PhotoPickerManager
+import com.thinh.snaplet.platform.share.ShareManager
 import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
@@ -32,7 +33,9 @@ class MyProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val photoPickerManager: PhotoPickerManager,
     private val uploadAvatarUseCase: UploadAvatarUseCase,
+    private val shareManager: ShareManager,
 ) : ViewModel() {
+
     private val _uiState = MutableStateFlow(
         MyProfileUiState(
             widgetChainEnabled = true,
@@ -114,6 +117,14 @@ class MyProfileViewModel @Inject constructor(
     private fun handleLogout() {
         viewModelScope.launch {
             authRepository.logout()
+        }
+    }
+
+    fun onInviteShareClick() {
+        viewModelScope.launch {
+            val userName = userRepository.getCurrentUserProfile()?.userName?.takeIf { it.isNotBlank() }
+            val content = shareManager.buildInviteShareContent(userName)
+            shareManager.openSystemChooser(content)
         }
     }
 
