@@ -108,7 +108,7 @@ private data class ProfileStrings(
     val sectionGeneral: String,
     val notifications: String,
     val editName: String,
-    val changeEmail: String,
+    val yourEmail: String,
     val sectionPrivacySecurity: String,
     val blockedAccounts: String,
     val privacyAndData: String,
@@ -169,7 +169,7 @@ fun MyProfile(
         sectionGeneral = stringResource(R.string.profile_section_general),
         notifications = stringResource(R.string.profile_notifications),
         editName = stringResource(R.string.profile_edit_name),
-        changeEmail = stringResource(R.string.profile_change_email),
+        yourEmail = stringResource(R.string.profile_your_email),
         sectionPrivacySecurity = stringResource(R.string.profile_section_privacy_security),
         blockedAccounts = stringResource(R.string.profile_blocked_accounts),
         privacyAndData = stringResource(R.string.profile_privacy_and_data),
@@ -188,6 +188,7 @@ fun MyProfile(
         widgetChainEnabled = uiState.widgetChainEnabled,
         onWidgetChainToggle = viewModel::onWidgetChainToggle,
         onLogoutClick = viewModel::onLogout,
+        onEditNameClick = viewModel::onEditNameClick,
         displayName = uiState.displayName,
         email = uiState.email,
         strings = strings,
@@ -203,6 +204,18 @@ fun MyProfile(
         onShareInviteClick = { },
         modifier = modifier
     )
+
+    if (uiState.isEditNameSheetVisible) {
+        EditDisplayNameBottomSheet(
+            firstName = uiState.editFirstName,
+            lastName = uiState.editLastName,
+            isSaving = uiState.isUpdatingDisplayName,
+            onFirstNameChange = viewModel::onEditFirstNameChange,
+            onLastNameChange = viewModel::onEditLastNameChange,
+            onDismiss = viewModel::onEditNameDismiss,
+            onSaveClick = viewModel::onSaveDisplayName,
+        )
+    }
 }
 
 @Composable
@@ -452,6 +465,7 @@ private fun buildProfileSections(
     widgetChainEnabled: Boolean,
     onWidgetChainToggle: () -> Unit,
     onLogoutClick: () -> Unit,
+    onEditNameClick: () -> Unit,
     displayName: String,
     email: String,
     strings: ProfileStrings,
@@ -484,10 +498,11 @@ private fun buildProfileSections(
                 icon = Icons.Outlined.Person,
                 label = strings.editName,
                 subtitle = displayName,
+                onClick = onEditNameClick,
             ),
             ProfileMenuItem.Standard(
                 icon = Icons.Outlined.Email,
-                label = strings.changeEmail,
+                label = strings.yourEmail,
                 subtitle = email,
             ),
         )

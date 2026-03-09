@@ -15,6 +15,7 @@ import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
 import com.thinh.snaplet.ui.theme.Red
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.network.onFailure
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -47,6 +48,7 @@ class MyProfileViewModel @Inject constructor(
         state.copy(
             displayName = profile?.displayName.orEmpty(),
             firstName = profile?.firstName.orEmpty(),
+            lastName = profile?.lastName.orEmpty(),
             avatarUrls = profile?.avatarUrls ?: AvatarUrls(),
             userName = profile?.userName.orEmpty(),
             email = profile?.email.orEmpty(),
@@ -112,6 +114,58 @@ class MyProfileViewModel @Inject constructor(
     private fun handleLogout() {
         viewModelScope.launch {
             authRepository.logout()
+        }
+    }
+
+    fun onEditNameClick() {
+        _uiState.update { state ->
+            state.copy(
+                isEditNameSheetVisible = true,
+                editFirstName = state.firstName,
+                editLastName = state.lastName,
+            )
+        }
+    }
+
+    fun onEditNameDismiss() {
+        _uiState.update { it.copy(isEditNameSheetVisible = false) }
+    }
+
+    fun onEditFirstNameChange(value: String) {
+        _uiState.update { it.copy(editFirstName = value) }
+    }
+
+    fun onEditLastNameChange(value: String) {
+        _uiState.update { it.copy(editLastName = value) }
+    }
+
+    fun onSaveDisplayName() {
+        val currentState = _uiState.value
+        val firstName = currentState.editFirstName.trim()
+        val lastName = currentState.editLastName.trim()
+
+        if (firstName.isEmpty() && lastName.isEmpty()) {
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUpdatingDisplayName = true) }
+
+            val result = userRepository.updateDisplayName(
+                firstName = firstName,
+                lastName = lastName
+            )
+
+            result.onFailure { error ->
+                Logger.e("❌ Failed to update display name: ${error.message}")
+            }
+
+            _uiState.update {
+                it.copy(
+                    isUpdatingDisplayName = false,
+                    isEditNameSheetVisible = false
+                )
+            }
         }
     }
 

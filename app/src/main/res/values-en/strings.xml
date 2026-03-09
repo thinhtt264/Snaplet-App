@@ -87,7 +87,7 @@
     <string name="profile_section_general">General</string>
     <string name="profile_notifications">Notifications</string>
     <string name="profile_edit_name">Edit name</string>
-    <string name="profile_change_email">Change email address</string>
+    <string name="profile_your_email">Your email address</string>
     <string name="profile_section_privacy_security">Privacy &amp; Security</string>
     <string name="profile_blocked_accounts">Blocked accounts</string>
     <string name="profile_privacy_and_data">Privacy and Data</string>
@@ -103,4 +103,6 @@
     <string name="profile_logout_confirm_title">Are you sure you want to log out?</string>
     <string name="delete_avatar">Delete avatar</string>
     <string name="profile_change_avatar_title">Your profile picture will be displayed to everyone.</string>
+    <string name="profile_edit_name_title">Edit your name</string>
+    <string name="profile_edit_name_save">Save</string>
 </resources>

@@ -11,6 +11,7 @@ import com.thinh.snaplet.data.model.UpdateRelationshipRequest
 import com.thinh.snaplet.data.model.user.AvatarUploadRequest
 import com.thinh.snaplet.data.model.user.AvatarUploadRequestResponse
 import com.thinh.snaplet.data.model.user.ConfirmAvatarUploadRequest
+import com.thinh.snaplet.data.model.user.UpdateDisplayNameRequest
 import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.di.BaseOkHttpClient
 import com.thinh.snaplet.utils.Logger
@@ -224,6 +225,22 @@ class UserRepositoryImpl @Inject constructor(
             apiCall = {
                 apiService.deleteAvatar()
             },
+            onSuccess = { updatedProfile ->
+                dataStoreManager.saveUserProfile(updatedProfile)
+            }
+        )
+    }
+
+    override suspend fun updateDisplayName(
+        firstName: String,
+        lastName: String,
+    ): ApiResult<UserProfile> {
+        val body = UpdateDisplayNameRequest(
+            firstName = firstName,
+            lastName = lastName,
+        )
+        return safeApiCall(
+            apiCall = { apiService.updateDisplayName(body) },
             onSuccess = { updatedProfile ->
                 dataStoreManager.saveUserProfile(updatedProfile)
             }

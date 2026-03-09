@@ -15,10 +15,11 @@ import com.thinh.snaplet.data.model.RelationshipWithUserDto
 import com.thinh.snaplet.data.model.UpdateRelationshipRequest
 import com.thinh.snaplet.data.model.TokenResponse
 import com.thinh.snaplet.data.model.UsernameAvailabilityData
-import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.data.model.user.AvatarUploadRequest
 import com.thinh.snaplet.data.model.user.AvatarUploadRequestResponse
 import com.thinh.snaplet.data.model.user.ConfirmAvatarUploadRequest
+import com.thinh.snaplet.data.model.user.UpdateDisplayNameRequest
+import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.data.model.media.ConfirmUploadData
 import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
 import com.thinh.snaplet.data.model.media.RequestUploadRequest
@@ -121,6 +122,11 @@ interface ApiService {
 
     @DELETE("users/avatar")
     suspend fun deleteAvatar(
+    ): Response<BaseResponse<UserProfile>>
+
+    @PATCH("users/display-name")
+    suspend fun updateDisplayName(
+        @Body body: UpdateDisplayNameRequest
     ): Response<BaseResponse<UserProfile>>
 
     @POST("posts")

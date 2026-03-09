@@ -44,5 +44,10 @@ interface UserRepository {
     fun observeMyUserProfile(): Flow<UserProfile?>
     
     suspend fun getCurrentUserProfile(): UserProfile?
+
+    suspend fun updateDisplayName(
+        firstName: String,
+        lastName: String,
+    ): ApiResult<UserProfile>
 }
 
