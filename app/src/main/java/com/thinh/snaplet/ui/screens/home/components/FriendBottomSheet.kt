@@ -240,7 +240,7 @@ private fun FriendListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Avatar(
-            avatarUrl = friend.avatarUrl,
+            avatarUrl = friend.avatarUrls.forThumbnail().ifBlank { null },
             firstName = friend.firstName,
             isConnectedUser = friend.status == RelationshipStatus.ACCEPTED,
         )

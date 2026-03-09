@@ -104,7 +104,7 @@ class HomeViewModel @Inject constructor(
         _uiState,
         userRepository.observeMyUserProfile()
     ) { state, profile ->
-        state.copy(profileAvatarUrl = profile?.avatarUrl)
+        state.copy(profileAvatarUrl = profile?.avatarUrls?.forThumbnail().orEmpty())
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -618,7 +618,7 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(snackbarMessage = UiText.StringResource(R.string.download_failed)) }
             return
         }
-        val imageSource = media.originalUrl
+        val imageSource = media.images.original
 
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {

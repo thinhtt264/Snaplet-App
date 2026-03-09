@@ -34,9 +34,10 @@ class ImageCropViewModel @Inject constructor(
         uri: Uri,
         displayImageW: Int,
         displayImageH: Int,
-        displayScale: Float,
+        frameLeft: Float,
         frameTop: Float,
-        framePx: Float,
+        frameW: Float,
+        frameH: Float,
         rotationDeg: Int = 0,
         isFlippedH: Boolean = false,
         isFlippedV: Boolean = false,
@@ -47,7 +48,7 @@ class ImageCropViewModel @Inject constructor(
             val croppedUri: Uri? = withContext(Dispatchers.IO) {
                 val bitmap = cropImageRegion(
                     context, uri, displayImageW, displayImageH,
-                    displayScale, frameTop, framePx,
+                    frameLeft, frameTop, frameW, frameH,
                     rotationDeg, isFlippedH, isFlippedV
                 ) ?: return@withContext null
                 saveBitmapToCache(context, bitmap)

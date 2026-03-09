@@ -3,26 +3,36 @@ package com.thinh.snaplet.data.model.media
 import com.google.gson.annotations.SerializedName
 
 /**
- * Image URLs for different sizes
+ * Image URLs for different sizes.
+ * Any size (xs, sm, md, xl) that is blank falls back to [original].
  * Based on ImageSizeKey enum from backend:
+ * - original: URL gốc
  * - XS: 64x64 (1:1) - Thumbnail / Icon
  * - SM: 256x256 (1:1) - Preview / Avatar
  * - MD: 512x512 (1:1) - Standard Square
  * - XL: 768x768 (1:1) - High-Res Square
  */
-data class ImageSizes(
+open class ImageSizes(
+    @SerializedName("original")
+    val original: String = "",
+
     @SerializedName("xs")
-    val xs: String = "",
+    private val xsValue: String = "",
 
     @SerializedName("sm")
-    val sm: String = "",
+    private val smValue: String = "",
 
     @SerializedName("md")
-    val md: String = "",
+    private val mdValue: String = "",
 
     @SerializedName("xl")
-    val xl: String = ""
-)
+    private val xlValue: String = ""
+) {
+    val xs: String get() = xsValue.ifBlank { original }
+    val sm: String get() = smValue.ifBlank { original }
+    val md: String get() = mdValue.ifBlank { original }
+    val xl: String get() = xlValue.ifBlank { original }
+}
 
 data class Media(
     @SerializedName("id")
@@ -30,9 +40,6 @@ data class Media(
 
     @SerializedName("mimeType")
     val type: String,
-
-    @SerializedName("originalUrl")
-    val originalUrl: String = "",
 
     @SerializedName("ownerId")
     val ownerId: String,

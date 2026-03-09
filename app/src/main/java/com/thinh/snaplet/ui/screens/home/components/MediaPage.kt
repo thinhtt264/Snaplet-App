@@ -39,6 +39,7 @@ import androidx.compose.ui.zIndex
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.ui.common.CommonImages
+import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.components.image.AsyncImage
 import com.thinh.snaplet.ui.components.image.ErrorPlaceholderConfig
@@ -117,7 +118,7 @@ private fun PostMediaContent(post: Post) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         AsyncImage(
-            imageUrl = media.images.md.ifEmpty { media.originalUrl },
+            imageUrl = media.images.md,
             contentDescription = "Post ${post.id}",
             modifier = Modifier
                 .fillMaxSize()
@@ -133,7 +134,8 @@ private fun PostMediaContent(post: Post) {
             errorConfig = ErrorStateConfig(
                 backgroundColor = MaterialTheme.colorScheme.surface,
                 placeholder = ErrorPlaceholderConfig.WithPainter(
-                    painter = painterResource(CommonImages.PhotoPlaceholder)
+                    painter = painterResource(CommonImages.PhotoPlaceholder),
+                    size = 84.dp
                 )
             )
         )
@@ -244,19 +246,12 @@ private fun PostMetadata(
             }
 
             else -> {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                ) {
-                    AsyncImage(
-                        imageUrl = post.avatarUrl ?: "",
-                        contentDescription = "Avatar of ${post.displayName}",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        resizeSize = ImageSize.Thumbnail,
-                    )
-                }
+                Avatar(
+                    avatarUrl = post.avatarUrls.forThumbnail(),
+                    firstName = post.firstName,
+                    size = 28.dp,
+                )
+
                 BaseText(
                     text = post.firstName,
                     typography = MaterialTheme.typography.titleMedium,

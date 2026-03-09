@@ -104,67 +104,66 @@ object FileUtils {
         return sampleSize
     }
 
-    private fun matrixForExifOrientation(orientation: Int): Matrix {
-        val matrix = Matrix()
-        when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.setRotate(90f)
-            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.setRotate(180f)
-            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(270f)
-            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.setScale(-1f, 1f)
-            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.setScale(1f, -1f)
-            else -> { /* ORIENTATION_NORMAL or unknown: identity */
-            }
-        }
-        return matrix
+    private fun buildTransformMatrix(
+        rotationDeg: Float = 0f,
+        flipH: Boolean = false,
+        flipV: Boolean = false,
+    ): Matrix = Matrix().apply {
+        if (rotationDeg != 0f) setRotate(rotationDeg)
+        if (flipH) postScale(-1f, 1f)
+        if (flipV) postScale(1f, -1f)
+    }
+
+    private fun matrixForExifOrientation(orientation: Int): Matrix = when (orientation) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> buildTransformMatrix(rotationDeg = 90f)
+        ExifInterface.ORIENTATION_ROTATE_180 -> buildTransformMatrix(rotationDeg = 180f)
+        ExifInterface.ORIENTATION_ROTATE_270 -> buildTransformMatrix(rotationDeg = 270f)
+        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> buildTransformMatrix(flipH = true)
+        ExifInterface.ORIENTATION_FLIP_VERTICAL -> buildTransformMatrix(flipV = true)
+        else -> Matrix()
     }
 
     /**
-     * Maps the frame position back to original image coordinates,
-     * then applies rotation + flip via Matrix to match what user sees in the frame.
+     * Maps the frame rect (position + size in display coords) back to original
+     * image pixels, then applies rotation + flip via Matrix.
      *
-     * Since graphicsLayer scales from center:
-     *   scaledImgTop      = (displayH - displayH * scale) / 2
-     *   frameTopInDisplay = (frameTop - scaledImgTop) / scale
-     *   srcTop            = frameTopInDisplay * (origH / displayH)
+     * Image is displayed at 1:1 (no scale), so:
+     *   ratioX = origW / displayW
+     *   ratioY = origH / displayH
+     *   srcRect = frameRect * ratio
      */
     fun cropImageRegion(
         context: Context,
         uri: Uri,
         displayImageW: Int,
         displayImageH: Int,
-        displayScale: Float,
+        frameLeft: Float,
         frameTop: Float,
-        framePx: Float,
+        frameW: Float,
+        frameH: Float,
         rotationDeg: Int = 0,
         isFlippedH: Boolean = false,
         isFlippedV: Boolean = false,
     ): Bitmap? {
         return try {
-            // Read original dimensions (header only, no pixel load)
             val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             context.contentResolver.openInputStream(uri)?.use {
                 BitmapFactory.decodeStream(it, null, opts)
             }
             val origW = opts.outWidth
             val origH = opts.outHeight
+            if (origW <= 0 || origH <= 0) return null
 
-            // Map frame coordinates back to original image space
-            val scaledH = displayImageH * displayScale
-            val scaledImgTop = (displayImageH - scaledH) / 2f
+            val ratioX = origW.toFloat() / displayImageW
+            val ratioY = origH.toFloat() / displayImageH
 
-            val frameTopInDisplay = (frameTop - scaledImgTop) / displayScale
-            val frameBottomInDisplay = frameTopInDisplay + framePx / displayScale
+            val srcLeft: Int = (frameLeft * ratioX).roundToInt().coerceIn(0, origW)
+            val srcTop: Int = (frameTop * ratioY).roundToInt().coerceIn(0, origH)
+            val srcRight: Int = ((frameLeft + frameW) * ratioX).roundToInt().coerceIn(0, origW)
+            val srcBottom: Int = ((frameTop + frameH) * ratioY).roundToInt().coerceIn(0, origH)
 
-            val ratioH = origH.toFloat() / displayImageH
+            if (srcRight <= srcLeft || srcBottom <= srcTop) return null
 
-            val srcLeft = 0
-            val srcTop = (frameTopInDisplay * ratioH).roundToInt().coerceIn(0, origH)
-            val srcRight = origW
-            val srcBottom = (frameBottomInDisplay * ratioH).roundToInt().coerceIn(0, origH)
-
-            if (srcBottom <= srcTop) return null
-
-            // Decode only the required region
             val region = context.contentResolver.openInputStream(uri)?.use { stream ->
                 val decoder = BitmapRegionDecoder.newInstance(stream, false)
                 decoder?.decodeRegion(
@@ -173,15 +172,14 @@ object FileUtils {
                     .also { decoder?.recycle() }
             } ?: return null
 
-            // Apply rotation + flip via Matrix to match what user sees in the frame
             val needTransform = rotationDeg != 0 || isFlippedH || isFlippedV
             if (!needTransform) return region
 
-            val matrix = Matrix().apply {
-                if (rotationDeg != 0) postRotate(rotationDeg.toFloat())
-                if (isFlippedH) postScale(-1f, 1f, region.width / 2f, region.height / 2f)
-                if (isFlippedV) postScale(1f, -1f, region.width / 2f, region.height / 2f)
-            }
+            val matrix = buildTransformMatrix(
+                rotationDeg = rotationDeg.toFloat(),
+                flipH = isFlippedH,
+                flipV = isFlippedV,
+            )
 
             Bitmap.createBitmap(region, 0, 0, region.width, region.height, matrix, true)
                 .also { region.recycle() }

@@ -1,9 +1,11 @@
 package com.thinh.snaplet.ui.screens.my_profile
 
+import com.thinh.snaplet.data.model.user.AvatarUrls
+
 data class MyProfileUiState(
     val displayName: String = "",
     val firstName: String = "",
-    val avatarUrl: String? = null,
+    val avatarUrls: AvatarUrls = AvatarUrls(),
     val userName: String = "",
     val email: String = "",
     val widgetChainEnabled: Boolean = true,

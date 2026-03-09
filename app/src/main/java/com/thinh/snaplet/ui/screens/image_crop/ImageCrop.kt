@@ -4,7 +4,8 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -49,6 +51,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -58,12 +61,20 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.thinh.snaplet.ui.components.BaseText
+import com.thinh.snaplet.ui.components.image.AsyncImage
+import com.thinh.snaplet.ui.components.image.ImageSize
 import com.thinh.snaplet.ui.theme.Typography
+import kotlin.math.min
+import kotlin.math.sqrt
 
-val FRAME_SIZE = 400.dp
+private val MAX_FRAME_HEIGHT = 400.dp
+private val HANDLE_ZONE = 44.dp
+private const val MIN_FRAME_RATIO = 0.2f
+
+private enum class DragHandle {
+    TopLeft, TopRight, BottomLeft, BottomRight, None
+}
 
 @Composable
 fun ImageCrop(
@@ -73,10 +84,7 @@ fun ImageCrop(
 ) {
     val uiState by cropImageViewModel.uiState.collectAsStateWithLifecycle()
     val imageUri: Uri? = uiState.imageUri?.toUri()
-
     val context = LocalContext.current
-    val density = LocalDensity.current
-    val framePx = with(density) { FRAME_SIZE.toPx() }
 
     var rotationDeg by remember { mutableIntStateOf(0) }
     var isFlippedH by remember { mutableStateOf(false) }
@@ -86,13 +94,10 @@ fun ImageCrop(
     BackHandler(enabled = true, onBack = {})
 
     LaunchedEffect(uiState.croppedUri) {
-        uiState.croppedUri?.let { uri ->
-            onCropDone(uri)
-        }
+        uiState.croppedUri?.let { uri -> onCropDone(uri) }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-
         ImageCropHeader(
             isCropping = uiState.isCropping,
             isFlippedH = isFlippedH,
@@ -114,20 +119,20 @@ fun ImageCrop(
                 key(imageUri) {
                     ImageCropper(
                         uri = imageUri,
-                        frameSize = FRAME_SIZE,
                         rotationDeg = rotationDeg,
                         isFlippedH = isFlippedH,
                         isFlippedV = isFlippedV,
                         cropTrigger = cropTrigger,
-                        onCropReady = { w, h, scale, frameTop ->
+                        onCropReady = { baseW, baseH, frameLeft, frameTop, fW, fH ->
                             cropImageViewModel.cropImage(
                                 context = context,
                                 uri = imageUri,
-                                displayImageW = w,
-                                displayImageH = h,
-                                displayScale = scale,
+                                displayImageW = baseW,
+                                displayImageH = baseH,
+                                frameLeft = frameLeft,
                                 frameTop = frameTop,
-                                framePx = framePx,
+                                frameW = fW,
+                                frameH = fH,
                                 rotationDeg = rotationDeg,
                                 isFlippedH = isFlippedH,
                                 isFlippedV = isFlippedV,
@@ -235,52 +240,91 @@ fun ImageCropHeader(
 fun ImageCropper(
     modifier: Modifier = Modifier,
     uri: Uri,
-    frameSize: Dp = FRAME_SIZE,
+    maxFrameHeight: Dp = MAX_FRAME_HEIGHT,
     rotationDeg: Int = 0,
     isFlippedH: Boolean = false,
     isFlippedV: Boolean = false,
     cropTrigger: Int = 0,
-    onCropReady: (w: Int, h: Int, scale: Float, frameTop: Float) -> Unit = { _, _, _, _ -> },
+    onCropReady: (
+        baseW: Int, baseH: Int,
+        frameLeft: Float, frameTop: Float,
+        frameW: Float, frameH: Float
+    ) -> Unit = { _, _, _, _, _, _ -> },
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+    val handleZonePx = with(density) { HANDLE_ZONE.toPx() }
+    val maxFrameHPx = with(density) { maxFrameHeight.toPx() }
 
     var imageWidthPx by remember { mutableIntStateOf(0) }
     var imageHeightPx by remember { mutableIntStateOf(0) }
 
-    val framePx = with(density) { frameSize.toPx() }
-
-    var frameOffsetY by remember { mutableFloatStateOf(0f) }
-    var imageScale by remember { mutableFloatStateOf(1f) }
-
     val isSwapped = rotationDeg == 90 || rotationDeg == 270
-    val effectiveW = if (isSwapped) imageHeightPx else imageWidthPx
-    val effectiveH = if (isSwapped) imageWidthPx else imageHeightPx
+    val baseW = if (isSwapped) imageHeightPx else imageWidthPx
+    val baseH = if (isSwapped) imageWidthPx else imageHeightPx
 
-    fun computeMinScale(): Float {
-        if (effectiveH == 0) return 1f
-        return maxOf(framePx / effectiveH, 1f)
+    val maxFrameW = baseW.toFloat().coerceAtLeast(1f)
+    val maxFrameH = min(baseH.toFloat(), maxFrameHPx).coerceAtLeast(1f)
+    val minFrameW = (MIN_FRAME_RATIO * maxFrameW).coerceAtLeast(1f)
+    val minFrameH = (MIN_FRAME_RATIO * maxFrameH).coerceAtLeast(1f)
+
+    var frameW by remember { mutableFloatStateOf(0f) }
+    var frameH by remember { mutableFloatStateOf(0f) }
+    var frameOffsetX by remember { mutableFloatStateOf(0f) }
+    var frameOffsetY by remember { mutableFloatStateOf(0f) }
+
+    fun clampOffsetX(): Float {
+        val slack = (baseW - frameW) / 2f
+        return if (slack <= 0f) 0f else frameOffsetX.coerceIn(-slack, slack)
     }
 
-    fun clampFrame(offset: Float): Float {
-        if (effectiveH == 0) return 0f
-        val halfFrame = framePx / 2f
-        val halfImg = effectiveH / 2f
-        if (halfImg <= halfFrame) return 0f
-        return offset.coerceIn(-(halfImg - halfFrame), halfImg - halfFrame)
+    fun clampOffsetY(): Float {
+        val slack = (baseH - frameH) / 2f
+        return if (slack <= 0f) 0f else frameOffsetY.coerceIn(-slack, slack)
+    }
+
+    LaunchedEffect(baseW, baseH) {
+        if (baseW > 0 && baseH > 0) {
+            if (frameW <= 0 || frameH <= 0) {
+                frameW = maxFrameW
+                frameH = maxFrameH
+            }
+            frameW = frameW.coerceIn(minFrameW, maxFrameW)
+            frameH = frameH.coerceIn(minFrameH, maxFrameH)
+            frameOffsetX = clampOffsetX()
+            frameOffsetY = clampOffsetY()
+        }
     }
 
     LaunchedEffect(rotationDeg) {
-        val minScale = computeMinScale()
-        if (imageScale < minScale) imageScale = minScale
-        frameOffsetY = 0f
+        if (baseW > 0 && baseH > 0) {
+            frameW = maxFrameW
+            frameH = maxFrameH
+            frameOffsetX = 0f
+            frameOffsetY = 0f
+        }
     }
 
-    val frameTop = effectiveH / 2f - framePx / 2f + frameOffsetY
+    val frameLeft = (baseW - frameW) / 2f + frameOffsetX
+    val frameTop = (baseH - frameH) / 2f + frameOffsetY
+    val frameRect = Rect(frameLeft, frameTop, frameLeft + frameW, frameTop + frameH)
+
+    fun detectDragHandle(pos: Offset): DragHandle {
+        if (baseW <= 0 || baseH <= 0) return DragHandle.None
+        val inL = pos.x in (frameRect.left - handleZonePx)..(frameRect.left + handleZonePx)
+        val inR = pos.x in (frameRect.right - handleZonePx)..(frameRect.right + handleZonePx)
+        val inT = pos.y in (frameRect.top - handleZonePx)..(frameRect.top + handleZonePx)
+        val inB = pos.y in (frameRect.bottom - handleZonePx)..(frameRect.bottom + handleZonePx)
+        if (inL && inT) return DragHandle.TopLeft
+        if (inR && inT) return DragHandle.TopRight
+        if (inL && inB) return DragHandle.BottomLeft
+        if (inR && inB) return DragHandle.BottomRight
+        return DragHandle.None
+    }
 
     LaunchedEffect(cropTrigger) {
-        if (cropTrigger > 0 && imageWidthPx > 0 && imageHeightPx > 0) {
-            onCropReady(imageWidthPx, imageHeightPx, imageScale, frameTop)
+        if (cropTrigger > 0 && baseW > 0 && baseH > 0 && frameW > 0 && frameH > 0) {
+            onCropReady(baseW, baseH, frameLeft, frameTop, frameW, frameH)
         }
     }
 
@@ -289,55 +333,108 @@ fun ImageCropper(
             .fillMaxWidth()
             .wrapContentHeight()
             .clip(RectangleShape)
-            .pointerInput(rotationDeg) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    if (zoom != 1f) {
-                        val minScale = computeMinScale()
-                        imageScale = (imageScale * zoom).coerceIn(minScale, minScale * 5f)
-                    } else {
-                        frameOffsetY = clampFrame(frameOffsetY + pan.y)
-                    }
+            .pointerInput(rotationDeg, baseW, baseH) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val handle = detectDragHandle(down.position)
+                    var initialPinchSpan = 0f
+                    var initialFrameW = frameW
+                    var initialFrameH = frameH
+
+                    do {
+                        val event = awaitPointerEvent()
+                        val current = event.changes.firstOrNull()
+                        if (current != null && !current.pressed) {
+                            current.consume()
+                            break
+                        }
+                        when {
+                            // Pinch: uniform frame resize
+                            event.changes.size >= 2 -> {
+                                val p0 = event.changes[0].position
+                                val p1 = event.changes[1].position
+                                val span = sqrt(
+                                    (p1.x - p0.x) * (p1.x - p0.x) +
+                                            (p1.y - p0.y) * (p1.y - p0.y)
+                                )
+                                if (initialPinchSpan <= 0f) {
+                                    initialPinchSpan = span.coerceAtLeast(1f)
+                                    initialFrameW = frameW
+                                    initialFrameH = frameH
+                                }
+                                if (span > 0f) {
+                                    val ratio = span / initialPinchSpan
+                                    frameW = (initialFrameW * ratio).coerceIn(minFrameW, maxFrameW)
+                                    frameH = (initialFrameH * ratio).coerceIn(minFrameH, maxFrameH)
+                                    frameOffsetX = clampOffsetX()
+                                    frameOffsetY = clampOffsetY()
+                                }
+                                event.changes.forEach { it.consume() }
+                            }
+                            // Corner drag: resize
+                            handle != DragHandle.None -> {
+                                val delta = current?.positionChange() ?: Offset.Zero
+                                val (dw, dh) = when (handle) {
+                                    DragHandle.TopLeft -> Pair(-delta.x, -delta.y)
+                                    DragHandle.TopRight -> Pair(delta.x, -delta.y)
+                                    DragHandle.BottomLeft -> Pair(-delta.x, delta.y)
+                                    DragHandle.BottomRight -> Pair(delta.x, delta.y)
+                                    else -> Pair(0f, 0f)
+                                }
+                                frameW = (frameW + dw).coerceIn(minFrameW, maxFrameW)
+                                frameH = (frameH + dh).coerceIn(minFrameH, maxFrameH)
+                                frameOffsetX = clampOffsetX()
+                                frameOffsetY = clampOffsetY()
+                                current?.consume()
+                            }
+                            // Single finger: scroll frame position
+                            else -> {
+                                val delta = current?.positionChange() ?: Offset.Zero
+                                frameOffsetX += delta.x
+                                frameOffsetY += delta.y
+                                frameOffsetX = clampOffsetX()
+                                frameOffsetY = clampOffsetY()
+                                current?.consume()
+                            }
+                        }
+                    } while (event.changes.any { it.pressed })
                 }
             }
     ) {
         AsyncImage(
-            model = ImageRequest.Builder(context).data(uri).crossfade(true).build(),
+            imageUrl = uri.toString(),
             contentDescription = null,
             contentScale = ContentScale.FillWidth,
+            resizeSize = ImageSize.Original,
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.Center)
                 .onGloballyPositioned { coords ->
-                    val newH = coords.size.height
                     val newW = coords.size.width
-                    if (newH != imageHeightPx || newW != imageWidthPx) {
+                    val newH = coords.size.height
+                    if (newW != imageWidthPx || newH != imageHeightPx) {
                         imageWidthPx = newW
                         imageHeightPx = newH
-                        val minScale = computeMinScale()
-                        if (imageScale < minScale) {
-                            imageScale = minScale
-                            frameOffsetY = 0f
-                        }
                     }
                 }
                 .graphicsLayer {
-                    scaleX = imageScale * if (isFlippedH) -1f else 1f
-                    scaleY = imageScale * if (isFlippedV) -1f else 1f
+                    scaleX = if (isFlippedH) -1f else 1f
+                    scaleY = if (isFlippedV) -1f else 1f
                     rotationZ = rotationDeg.toFloat()
                     transformOrigin = TransformOrigin(0.5f, 0.5f)
                 }
         )
 
-        if (imageHeightPx > 0) {
+        if (baseW > 0 && baseH > 0 && frameW > 0 && frameH > 0) {
             Canvas(
                 modifier = Modifier
-                    .width(with(density) { effectiveW.toDp() })
-                    .height(with(density) { effectiveH.toDp() })
+                    .width(with(density) { baseW.toDp() })
+                    .height(with(density) { baseH.toDp() })
                     .align(Alignment.Center)
             ) {
-                drawDimRects(frameTop, framePx)
-                drawGrid(frameTop, framePx)
-                drawCornerHandles(frameTop, framePx)
+                drawDimOverlay(frameRect)
+                drawGrid(frameRect)
+                drawCornerHandles(frameRect)
             }
         }
     }
@@ -347,53 +444,64 @@ fun ImageCropper(
 //  Drawing
 // ─────────────────────────────────────────────────────────────
 
-private fun DrawScope.drawDimRects(frameTop: Float, frameH: Float) {
+private fun DrawScope.drawDimOverlay(frame: Rect) {
     val dim = Color(0x99000000)
-    val frameBottom = frameTop + frameH
-    if (frameTop > 0f)
-        drawRect(dim, topLeft = Offset.Zero, size = Size(size.width, frameTop))
-    if (frameBottom < size.height)
-        drawRect(
-            dim,
-            topLeft = Offset(0f, frameBottom),
-            size = Size(size.width, size.height - frameBottom)
-        )
+    if (frame.top > 0f)
+        drawRect(dim, Offset.Zero, Size(size.width, frame.top))
+    if (frame.bottom < size.height)
+        drawRect(dim, Offset(0f, frame.bottom), Size(size.width, size.height - frame.bottom))
+    if (frame.left > 0f)
+        drawRect(dim, Offset(0f, frame.top), Size(frame.left, frame.height))
+    if (frame.right < size.width)
+        drawRect(dim, Offset(frame.right, frame.top), Size(size.width - frame.right, frame.height))
 }
 
-private fun DrawScope.drawGrid(frameTop: Float, frameH: Float) {
-    clipRect(0f, frameTop, size.width, frameTop + frameH) {
+private fun DrawScope.drawGrid(frame: Rect) {
+    clipRect(frame.left, frame.top, frame.right, frame.bottom) {
         val color = Color.White.copy(alpha = .55f)
         val stroke = 2.dp.toPx()
-        val frameBottom = frameTop + frameH
-        val right = size.width
-
-        drawLine(color, Offset(0f, frameTop), Offset(right, frameTop), strokeWidth = stroke)
-        drawLine(color, Offset(0f, frameBottom), Offset(right, frameBottom), strokeWidth = stroke)
-        drawLine(color, Offset(0f, frameTop), Offset(0f, frameBottom), strokeWidth = stroke)
-        drawLine(color, Offset(right, frameTop), Offset(right, frameBottom), strokeWidth = stroke)
-
+        drawLine(
+            color,
+            Offset(frame.left, frame.top),
+            Offset(frame.right, frame.top),
+            strokeWidth = stroke
+        )
+        drawLine(
+            color,
+            Offset(frame.left, frame.bottom),
+            Offset(frame.right, frame.bottom),
+            strokeWidth = stroke
+        )
+        drawLine(
+            color,
+            Offset(frame.left, frame.top),
+            Offset(frame.left, frame.bottom),
+            strokeWidth = stroke
+        )
+        drawLine(
+            color,
+            Offset(frame.right, frame.top),
+            Offset(frame.right, frame.bottom),
+            strokeWidth = stroke
+        )
         for (i in 1..2) {
-            val x = right * i / 3f
-            val y = frameTop + frameH * i / 3f
-            drawLine(color, Offset(x, frameTop), Offset(x, frameBottom), strokeWidth = stroke)
-            drawLine(color, Offset(0f, y), Offset(right, y), strokeWidth = stroke)
+            val x = frame.left + frame.width * i / 3f
+            val y = frame.top + frame.height * i / 3f
+            drawLine(color, Offset(x, frame.top), Offset(x, frame.bottom), strokeWidth = stroke)
+            drawLine(color, Offset(frame.left, y), Offset(frame.right, y), strokeWidth = stroke)
         }
     }
 }
 
-private fun DrawScope.drawCornerHandles(frameTop: Float, frameH: Float) {
+private fun DrawScope.drawCornerHandles(frame: Rect) {
     val color = Color.White
     val stroke = 3.dp.toPx()
     val len = 16.dp.toPx()
     val inset = 2.dp.toPx()
-    val frameBottom = frameTop + frameH
-    val right = size.width
-
-    val l = inset
-    val t = frameTop + inset
-    val b = frameBottom - inset
-    val r = right - inset
-
+    val l = frame.left + inset
+    val t = frame.top + inset
+    val r = frame.right - inset
+    val b = frame.bottom - inset
     drawLine(color, Offset(l, t), Offset(l + len, t), strokeWidth = stroke)
     drawLine(color, Offset(l, t), Offset(l, t + len), strokeWidth = stroke)
     drawLine(color, Offset(r, t), Offset(r - len, t), strokeWidth = stroke)

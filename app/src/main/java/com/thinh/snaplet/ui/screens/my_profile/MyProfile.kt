@@ -241,7 +241,7 @@ private fun MyProfileContent(
         }
 
         ProfileHeader(
-            avatarUrl = uiState.avatarUrl,
+            avatarUrl = uiState.avatarUrls.forHeader(),
             firstName = uiState.firstName,
             displayName = uiState.displayName,
             editPhotoLabel = editPhotoLabel,
@@ -252,7 +252,7 @@ private fun MyProfileContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         InviteCard(
-            avatarUrl = uiState.avatarUrl,
+            avatarUrl = uiState.avatarUrls.forThumbnail(),
             firstName = uiState.firstName,
             userName = uiState.userName,
             inviteTitle = inviteFriendsTitle,
@@ -273,7 +273,7 @@ private fun MyProfileContent(
 
 @Composable
 private fun ProfileHeader(
-    avatarUrl: String?,
+    avatarUrl: String,
     firstName: String,
     displayName: String,
     isAvatarUploading: Boolean,
@@ -285,7 +285,7 @@ private fun ProfileHeader(
         modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Avatar(
-            avatarUrl = avatarUrl,
+            avatarUrl = avatarUrl.ifBlank { null },
             firstName = firstName,
             isUploading = isAvatarUploading,
             isConnectedUser = true,
@@ -317,7 +317,7 @@ private fun ProfileHeader(
 
 @Composable
 private fun InviteCard(
-    avatarUrl: String?,
+    avatarUrl: String,
     firstName: String,
     userName: String,
     inviteTitle: String,
@@ -335,7 +335,7 @@ private fun InviteCard(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Avatar(
-            avatarUrl = avatarUrl,
+            avatarUrl = avatarUrl.ifBlank { null },
             firstName = firstName,
             isConnectedUser = true,
             size = 40.dp,

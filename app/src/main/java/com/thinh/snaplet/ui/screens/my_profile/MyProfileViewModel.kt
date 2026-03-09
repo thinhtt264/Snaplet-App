@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.R
+import com.thinh.snaplet.data.model.user.AvatarUrls
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.auth.AuthRepository
 import com.thinh.snaplet.domain.model.UploadAvatarResult
@@ -46,7 +47,7 @@ class MyProfileViewModel @Inject constructor(
         state.copy(
             displayName = profile?.displayName.orEmpty(),
             firstName = profile?.firstName.orEmpty(),
-            avatarUrl = profile?.avatarUrl,
+            avatarUrls = profile?.avatarUrls ?: AvatarUrls(),
             userName = profile?.userName.orEmpty(),
             email = profile?.email.orEmpty(),
         )
