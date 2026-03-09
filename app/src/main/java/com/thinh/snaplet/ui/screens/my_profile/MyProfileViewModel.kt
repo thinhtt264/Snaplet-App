@@ -118,8 +118,10 @@ class MyProfileViewModel @Inject constructor(
     }
 
     fun onEditNameClick() {
-        _uiState.update { state ->
-            state.copy(
+        val state = uiState.value
+
+        _uiState.update {
+            it.copy(
                 isEditNameSheetVisible = true,
                 editFirstName = state.firstName,
                 editLastName = state.lastName,
