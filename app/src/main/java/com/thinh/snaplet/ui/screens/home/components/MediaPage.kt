@@ -245,7 +245,8 @@ private fun PostMetadata(
                     BaseText(
                         text = stringResource(R.string.you),
                         typography = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.Bold
                     )
                 } else {
                     Avatar(
