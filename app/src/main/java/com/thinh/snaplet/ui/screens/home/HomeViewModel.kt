@@ -614,19 +614,50 @@ class HomeViewModel @Inject constructor(
     }
 
     fun downloadPostImage(post: Post) {
+        if (_uiState.value.isDownloading) return
         val media = post.media.firstOrNull() ?: run {
             _uiState.update { it.copy(snackbarMessage = UiText.StringResource(R.string.download_failed)) }
             return
         }
         val imageSource = media.images.original
-        downloadImage(imageSource)
-    }
 
-    fun downloadImage(imageSource: String?) {
-        if (_uiState.value.isDownloading || imageSource.isNullOrBlank()) return
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
             downloadPostImageUseCase(imageSource).onSuccess {
+                _uiState.update {
+                    it.copy(
+                        isDownloading = false
+                    )
+                }
+            }.onFailure { e ->
+                _uiState.update {
+                    it.copy(
+                        isDownloading = false,
+                        snackbarMessage = UiText.DynamicString(e.message ?: "Download failed")
+                    )
+                }
+            }
+        }
+    }
+
+    fun downloadCaptureImage() {
+        val state = _uiState.value
+        val imageSource = state.cameraState.capturedImagePath
+        if (state.isDownloading || imageSource == null) return
+
+        _uiState.update { it.copy(isDownloading = true) }
+
+        viewModelScope.launch {
+            val isFrontCamera =
+                state.cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
+
+            val processedPath = withContext(Dispatchers.IO) {
+                FileUtils.flipAndCompressImage(
+                    File(imageSource), flipHorizontal = isFrontCamera
+                ) ?: imageSource
+            }
+
+            downloadPostImageUseCase(processedPath).onSuccess {
                 _uiState.update {
                     it.copy(
                         isDownloading = false

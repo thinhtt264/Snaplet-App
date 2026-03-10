@@ -93,6 +93,7 @@ fun CameraPage(
     cameraState: CameraState,
     currentCaption: String?,
     isUploading: Boolean,
+    isDownloading: Boolean,
     cameraActions: CameraActions,
     onDownloadImage: () -> Unit,
     modifier: Modifier = Modifier
@@ -153,6 +154,7 @@ fun CameraPage(
             )
 
             AppIconButton(
+                loading = isDownloading,
                 containerColor = Color.Transparent,
                 onClick = onDownloadImage,
                 iconSize = 32.dp,
