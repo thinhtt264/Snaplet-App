@@ -57,6 +57,7 @@
     <string name="invalid_credentials">Email or password is incorrect</string>
     <string name="add_caption_placeholder">Add a message</string>
     <string name="friends">Friends</string>
+    <string name="send_to">Send to...</string>
     <string name="friend_sheet_title">My friends</string>
     <string name="friend_sheet_count">%1$d / %2$d friends added</string>
     <string name="friend_sheet_add_placeholder">Add a new friend</string>

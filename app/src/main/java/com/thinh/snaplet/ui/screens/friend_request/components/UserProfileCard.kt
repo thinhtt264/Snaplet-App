@@ -27,12 +27,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.R
 import com.thinh.snaplet.domain.model.RelationshipAction
+import com.thinh.snaplet.ui.components.AppIconButton
 import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText
+import com.thinh.snaplet.ui.components.IconSpec
 import com.thinh.snaplet.ui.components.PrimaryButton
 import com.thinh.snaplet.ui.screens.friend_request.FriendRequestUiState
-import com.thinh.snaplet.ui.screens.home.components.AppIconButton
-import com.thinh.snaplet.ui.screens.home.components.IconSpec
 
 private val ICON_SIZE = 56.dp
 

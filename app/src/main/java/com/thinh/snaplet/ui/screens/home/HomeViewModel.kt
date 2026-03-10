@@ -639,4 +639,38 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
+    fun downloadCaptureImage() {
+        val state = _uiState.value
+        val imageSource = state.cameraState.capturedImagePath
+        if (state.isDownloading || imageSource == null) return
+
+        _uiState.update { it.copy(isDownloading = true) }
+
+        viewModelScope.launch {
+            val isFrontCamera =
+                state.cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
+
+            val processedPath = withContext(Dispatchers.IO) {
+                FileUtils.flipAndCompressImage(
+                    File(imageSource), flipHorizontal = isFrontCamera
+                ) ?: imageSource
+            }
+
+            downloadPostImageUseCase(processedPath).onSuccess {
+                _uiState.update {
+                    it.copy(
+                        isDownloading = false
+                    )
+                }
+            }.onFailure { e ->
+                _uiState.update {
+                    it.copy(
+                        isDownloading = false,
+                        snackbarMessage = UiText.DynamicString(e.message ?: "Download failed")
+                    )
+                }
+            }
+        }
+    }
 }

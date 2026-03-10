@@ -47,9 +47,11 @@ import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.domain.model.RelationshipAction
 import com.thinh.snaplet.platform.share.ShareApp
+import com.thinh.snaplet.ui.components.AppIconButton
 import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.components.BaseTextField
+import com.thinh.snaplet.ui.components.IconSpec
 import com.thinh.snaplet.ui.components.PrimaryButton
 import com.thinh.snaplet.ui.screens.home.FriendBottomSheetState
 import kotlinx.coroutines.delay

@@ -13,8 +13,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,14 +25,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,13 +62,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import com.thinh.snaplet.R
+import com.thinh.snaplet.ui.components.AppIconButton
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.components.CameraPreview
+import com.thinh.snaplet.ui.components.IconSpec
 import com.thinh.snaplet.ui.components.image.AsyncImage
 import com.thinh.snaplet.ui.components.image.ImageSize
 import com.thinh.snaplet.ui.components.image.LoadingStateConfig
 import com.thinh.snaplet.ui.screens.home.CameraActions
 import com.thinh.snaplet.ui.screens.home.CameraState
+import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.ValidationConstants
 
 private const val TOP_SPACE_RATIO = 0.12f
@@ -83,17 +93,15 @@ fun CameraPage(
     cameraState: CameraState,
     currentCaption: String?,
     isUploading: Boolean,
+    isDownloading: Boolean,
     cameraActions: CameraActions,
+    onDownloadImage: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val focusManager = LocalFocusManager.current
-
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { focusManager.clearFocus() })
-            }) {
+    ) {
         val screenHeight = maxHeight
         val density = LocalDensity.current
         val topPadding = screenHeight * TOP_SPACE_RATIO
@@ -115,6 +123,43 @@ fun CameraPage(
 
         val actionOffsetPx = remember {
             with(density) { (screenHeight * (2.2f / 3f)).toPx() }
+        }
+
+        var imeFullHeightPx by remember { mutableFloatStateOf(imeHeightPx) }
+        if (imeHeightPx > imeFullHeightPx) {
+            imeFullHeightPx = imeHeightPx
+        }
+
+        val topActionsAlpha = when {
+            cameraState.capturedImagePath == null -> 0f
+            imeFullHeightPx == 0f -> 1f
+            else -> 1f - (imeHeightPx / imeFullHeightPx).coerceIn(0f, 1f)
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(all = 16.dp)
+                .graphicsLayer { alpha = topActionsAlpha },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Spacer(modifier = Modifier.width(32.dp))
+
+            BaseText(
+                text = stringResource(id = R.string.send_to),
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                typography = Typography.headlineSmall
+            )
+
+            AppIconButton(
+                loading = isDownloading,
+                containerColor = Color.Transparent,
+                onClick = onDownloadImage,
+                iconSize = 32.dp,
+                icon = IconSpec.Vector(Icons.Outlined.FileDownload, tint = Color.White)
+            )
         }
 
         Box(
@@ -200,8 +245,14 @@ private fun CapturedImageOverlay(
     isFrontCamera: Boolean = false
 ) {
     val imageUri = "file://$imagePath".toUri()
+    val focusManager = LocalFocusManager.current
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { focusManager.clearFocus() })
+            }) {
         AsyncImage(
             modifier = Modifier
                 .fillMaxSize()
@@ -284,7 +335,9 @@ private fun CaptionInput(
                 .widthIn(min = placeholderWidth, max = 300.dp)
                 .wrapContentWidth(),
             textStyle = MaterialTheme.typography.titleSmall.copy(
-                fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                textAlign = TextAlign.Center,
                 lineHeight = MaterialTheme.typography.titleSmall.fontSize,
                 platformStyle = PlatformTextStyle(includeFontPadding = false)
             ),

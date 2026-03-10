@@ -1,4 +1,4 @@
-package com.thinh.snaplet.ui.screens.home.components
+package com.thinh.snaplet.ui.components
 
 import android.widget.ImageView
 import androidx.annotation.DrawableRes

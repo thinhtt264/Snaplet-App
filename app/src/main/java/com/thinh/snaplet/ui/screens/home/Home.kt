@@ -276,10 +276,12 @@ private fun HomeScreen(
             onMoreClick = onMoreClick,
             onShowFriendSheet = { showFriendSheet = true },
             onRetryUpload = viewModel::retryUpload,
-            onDeleteFailedPost = viewModel::deleteFailedPost
+            onDeleteFailedPost = viewModel::deleteFailedPost,
+            onDownloadImage = viewModel::downloadCaptureImage
         )
 
         TopAction(
+            hasCaptureImage = uiState.cameraState.capturedImagePath != null,
             onProfileClick = onProfileClick,
             onFriendsClick = { showFriendSheet = true },
             onChatClick = { /* TODO */ },
@@ -287,8 +289,8 @@ private fun HomeScreen(
             avatarUrl = uiState.profileAvatarUrl.orEmpty(),
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(16.dp)
                 .align(Alignment.TopCenter)
-                .padding(all = 16.dp)
         )
 
         if (showFriendSheet) {
@@ -338,9 +340,10 @@ private fun HomePager(
     cameraActions: CameraActions,
     onNavigateToCameraPage: () -> Unit,
     onMoreClick: () -> Unit,
-    onShowFriendSheet: () -> Unit = {},
-    onRetryUpload: (String) -> Unit = {},
-    onDeleteFailedPost: (String) -> Unit = {}
+    onShowFriendSheet: () -> Unit,
+    onRetryUpload: (String) -> Unit,
+    onDeleteFailedPost: (String) -> Unit,
+    onDownloadImage: () -> Unit,
 ) {
     VerticalPager(
         state = pagerState,
@@ -357,10 +360,12 @@ private fun HomePager(
         }) { page ->
         when (page) {
             CAMERA_PAGE_INDEX -> CameraPage(
+                onDownloadImage = onDownloadImage,
                 cameraState = cameraState,
                 currentCaption = currentCaption,
                 isUploading = isUploading,
-                cameraActions = cameraActions
+                cameraActions = cameraActions,
+                isDownloading = showMoreButtonLoading
             )
 
             else -> {
