@@ -29,7 +29,7 @@ fun BaseTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     trailingIcon: @Composable (() -> Unit)? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
-    singleLine: Boolean = true,
+    singleLine: Boolean = false,
     maxLines: Int = 1,
     minLines: Int = 1,
     colors: TextFieldColors? = null

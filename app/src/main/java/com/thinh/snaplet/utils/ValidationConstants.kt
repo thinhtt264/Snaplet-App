@@ -13,4 +13,6 @@ object ValidationConstants {
     const val USERNAME_MAX_LENGTH = 20
 
     const val PASSWORD_MIN_LENGTH = 8
+
+    const val CAPTION_MAX_LENGTH = 36
 }
