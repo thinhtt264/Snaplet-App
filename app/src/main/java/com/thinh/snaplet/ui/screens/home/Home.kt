@@ -280,9 +280,13 @@ private fun HomeScreen(
         )
 
         TopAction(
+            hasCaptureImage = uiState.cameraState.capturedImagePath != null,
             onProfileClick = onProfileClick,
             onFriendsClick = { showFriendSheet = true },
             onChatClick = { /* TODO */ },
+            onSendClick = {
+                viewModel.downloadImage(uiState.cameraState.capturedImagePath)
+            },
             friendsCount = uiState.friendSheetState.friendsCount,
             avatarUrl = uiState.profileAvatarUrl.orEmpty(),
             modifier = Modifier

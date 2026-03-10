@@ -614,13 +614,16 @@ class HomeViewModel @Inject constructor(
     }
 
     fun downloadPostImage(post: Post) {
-        if (_uiState.value.isDownloading) return
         val media = post.media.firstOrNull() ?: run {
             _uiState.update { it.copy(snackbarMessage = UiText.StringResource(R.string.download_failed)) }
             return
         }
         val imageSource = media.images.original
+        downloadImage(imageSource)
+    }
 
+    fun downloadImage(imageSource: String?) {
+        if (_uiState.value.isDownloading || imageSource.isNullOrBlank()) return
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
             downloadPostImageUseCase(imageSource).onSuccess {
