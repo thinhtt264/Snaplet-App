@@ -6,7 +6,9 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Build
+import com.thinh.snaplet.utils.InviteConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -25,6 +27,7 @@ interface ShareManager {
     fun getTopShareApps(): List<ShareApp>
     fun shareToApp(packageName: String, content: ShareContent)
     fun openSystemChooser(content: ShareContent)
+    fun buildInviteShareContent(userName: String?): ShareContent
 }
 
 class ShareManagerImpl @Inject constructor(
@@ -45,8 +48,6 @@ class ShareManagerImpl @Inject constructor(
             "signal",
             "discord",
             "slack",
-            "kakao",
-            "wechat",
             "facebook.lite",
             // Social
             "facebook.katana",
@@ -121,5 +122,14 @@ class ShareManagerImpl @Inject constructor(
         context.startActivity(
             Intent.createChooser(intent, "Share via").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
+    }
+
+    override fun buildInviteShareContent(userName: String?): ShareContent {
+        val inviteUrl = if (!userName.isNullOrBlank()) {
+            "${InviteConstants.BASE_URL}?userName=${Uri.encode(userName)}"
+        } else {
+            InviteConstants.BASE_URL
+        }
+        return ShareContent(str = inviteUrl)
     }
 }

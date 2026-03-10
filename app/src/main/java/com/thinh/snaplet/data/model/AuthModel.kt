@@ -1,6 +1,7 @@
 package com.thinh.snaplet.data.model
 
 import com.google.gson.annotations.SerializedName
+import com.thinh.snaplet.data.model.user.UserProfile
 
 data class LoginRequest(
     @SerializedName("email")

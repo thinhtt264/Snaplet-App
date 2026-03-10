@@ -6,7 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.auth.AuthRepository
 import com.thinh.snaplet.data.repository.device.DeviceRepository
-import com.thinh.snaplet.navigation.NavScreen
+import com.thinh.snaplet.navigation.AuthGraph
+import com.thinh.snaplet.navigation.HomeGraph
 import com.thinh.snaplet.platform.deeplink.DeepLinkEvent
 import com.thinh.snaplet.platform.deeplink.DeepLinkManager
 import com.thinh.snaplet.ui.overlay.ModalContent
@@ -63,15 +64,11 @@ class AppViewModel @Inject constructor(
 
                 _uiState.update {
                     it.copy(
-                        startDestination = if (isAuthenticated) {
-                            NavScreen.HomeGraph.route
-                        } else {
-                            NavScreen.AuthGraph.route
-                        }
+                        startDestination = if (isAuthenticated) HomeGraph else AuthGraph
                     )
                 }
             } catch (_: Exception) {
-                _uiState.update { it.copy(startDestination = NavScreen.AuthGraph.route) }
+                _uiState.update { it.copy(startDestination = AuthGraph) }
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
                 isInitialized = true

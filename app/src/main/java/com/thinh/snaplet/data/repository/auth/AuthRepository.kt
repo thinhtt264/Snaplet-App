@@ -2,7 +2,7 @@ package com.thinh.snaplet.data.repository.auth
 
 import AuthState
 import com.thinh.snaplet.data.model.TokenResponse
-import com.thinh.snaplet.data.model.UserProfile
+import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.utils.network.ApiResult
 import kotlinx.coroutines.flow.StateFlow
 

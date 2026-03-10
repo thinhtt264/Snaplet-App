@@ -26,7 +26,7 @@ class ValidateRetryUploadUseCase @Inject constructor() {
         val media = post.media.firstOrNull()
             ?: return ValidateRetryResult.MediaNotFound
 
-        val imagePath = media.originalUrl?.removePrefix("file://")?.takeIf { it.isNotBlank() }
+        val imagePath = media.images.original.removePrefix("file://").takeIf { it.isNotBlank() }
             ?: return ValidateRetryResult.ImagePathNotFound
 
         val transform = media.transform ?: ImageTransform(rotation = 0, scaleX = 1f, scaleY = 1f)

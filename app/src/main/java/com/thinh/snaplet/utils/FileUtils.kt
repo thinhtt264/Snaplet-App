@@ -1,16 +1,23 @@
 package com.thinh.snaplet.utils
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapRegionDecoder
 import android.graphics.Matrix
+import android.graphics.Rect
 import android.graphics.RectF
+import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
+import com.thinh.snaplet.utils.FileUtils.MAX_DIMENSION
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.roundToInt
 
 object FileUtils {
 
-    private const val JPEG_QUALITY = 90
+    private const val JPEG_QUALITY = 95
+
     /**
      * Max dimension (long edge) before downscaling. Chosen to match feed display:
      * MediaPage shows post image in 400.dp height × full width (~1000–1200px × 1080–1440px).
@@ -20,7 +27,6 @@ object FileUtils {
 
     /**
      * Applies orientation (EXIF + optional horizontal flip), downscales if over [MAX_DIMENSION], keeps JPEG.
-     * Decodes at reduced size via [inSampleSize] first to save memory and time (no full-size decode).
      *
      * @param file Source image (e.g. JPEG from camera)
      * @param flipHorizontal true = mirror (front camera), false = EXIF normalization only
@@ -35,8 +41,7 @@ object FileUtils {
             val (boundsW, boundsH) = decodeBounds(path) ?: return null
             val exif = ExifInterface(path)
             val orientation = exif.getAttributeInt(
-                ExifInterface.TAG_ORIENTATION,
-                ExifInterface.ORIENTATION_NORMAL
+                ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL
             )
             val matrix = matrixForExifOrientation(orientation)
             if (flipHorizontal) matrix.postScale(-1f, 1f)
@@ -48,7 +53,8 @@ object FileUtils {
             val inSampleSize = computeInSampleSize(maxOf(outWidth, outHeight), MAX_DIMENSION)
 
             val bitmap = decodeWithSampleSize(path, inSampleSize) ?: return null
-            val result = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+            val result =
+                Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
             bitmap.recycle()
 
             FileOutputStream(outputFile).use { out ->
@@ -59,8 +65,7 @@ object FileUtils {
 
             ExifInterface(outputFile.absolutePath).apply {
                 setAttribute(
-                    ExifInterface.TAG_ORIENTATION,
-                    ExifInterface.ORIENTATION_NORMAL.toString()
+                    ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString()
                 )
                 saveAttributes()
             }
@@ -99,18 +104,102 @@ object FileUtils {
         return sampleSize
     }
 
-    private fun matrixForExifOrientation(orientation: Int): Matrix {
-        val matrix = Matrix()
-        when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.setRotate(90f)
-            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.setRotate(180f)
-            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(270f)
-            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.setScale(-1f, 1f)
-            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.setScale(1f, -1f)
-            else -> { /* ORIENTATION_NORMAL or unknown: identity */
+    private fun buildTransformMatrix(
+        rotationDeg: Float = 0f,
+        flipH: Boolean = false,
+        flipV: Boolean = false,
+    ): Matrix = Matrix().apply {
+        if (rotationDeg != 0f) setRotate(rotationDeg)
+        if (flipH) postScale(-1f, 1f)
+        if (flipV) postScale(1f, -1f)
+    }
+
+    private fun matrixForExifOrientation(orientation: Int): Matrix = when (orientation) {
+        ExifInterface.ORIENTATION_ROTATE_90 -> buildTransformMatrix(rotationDeg = 90f)
+        ExifInterface.ORIENTATION_ROTATE_180 -> buildTransformMatrix(rotationDeg = 180f)
+        ExifInterface.ORIENTATION_ROTATE_270 -> buildTransformMatrix(rotationDeg = 270f)
+        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> buildTransformMatrix(flipH = true)
+        ExifInterface.ORIENTATION_FLIP_VERTICAL -> buildTransformMatrix(flipV = true)
+        else -> Matrix()
+    }
+
+    /**
+     * Maps the frame rect (position + size in display coords) back to original
+     * image pixels, then applies rotation + flip via Matrix.
+     *
+     * Image is displayed at 1:1 (no scale), so:
+     *   ratioX = origW / displayW
+     *   ratioY = origH / displayH
+     *   srcRect = frameRect * ratio
+     */
+    fun cropImageRegion(
+        context: Context,
+        uri: Uri,
+        displayImageW: Int,
+        displayImageH: Int,
+        frameLeft: Float,
+        frameTop: Float,
+        frameW: Float,
+        frameH: Float,
+        rotationDeg: Int = 0,
+        isFlippedH: Boolean = false,
+        isFlippedV: Boolean = false,
+    ): Bitmap? {
+        return try {
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, opts)
             }
+            val origW = opts.outWidth
+            val origH = opts.outHeight
+            if (origW <= 0 || origH <= 0) return null
+
+            val ratioX = origW.toFloat() / displayImageW
+            val ratioY = origH.toFloat() / displayImageH
+
+            val srcLeft: Int = (frameLeft * ratioX).roundToInt().coerceIn(0, origW)
+            val srcTop: Int = (frameTop * ratioY).roundToInt().coerceIn(0, origH)
+            val srcRight: Int = ((frameLeft + frameW) * ratioX).roundToInt().coerceIn(0, origW)
+            val srcBottom: Int = ((frameTop + frameH) * ratioY).roundToInt().coerceIn(0, origH)
+
+            if (srcRight <= srcLeft || srcBottom <= srcTop) return null
+
+            val region = context.contentResolver.openInputStream(uri)?.use { stream ->
+                val decoder = BitmapRegionDecoder.newInstance(stream, false)
+                decoder?.decodeRegion(
+                    Rect(srcLeft, srcTop, srcRight, srcBottom),
+                    BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.ARGB_8888 })
+                    .also { decoder?.recycle() }
+            } ?: return null
+
+            val needTransform = rotationDeg != 0 || isFlippedH || isFlippedV
+            if (!needTransform) return region
+
+            val matrix = buildTransformMatrix(
+                rotationDeg = rotationDeg.toFloat(),
+                flipH = isFlippedH,
+                flipV = isFlippedV,
+            )
+
+            Bitmap.createBitmap(region, 0, 0, region.width, region.height, matrix, true)
+                .also { region.recycle() }
+        } catch (e: Exception) {
+            Logger.d("Crop region failed: ${e.message}")
+            null
         }
-        return matrix
+    }
+
+    fun saveBitmapToCache(context: Context, bitmap: Bitmap): Uri? {
+        return try {
+            val file = File(context.cacheDir, "${System.currentTimeMillis()}.jpg")
+            file.outputStream().use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+            }
+            Uri.fromFile(file)
+        } catch (e: Exception) {
+            Logger.d("Save bitmap to cache failed: ${e.message}")
+            null
+        }
     }
 
     /** Deletes the file at [filePath]. Returns true if deleted. */

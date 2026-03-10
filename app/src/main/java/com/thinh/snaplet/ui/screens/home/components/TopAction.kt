@@ -26,12 +26,15 @@ import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.theme.Typography
 import pressScaleClickable
 
+private val ICON_SIZE = 28.dp
+
 @Composable
 fun TopAction(
     modifier: Modifier = Modifier,
     onProfileClick: () -> Unit,
     onFriendsClick: () -> Unit,
     onChatClick: () -> Unit,
+    avatarUrl: String,
     friendsCount: Int? = null
 ) {
     Row(
@@ -40,11 +43,15 @@ fun TopAction(
         verticalAlignment = Alignment.CenterVertically
     ) {
         AppIconButton(
-            modifier = Modifier.padding(10.dp),
+            modifier = Modifier.padding(16.dp),
             containerColor = MaterialTheme.colorScheme.secondary,
             onClick = onProfileClick,
-            iconSize = 28.dp,
-            icon = IconSpec.Vector(Icons.Outlined.AccountCircle, tint = Color.White)
+            iconSize = ICON_SIZE,
+            icon = if (avatarUrl.isBlank()) {
+                IconSpec.Vector(Icons.Outlined.AccountCircle, tint = Color.White)
+            } else IconSpec.Url(
+                avatarUrl, fallbackIcon = Icons.Outlined.AccountCircle, tint = Color.White
+            )
         )
 
         Spacer(modifier = Modifier.width(12.dp))
@@ -52,8 +59,7 @@ fun TopAction(
         Box(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.secondary, shape = CircleShape)
-                .pressScaleClickable(onClick = onFriendsClick),
-            contentAlignment = Alignment.Center
+                .pressScaleClickable(onClick = onFriendsClick), contentAlignment = Alignment.Center
         ) {
             Row(
                 modifier = Modifier.padding(all = 12.dp),
@@ -63,7 +69,7 @@ fun TopAction(
                     imageVector = Icons.Outlined.Group,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(ICON_SIZE)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 if (friendsCount != null) {
@@ -85,10 +91,10 @@ fun TopAction(
         Spacer(modifier = Modifier.width(12.dp))
 
         AppIconButton(
-            modifier = Modifier.padding(10.dp),
+            modifier = Modifier.padding(16.dp),
             containerColor = MaterialTheme.colorScheme.secondary,
             onClick = onChatClick,
-            iconSize = 28.dp,
+            iconSize = ICON_SIZE,
             icon = IconSpec.Vector(Icons.Outlined.ChatBubbleOutline, tint = Color.White)
         )
     }

@@ -34,7 +34,7 @@ data class UploadRequestData(
     val data: List<UploadRequestResponse>
 )
 
-data class ConfirmUploadRequest(
+data class MediaConfirmUploadRequest(
     @SerializedName("mediaIds")
     val mediaIds: List<String>
 )

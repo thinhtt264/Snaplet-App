@@ -39,10 +39,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import com.thinh.snaplet.R
-import com.thinh.snaplet.ui.components.AsyncImage
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.components.CameraPreview
-import com.thinh.snaplet.ui.components.ImageSize
+import com.thinh.snaplet.ui.components.image.AsyncImage
+import com.thinh.snaplet.ui.components.image.ImageSize
+import com.thinh.snaplet.ui.components.image.LoadingStateConfig
 import com.thinh.snaplet.ui.screens.home.CameraActions
 import com.thinh.snaplet.ui.screens.home.CameraState
 
@@ -180,7 +181,7 @@ private fun CapturedImageOverlay(
             contentDescription = "Captured image",
             contentScale = ContentScale.Crop,
             resizeSize = ImageSize.Original,
-            showLoadingIndicator = false,
+            loadingConfig = LoadingStateConfig.None,
             crossfadeDuration = 0
         )
 

@@ -40,7 +40,8 @@ sealed interface ModalContent {
 sealed interface BottomSheetContent {
 
     data class Options(
-        val options: List<SheetOption>
+        val title: UiText? = null,
+        val options: List<SheetOption>,
     ) : BottomSheetContent
 
     data class Confirm(

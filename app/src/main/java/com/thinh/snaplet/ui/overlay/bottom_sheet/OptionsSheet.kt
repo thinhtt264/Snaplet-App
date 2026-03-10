@@ -3,6 +3,7 @@ package com.thinh.snaplet.ui.overlay.bottom_sheet
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,6 +27,18 @@ internal fun OptionsSheet(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterVertically),
     ) {
+        if (content.title != null) {
+            BaseText(
+                text = content.title.asString(context),
+                textAlign = TextAlign.Center,
+                typography = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 4.dp),
+            )
+        }
+
         content.options.forEach { option ->
             BaseText(
                 text = option.label.asString(context),

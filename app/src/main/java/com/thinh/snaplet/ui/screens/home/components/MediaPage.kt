@@ -39,9 +39,12 @@ import androidx.compose.ui.zIndex
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.ui.common.CommonImages
-import com.thinh.snaplet.ui.components.AsyncImage
+import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText
-import com.thinh.snaplet.ui.components.ImageSize
+import com.thinh.snaplet.ui.components.image.AsyncImage
+import com.thinh.snaplet.ui.components.image.ErrorPlaceholderConfig
+import com.thinh.snaplet.ui.components.image.ErrorStateConfig
+import com.thinh.snaplet.ui.components.image.ImageSize
 import com.thinh.snaplet.ui.screens.home.UploadStatus
 import com.thinh.snaplet.ui.theme.Red
 import com.thinh.snaplet.utils.formatTimeAgo
@@ -86,9 +89,7 @@ fun MediaPage(
             Spacer(Modifier.height(12.dp))
 
             PostMetadata(
-                post = post,
-                uploadStatus = uploadStatus,
-                onDeleteClick = onDeleteClick
+                post = post, uploadStatus = uploadStatus, onDeleteClick = onDeleteClick
             )
         }
 
@@ -115,7 +116,7 @@ private fun PostMediaContent(post: Post) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         AsyncImage(
-            imageUrl = media.images.md.ifEmpty { media.originalUrl },
+            imageUrl = media.images.md,
             contentDescription = "Post ${post.id}",
             modifier = Modifier
                 .fillMaxSize()
@@ -128,9 +129,12 @@ private fun PostMediaContent(post: Post) {
                 },
             resizeSize = ImageSize.Small,
             contentScale = ContentScale.Crop,
-            showLoadingIndicator = true,
-            errorBackgroundColor = MaterialTheme.colorScheme.surface,
-            errorPlaceholder = painterResource(CommonImages.PhotoPlaceholder)
+            errorConfig = ErrorStateConfig(
+                backgroundColor = MaterialTheme.colorScheme.surface,
+                placeholder = ErrorPlaceholderConfig.WithPainter(
+                    painter = painterResource(CommonImages.PhotoPlaceholder), size = 84.dp
+                )
+            )
         )
 
         if (!post.caption.isNullOrBlank()) {
@@ -162,8 +166,7 @@ private fun UploadFailedOverlay(onRetryClick: () -> Unit) {
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.5f))
             .clickable(onClick = onRetryClick)
-            .zIndex(100f),
-        contentAlignment = Alignment.Center
+            .zIndex(100f), contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -188,8 +191,7 @@ private fun UploadFailedOverlay(onRetryClick: () -> Unit) {
                 .align(Alignment.TopEnd)
                 .padding(12.dp)
                 .size(28.dp)
-                .background(color = Red, shape = CircleShape),
-            contentAlignment = Alignment.Center
+                .background(color = Red, shape = CircleShape), contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Filled.Warning,
@@ -239,25 +241,26 @@ private fun PostMetadata(
             }
 
             else -> {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                ) {
-                    AsyncImage(
-                        imageUrl = post.avatarUrl ?: "",
-                        contentDescription = "Avatar of ${post.displayName}",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        resizeSize = ImageSize.Thumbnail,
-                        showLoadingIndicator = true
+                if (post.isOwnPost) {
+                    BaseText(
+                        text = stringResource(R.string.you),
+                        typography = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                } else {
+                    Avatar(
+                        avatarUrl = post.avatarUrls.forThumbnail(),
+                        firstName = post.firstName,
+                        size = 32.dp,
+                    )
+
+                    BaseText(
+                        text = post.firstName,
+                        typography = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                BaseText(
-                    text = post.firstName,
-                    typography = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
 
                 BaseText(
                     text = " ${formatTimeAgo(post.createdAt)}",

@@ -1,0 +1,78 @@
+---
+description: Conventions for integrating remote APIs into repositories using safeApiCall and ApiResult
+globs: **/*Repository*.kt
+alwaysApply: false
+---
+
+# Repository + Remote API Integration (Remote Only)
+
+- **Scope**: Applies to repositories that call remote APIs (Retrofit / HTTP). Do not use for pure Room/DAO repositories (use the `repository-room` skill instead).
+
+## Structure
+
+- **Split interface + implementation**:
+  - Interface named `XxxRepository`
+  - Implementation named `XxxRepositoryImpl`
+- **Interface functions**:
+  - All functions performing API calls are `suspend` and return `ApiResult<T>` (or `ApiResult<Unit>` when there is no payload).
+- **Implementation class**:
+  - Annotated with `@Singleton`
+  - Injects the Retrofit API service (and any required dependencies) via constructor
+
+```kotlin
+interface UserRepository {
+    suspend fun getUserProfile(userName: String): ApiResult<UserProfile>
+}
+```
+
+```kotlin
+@Singleton
+class UserRepositoryImpl @Inject constructor(
+    private val apiService: UserApiService
+) : UserRepository {
+
+    override suspend fun getUserProfile(userName: String): ApiResult<UserProfile> {
+        return safeApiCall(
+            apiCall = { apiService.getUserProfile(userName) }
+        )
+    }
+}
+```
+
+## safeApiCall Rules
+
+- **Always** wrap remote API calls in `safeApiCall` from `com.thinh.snaplet.utils.network.safeApiCall`.
+- **Never** call Retrofit APIs directly with manual `try/catch` in repositories.
+- Use the **no-transform overload** when the repository should expose the API type as-is.
+- Use the **transform overload** when mapping DTOs to domain models or exposing only part of the response.
+- Use **onSuccess** only for side effects (e.g. save tokens, cache data), not for changing the returned type.
+
+```kotlin
+override suspend fun login(email: String, password: String): ApiResult<UserProfile> {
+    return safeApiCall(
+        apiCall = { apiService.login(LoginRequest(email, password)) },
+        onSuccess = { result ->
+            dataStoreManager.saveTokens(result.token.accessToken, result.token.refreshToken)
+            dataStoreManager.saveUserProfile(result.user)
+        },
+        transform = { response -> response.user }
+    )
+}
+```
+
+## Hilt Binding
+
+- Every `XxxRepositoryImpl` must be bound to its interface in `RepositoryModule` using `@Binds`.
+- `RepositoryModule` must be installed in `SingletonComponent`.
+
+```kotlin
+@Binds
+@Singleton
+abstract fun bindUserRepository(impl: UserRepositoryImpl): UserRepository
+```
+
+## Consuming ApiResult
+
+- When you need a **single value** from success/failure branches, use `fold`.
+- When you only need **side effects** (update UI state, logging, etc.), use `onSuccess` / `onFailure`.
+

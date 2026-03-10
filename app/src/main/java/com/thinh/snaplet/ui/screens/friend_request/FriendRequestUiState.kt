@@ -1,6 +1,6 @@
 package com.thinh.snaplet.ui.screens.friend_request
 
-import com.thinh.snaplet.data.model.UserProfile
+import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.domain.model.RelationshipAction
 
 data class FriendRequestUiState(

@@ -17,11 +17,12 @@ object OverlayEventBus {
 
     fun showOptionsSheet(
         options: List<SheetOption>,
+        title: UiText? = null,
         onDismiss: (() -> Unit)? = null,
     ) {
         _events.tryEmit(
             OverlayEvent.ShowBottomSheet(
-                content = BottomSheetContent.Options(options),
+                content = BottomSheetContent.Options(title = title, options = options),
                 onDismiss = onDismiss,
             )
         )

@@ -15,20 +15,25 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.ui.components.PermissionHandler
@@ -55,7 +60,10 @@ data class CameraActions(
 )
 
 @Composable
-fun Home(viewModel: HomeViewModel = hiltViewModel()) {
+fun Home(
+    onProfileClick: () -> Unit = {},
+    viewModel: HomeViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -116,7 +124,8 @@ fun Home(viewModel: HomeViewModel = hiltViewModel()) {
                 scope.launch { pagerState.animateScrollToPage(CAMERA_PAGE_INDEX) }
             },
             onItemVisible = viewModel::onItemVisible,
-            onMoreClick = viewModel::onShowMoreOptions
+            onMoreClick = viewModel::onShowMoreOptions,
+            onProfileClick = onProfileClick
         )
 
         SnackbarHost(hostState = snackBarHostState)
@@ -144,6 +153,43 @@ private fun CameraBindingEffect(
                 snapshotHandler?.invoke()?.let(onSnapshotCaptured)
                 onCameraPageHidden()
             }
+        }
+    }
+
+    val currentShouldBindCamera by rememberUpdatedState(shouldBindCamera)
+    val currentSnapshotHandler by rememberUpdatedState(snapshotHandler)
+    val currentOnSnapshotCaptured by rememberUpdatedState(onSnapshotCaptured)
+    val currentOnCameraPageHidden by rememberUpdatedState(onCameraPageHidden)
+    val currentOnCameraPageVisible by rememberUpdatedState(onCameraPageVisible)
+    val currentIsOnCameraPage by rememberUpdatedState(isOnCameraPage)
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE -> {
+                    if (currentShouldBindCamera) {
+                        currentSnapshotHandler?.invoke()?.let(currentOnSnapshotCaptured)
+                        currentOnCameraPageHidden()
+                    }
+                }
+
+                Lifecycle.Event.ON_RESUME -> {
+                    if (currentIsOnCameraPage) {
+                        if (currentShouldBindCamera) {
+                            // Force a rebind by toggling the camera binding state
+                            currentOnCameraPageHidden()
+                        }
+                        currentOnCameraPageVisible()
+                    }
+                }
+
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 }
@@ -191,6 +237,7 @@ private fun HomeScreen(
     onNavigateToCameraPage: () -> Unit,
     onItemVisible: (currentIndex: Int) -> Unit,
     onMoreClick: () -> Unit,
+    onProfileClick: () -> Unit = {},
 ) {
     var showFriendSheet by remember { mutableStateOf(false) }
     var friendSearchQuery by remember { mutableStateOf("") }
@@ -233,10 +280,11 @@ private fun HomeScreen(
         )
 
         TopAction(
-            onProfileClick = { /* TODO */ },
+            onProfileClick = onProfileClick,
             onFriendsClick = { showFriendSheet = true },
             onChatClick = { /* TODO */ },
             friendsCount = uiState.friendSheetState.friendsCount,
+            avatarUrl = uiState.profileAvatarUrl.orEmpty(),
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)

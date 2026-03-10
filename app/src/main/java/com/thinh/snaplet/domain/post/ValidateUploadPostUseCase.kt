@@ -1,6 +1,6 @@
 package com.thinh.snaplet.domain.post
 
-import com.thinh.snaplet.data.model.UserProfile
+import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.data.repository.UserRepository
 import javax.inject.Inject
 

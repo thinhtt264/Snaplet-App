@@ -20,12 +20,14 @@ internal fun GlobalBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss, sheetState = sheetState, dragHandle = null,
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = null,
         sheetGesturesEnabled = false
     ) {
         Box(
             modifier = Modifier
-                .padding(vertical = 20.dp)
+                .padding(vertical = 20.dp, horizontal = 12.dp)
                 .navigationBarsPadding()
         ) {
             when (content) {

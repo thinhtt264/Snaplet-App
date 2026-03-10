@@ -240,14 +240,16 @@ private fun FriendListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Avatar(
-            avatarUrl = friend.avatarUrl,
+            avatarUrl = friend.avatarUrls.forThumbnail().ifBlank { null },
             firstName = friend.firstName,
             isConnectedUser = friend.status == RelationshipStatus.ACCEPTED,
+            borderWidth = 2.dp,
+            size = 40.dp
         )
         BaseText(
             text = friend.displayName,
             color = MaterialTheme.colorScheme.onBackground,
-            typography = MaterialTheme.typography.headlineSmall,
+            typography = MaterialTheme.typography.titleMedium,
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 12.dp),
@@ -308,7 +310,7 @@ private fun FriendListItemActionSlot(
 
         is RelationshipAction.PendingByMe -> {
             AppIconButton(
-                modifier = Modifier.size(ICON_BUTTON_SIZE / 1.5f),
+                modifier = Modifier.size(ICON_BUTTON_SIZE / 1.3f),
                 icon = IconSpec.Vector(
                     Icons.Outlined.Refresh, tint = MaterialTheme.colorScheme.onBackground
                 ),

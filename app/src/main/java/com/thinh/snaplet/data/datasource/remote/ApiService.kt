@@ -14,10 +14,14 @@ import com.thinh.snaplet.data.model.Relationship
 import com.thinh.snaplet.data.model.RelationshipWithUserDto
 import com.thinh.snaplet.data.model.UpdateRelationshipRequest
 import com.thinh.snaplet.data.model.TokenResponse
-import com.thinh.snaplet.data.model.UserProfile
 import com.thinh.snaplet.data.model.UsernameAvailabilityData
+import com.thinh.snaplet.data.model.user.AvatarUploadRequest
+import com.thinh.snaplet.data.model.user.AvatarUploadRequestResponse
+import com.thinh.snaplet.data.model.user.ConfirmAvatarUploadRequest
+import com.thinh.snaplet.data.model.user.UpdateDisplayNameRequest
+import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.data.model.media.ConfirmUploadData
-import com.thinh.snaplet.data.model.media.ConfirmUploadRequest
+import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
 import com.thinh.snaplet.data.model.media.RequestUploadRequest
 import com.thinh.snaplet.data.model.media.UploadRequestData
 import retrofit2.Response
@@ -103,8 +107,27 @@ interface ApiService {
 
     @POST("media/upload/confirm")
     suspend fun confirmUpload(
-        @Body body: ConfirmUploadRequest
+        @Body body: MediaConfirmUploadRequest
     ): Response<BaseResponse<ConfirmUploadData>>
+
+    @POST("users/avatar/upload/request")
+    suspend fun requestAvatarUpload(
+        @Body body: AvatarUploadRequest
+    ): Response<BaseResponse<AvatarUploadRequestResponse>>
+
+    @POST("users/avatar/upload/confirm")
+    suspend fun confirmAvatarUpload(
+        @Body body: ConfirmAvatarUploadRequest
+    ): Response<BaseResponse<UserProfile>>
+
+    @DELETE("users/avatar")
+    suspend fun deleteAvatar(
+    ): Response<BaseResponse<UserProfile>>
+
+    @PATCH("users/display-name")
+    suspend fun updateDisplayName(
+        @Body body: UpdateDisplayNameRequest
+    ): Response<BaseResponse<UserProfile>>
 
     @POST("posts")
     suspend fun createPost(

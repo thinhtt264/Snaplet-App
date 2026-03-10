@@ -7,7 +7,7 @@ import com.thinh.snaplet.data.model.LoginRequest
 import com.thinh.snaplet.data.model.RefreshTokenRequest
 import com.thinh.snaplet.data.model.RegisterRequest
 import com.thinh.snaplet.data.model.TokenResponse
-import com.thinh.snaplet.data.model.UserProfile
+import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.ApiResult
 import com.thinh.snaplet.utils.network.safeApiCall
@@ -24,19 +24,15 @@ class AuthRepositoryImpl @Inject constructor(
     override val authState: StateFlow<AuthState> = _authState
 
     override suspend fun login(email: String, password: String): ApiResult<UserProfile> {
-        return safeApiCall(
-            apiCall = {
-                apiService.login(body = LoginRequest(email, password))
-            },
-            onSuccess = { result ->
-                dataStoreManager.saveTokens(
-                    result.token.accessToken, result.token.refreshToken
-                )
-                dataStoreManager.saveUserProfile(result.user)
-                _authState.value = AuthState.Authenticated
-            },
-            transform = { response -> response.user }
-        )
+        return safeApiCall(apiCall = {
+            apiService.login(body = LoginRequest(email, password))
+        }, onSuccess = { result ->
+            dataStoreManager.saveTokens(
+                result.token.accessToken, result.token.refreshToken
+            )
+            dataStoreManager.saveUserProfile(result.user)
+            _authState.value = AuthState.Authenticated
+        }, transform = { response -> response.user })
     }
 
     override suspend fun register(
@@ -50,27 +46,22 @@ class AuthRepositoryImpl @Inject constructor(
             password = password
         )
 
-        return safeApiCall(
-            apiCall = {
-                apiService.register(body = request)
-            },
-            onSuccess = { result ->
-                dataStoreManager.saveTokens(
-                    accessToken = result.token.accessToken,
-                    refreshToken = result.token.refreshToken
-                )
-                dataStoreManager.saveUserProfile(result.user)
-                _authState.value = AuthState.Authenticated
-            },
-            transform = { response -> response.user }
-        )
+        return safeApiCall(apiCall = {
+            apiService.register(body = request)
+        }, onSuccess = { result ->
+            dataStoreManager.saveTokens(
+                accessToken = result.token.accessToken, refreshToken = result.token.refreshToken
+            )
+            dataStoreManager.saveUserProfile(result.user)
+            _authState.value = AuthState.Authenticated
+        }, transform = { response -> response.user })
     }
 
     override suspend fun logout() {
-        dataStoreManager.clearSession()
         _authState.value = AuthState.Unauthenticated
+        dataStoreManager.clearSession()
     }
-    
+
     override suspend fun forceLogout() {
         dataStoreManager.clearSession()
         _authState.value = AuthState.Unauthenticated
@@ -87,21 +78,15 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun checkEmailAvailability(email: String): ApiResult<Boolean> {
-        return safeApiCall(
-            apiCall = {
-                apiService.checkEmailAvailability(email)
-            },
-            transform = { response -> response.available }
-        )
+        return safeApiCall(apiCall = {
+            apiService.checkEmailAvailability(email)
+        }, transform = { response -> response.available })
     }
 
     override suspend fun checkUsernameAvailability(username: String): ApiResult<Boolean> {
-        return safeApiCall(
-            apiCall = {
-                apiService.checkUsernameAvailability(username)
-            },
-            transform = { response -> response.available }
-        )
+        return safeApiCall(apiCall = {
+            apiService.checkUsernameAvailability(username)
+        }, transform = { response -> response.available })
     }
 
     override suspend fun refreshToken(): ApiResult<TokenResponse> {
@@ -111,27 +96,21 @@ class AuthRepositoryImpl @Inject constructor(
         if (accessToken.isNullOrBlank() || refreshToken.isNullOrBlank()) {
             return ApiResult.Failure(
                 ApiError(
-                    httpCode = 401,
-                    message = "Access token or refresh token not found"
+                    httpCode = 401, message = "Access token or refresh token not found"
                 )
             )
         }
 
-        return safeApiCall(
-            apiCall = {
-                apiService.refreshToken(
-                    RefreshTokenRequest(
-                        refreshToken = refreshToken,
-                        accessToken = accessToken
-                    )
+        return safeApiCall(apiCall = {
+            apiService.refreshToken(
+                RefreshTokenRequest(
+                    refreshToken = refreshToken, accessToken = accessToken
                 )
-            },
-            onSuccess = { result ->
-                dataStoreManager.saveTokens(
-                    accessToken = result.accessToken,
-                    refreshToken = result.refreshToken
-                )
-            }
-        )
+            )
+        }, onSuccess = { result ->
+            dataStoreManager.saveTokens(
+                accessToken = result.accessToken, refreshToken = result.refreshToken
+            )
+        })
     }
 }

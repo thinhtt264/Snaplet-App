@@ -1,9 +1,10 @@
 package com.thinh.snaplet.domain.post
 
 import com.thinh.snaplet.data.model.Post
-import com.thinh.snaplet.data.model.UserProfile
+import com.thinh.snaplet.data.model.media.ImageSizes
 import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.model.media.Media
+import com.thinh.snaplet.data.model.user.UserProfile
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -30,7 +31,7 @@ class CreateTempPostUseCase @Inject constructor() {
         val tempMedia = Media(
             id = "temp_media_$id",
             type = "image",
-            originalUrl = fileUri,
+            images = ImageSizes(original = fileUri),
             transform = transform,
             ownerId = userProfile.id
         )
@@ -41,7 +42,7 @@ class CreateTempPostUseCase @Inject constructor() {
             username = userProfile.userName,
             firstName = userProfile.firstName,
             lastName = userProfile.lastName,
-            avatarUrl = userProfile.avatarUrl,
+            avatarUrls = userProfile.avatarUrls,
             media = listOf(tempMedia),
             caption = caption,
             visibility = "friend-only",

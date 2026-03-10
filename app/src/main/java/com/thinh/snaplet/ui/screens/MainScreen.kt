@@ -22,8 +22,9 @@ import androidx.compose.ui.zIndex
 import androidx.navigation.compose.rememberNavController
 import com.chuckerteam.chucker.api.Chucker
 import com.thinh.snaplet.BuildConfig
+import com.thinh.snaplet.navigation.AuthGraph
+import com.thinh.snaplet.navigation.HomeGraph
 import com.thinh.snaplet.navigation.NavGraph
-import com.thinh.snaplet.navigation.NavScreen
 import com.thinh.snaplet.ui.app.AppUiEvent
 import com.thinh.snaplet.ui.app.AppViewModel
 import com.thinh.snaplet.ui.overlay.OverlayHost
@@ -43,7 +44,7 @@ fun MainScreen(
             appViewModel.uiEvent.collect { event ->
                 when (event) {
                     is AppUiEvent.NavigateToAuthGraph -> {
-                        navController.navigate(NavScreen.AuthGraph.route) {
+                        navController.navigate(AuthGraph) {
                             popUpTo(navController.graph.startDestinationId) { inclusive = true }
                             launchSingleTop = true
                             restoreState = true
@@ -51,8 +52,8 @@ fun MainScreen(
                     }
 
                     is AppUiEvent.NavigateToHomeGraph -> {
-                        navController.navigate(NavScreen.HomeGraph.route) {
-                            popUpTo(NavScreen.AuthGraph.route) { inclusive = true }
+                        navController.navigate(HomeGraph) {
+                            popUpTo<AuthGraph> { inclusive = true }
                             launchSingleTop = true
                             restoreState = true
                         }

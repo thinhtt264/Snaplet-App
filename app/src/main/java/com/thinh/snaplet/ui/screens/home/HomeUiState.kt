@@ -39,7 +39,10 @@ data class HomeUiState(
     val pendingPermission: Permission? = null,
 
     /** When true, UI scrolls to first post then calls onScrollToFirstPostHandled(). */
-    val shouldScrollToFirstPost: Boolean = false
+    val shouldScrollToFirstPost: Boolean = false,
+
+    /** Current user avatar URL for TopAction profile button. */
+    val profileAvatarUrl: String? = null
 ) {
     /** Returns true if more data can be loaded (nextCursor is not null and not currently loading) */
     val canLoadMore: Boolean get() = nextCursor != null && !isLoadingMore && !isLoadingPosts

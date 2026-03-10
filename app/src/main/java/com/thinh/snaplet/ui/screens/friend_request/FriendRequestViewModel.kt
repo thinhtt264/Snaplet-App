@@ -2,7 +2,7 @@ package com.thinh.snaplet.ui.screens.friend_request
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.thinh.snaplet.data.model.UserProfile
+import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.domain.model.RelationshipAction
 import com.thinh.snaplet.domain.user.GetRelationshipActionUseCase

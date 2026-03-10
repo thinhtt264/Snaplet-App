@@ -9,7 +9,7 @@ import com.thinh.snaplet.data.model.CreatePostRequest
 import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.data.model.PostsFeedData
 import com.thinh.snaplet.data.model.media.ConfirmUploadData
-import com.thinh.snaplet.data.model.media.ConfirmUploadRequest
+import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
 import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.model.media.RequestUploadRequest
 import com.thinh.snaplet.data.model.media.UploadRequestData
@@ -254,7 +254,7 @@ class MediaRepositoryImpl @Inject constructor(
 
         return safeApiCall(
             apiCall = {
-                apiService.confirmUpload(ConfirmUploadRequest(mediaIds = mediaIds))
+                apiService.confirmUpload(MediaConfirmUploadRequest(mediaIds = mediaIds))
             }
         )
     }

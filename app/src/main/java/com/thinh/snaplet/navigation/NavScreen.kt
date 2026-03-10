@@ -1,11 +1,27 @@
 package com.thinh.snaplet.navigation
 
-sealed class NavScreen(val route: String) {
-    data object AuthGraph : NavScreen("auth_graph")
-    data object HomeGraph : NavScreen("home_graph")
+import kotlinx.serialization.Serializable
 
-    data object Onboarding : NavScreen("onboarding")
-    data object Home : NavScreen("home")
-    data object Login : NavScreen("login")
-    data object Register : NavScreen("register")
-}
+@Serializable
+object AuthGraph
+
+@Serializable
+object HomeGraph
+
+@Serializable
+object Onboarding
+
+@Serializable
+object Home
+
+@Serializable
+object MyProfile
+
+@Serializable
+data class ImageCrop(val sourceUri: String)
+
+@Serializable
+object Login
+
+@Serializable
+object Register

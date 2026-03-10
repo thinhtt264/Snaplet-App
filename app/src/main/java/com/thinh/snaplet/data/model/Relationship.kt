@@ -1,6 +1,7 @@
 package com.thinh.snaplet.data.model
 
 import com.google.gson.annotations.SerializedName
+import com.thinh.snaplet.data.model.user.AvatarUrls
 
 /**
  * Relationship status: pending | accepted | blocked
@@ -73,8 +74,8 @@ data class RelationshipWithUserDto(
     @SerializedName("lastName")
     val lastName: String,
 
-    @SerializedName("avatarUrl")
-    val avatarUrl: String? = null,
+    @SerializedName("avatarUrls")
+    val avatarUrls: AvatarUrls = AvatarUrls(),
 
     @SerializedName("status")
     val status: String,
@@ -91,7 +92,7 @@ data class RelationshipWithUserDto(
             username = username,
             firstName = firstName,
             lastName = lastName,
-            avatarUrl = avatarUrl,
+            avatarUrls = avatarUrls,
             status = statusEnum,
             createdAt = createdAt
         )
@@ -104,7 +105,7 @@ data class RelationshipWithUser(
     val username: String,
     val firstName: String,
     val lastName: String,
-    val avatarUrl: String? = null,
+    val avatarUrls: AvatarUrls,
     val status: RelationshipStatus,
     val createdAt: String
 ) {

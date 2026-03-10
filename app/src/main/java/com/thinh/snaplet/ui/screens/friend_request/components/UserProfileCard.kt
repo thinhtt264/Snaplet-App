@@ -48,7 +48,7 @@ internal fun UserProfileCard(
         modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Avatar(
-            avatarUrl = state.userProfile?.avatarUrl.orEmpty(),
+            avatarUrl = state.userProfile?.avatarUrls?.forMedium().orEmpty(),
             firstName = state.userProfile?.firstName.orEmpty(),
             size = 120.dp,
             isConnectedUser = false

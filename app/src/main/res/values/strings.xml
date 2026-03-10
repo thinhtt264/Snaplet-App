@@ -11,6 +11,8 @@
     <string name="report">Báo cáo</string>
     <string name="delete_photo_title">Xóa ảnh?</string>
     <string name="delete_photo_message">Việc này sẽ xóa vĩnh viễn ảnh khỏi lịch sử của bạn và bạn bè sẽ không còn có thể thấy ảnh này nữa.</string>
+    <string name="logout">Đăng xuất</string>
+    <string name="pick_photo_from_gallery">Chọn từ thư viện</string>
 
     <string name="onboarding_subtitle">Ảnh trực tiếp từ bạn bè,\nngay trên màn hình chính</string>
     <string name="create_account">Tạo một tài khoản</string>
@@ -79,4 +81,35 @@
     <string name="post_deleted">Đã xóa bài viết</string>
     <string name="upload_failed_tap_to_retry">Tải lên thất bại. Chạm để thử lại</string>
     <string name="uploading">Đang tải lên…</string>
+
+    <!-- My Profile -->
+    <string name="profile_back">Quay lại</string>
+    <string name="profile_edit_photo">Chỉnh ảnh</string>
+    <string name="profile_invite_friends_title">Mời bạn bè tham gia Snaplet!</string>
+    <string name="profile_share_invite">Chia sẻ lời mời</string>
+    <string name="profile_section_widget_settings">Thiết lập Tiện ích</string>
+    <string name="profile_add_widget">Thêm Tiện ích</string>
+    <string name="profile_how_to_add_widget">Cách thêm tiện ích</string>
+    <string name="profile_widget_chain">Chuỗi trên tiện ích</string>
+    <string name="profile_section_general">Tổng quát</string>
+    <string name="profile_notifications">Thông báo</string>
+    <string name="profile_edit_name">Sửa tên</string>
+    <string name="profile_your_email">Địa chỉ email của bạn</string>
+    <string name="profile_section_privacy_security">Riêng tư &amp; bảo mật</string>
+    <string name="profile_blocked_accounts">Tài khoản bị chặn</string>
+    <string name="profile_privacy_and_data">Quyền riêng tư và Dữ liệu</string>
+    <string name="profile_section_about">Giới thiệu</string>
+    <string name="profile_tiktok">TikTok</string>
+    <string name="profile_instagram">Instagram</string>
+    <string name="profile_x_twitter">X (Twitter)</string>
+    <string name="profile_share_snaplet">Chia sẻ Snaplet</string>
+    <string name="profile_terms_of_service">Điều khoản dịch vụ</string>
+    <string name="profile_privacy_policy">Chính sách quyền riêng tư</string>
+    <string name="profile_section_danger_zone">Vùng nguy hiểm</string>
+    <string name="profile_delete_account">Xóa tài khoản</string>
+    <string name="profile_logout_confirm_title">Bạn có chắc bạn muốn đăng xuất?</string>
+    <string name="profile_change_avatar_title">Ảnh hồ sơ của bạn sẽ được hiển thị cho tất cả mọi người</string>
+    <string name="delete_avatar">Xóa ảnh hồ sơ</string>
+    <string name="profile_edit_name_title">Sửa tên của bạn</string>
+    <string name="profile_edit_name_save">Lưu</string>
 </resources>

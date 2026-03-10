@@ -2,6 +2,7 @@ package com.thinh.snaplet.data.model
 
 import com.google.gson.annotations.SerializedName
 import com.thinh.snaplet.data.model.media.Media
+import com.thinh.snaplet.data.model.user.AvatarUrls
 
 data class Post(
     @SerializedName("id")
@@ -19,8 +20,8 @@ data class Post(
     @SerializedName("lastName")
     val lastName: String,
 
-    @SerializedName("avatarUrl")
-    val avatarUrl: String? = null,
+    @SerializedName("avatarUrls")
+    val avatarUrls: AvatarUrls = AvatarUrls(),
 
     @SerializedName("media")
     val media: List<Media> = emptyList(),
