@@ -46,15 +46,13 @@ import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.ui.components.AppIconButton
 import com.thinh.snaplet.ui.components.IconSpec
 import com.thinh.snaplet.ui.theme.GoldenPollen
+import com.thinh.snaplet.ui.theme.MotionTokens
 import pressScaleClickable
 import thenIf
 
 private val CAPTURE_BUTTON_SIZE = 96.dp
 private val ICON_SIZE = 46.dp
 private val CAPTURE_BUTTON_BORDER_WIDTH = 4.dp
-private const val CAPTURE_ANIMATION_DURATION = 250
-private const val CAMERA_ACTION_FADE_IN_DURATION = 250
-private const val CAMERA_ACTION_FADE_OUT_DURATION = 250
 private const val CAPTURE_BUTTON_MIN_SCALE = 0.85f
 private const val CAPTURE_BUTTON_MAX_SCALE = 1f
 
@@ -82,8 +80,8 @@ fun CameraAction(
         AnimatedContent(
             targetState = hasCaptureImage,
             transitionSpec = {
-                fadeIn(animationSpec = tween(CAMERA_ACTION_FADE_IN_DURATION)) togetherWith fadeOut(
-                    animationSpec = tween(CAMERA_ACTION_FADE_OUT_DURATION)
+                fadeIn(animationSpec = tween(MotionTokens.Emphasized)) togetherWith fadeOut(
+                    animationSpec = tween(MotionTokens.Emphasized)
                 )
             },
             label = "camera_action_left_icon"
@@ -101,8 +99,8 @@ fun CameraAction(
         AnimatedContent(
             targetState = hasCaptureImage,
             transitionSpec = {
-                fadeIn(animationSpec = tween(CAMERA_ACTION_FADE_IN_DURATION)) togetherWith fadeOut(
-                    animationSpec = tween(CAMERA_ACTION_FADE_OUT_DURATION)
+                fadeIn(animationSpec = tween(MotionTokens.Emphasized)) togetherWith fadeOut(
+                    animationSpec = tween(MotionTokens.Emphasized)
                 )
             },
             label = "camera_action_center",
@@ -154,7 +152,7 @@ fun CaptureButton(
         } else {
             Color.White
         },
-        animationSpec = tween(durationMillis = CAPTURE_ANIMATION_DURATION),
+        animationSpec = tween(durationMillis = MotionTokens.Emphasized),
         label = "capture_button_color"
     )
 
@@ -169,7 +167,7 @@ fun CaptureButton(
     val infiniteTransition = rememberInfiniteTransition(label = "infinite transition")
     val borderPulseWidth by infiniteTransition.animateFloat(
         initialValue = 1f, targetValue = 1.8f, animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = CAPTURE_ANIMATION_DURATION, easing = LinearEasing),
+            animation = tween(durationMillis = MotionTokens.Emphasized, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ), label = "border pulse width animation"
     )

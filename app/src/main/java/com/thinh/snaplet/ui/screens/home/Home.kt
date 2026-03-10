@@ -4,8 +4,10 @@ import android.content.Context
 import android.graphics.Bitmap
 import androidx.camera.core.ImageCapture
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.PagerState
@@ -28,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -252,6 +255,10 @@ private fun HomeScreen(
     val userScrollEnabled = !uiState.cameraState.isEditMode
     val isDownloading = uiState.isDownloading
 
+    val density = LocalDensity.current
+    val imeHeight = WindowInsets.ime.getBottom(density)
+    val isKeyboardVisible = imeHeight > 0
+
     LaunchedEffect(pagerState.currentPage) {
         val currentPage = pagerState.currentPage
         if (currentPage > CAMERA_PAGE_INDEX) {
@@ -276,7 +283,8 @@ private fun HomeScreen(
             onMoreClick = onMoreClick,
             onShowFriendSheet = { showFriendSheet = true },
             onRetryUpload = viewModel::retryUpload,
-            onDeleteFailedPost = viewModel::deleteFailedPost
+            onDeleteFailedPost = viewModel::deleteFailedPost,
+            onDownloadImage = { viewModel.downloadImage(uiState.cameraState.capturedImagePath) }
         )
 
         TopAction(
@@ -284,15 +292,12 @@ private fun HomeScreen(
             onProfileClick = onProfileClick,
             onFriendsClick = { showFriendSheet = true },
             onChatClick = { /* TODO */ },
-            onSendClick = {
-                viewModel.downloadImage(uiState.cameraState.capturedImagePath)
-            },
             friendsCount = uiState.friendSheetState.friendsCount,
             avatarUrl = uiState.profileAvatarUrl.orEmpty(),
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(16.dp)
                 .align(Alignment.TopCenter)
-                .padding(all = 16.dp)
         )
 
         if (showFriendSheet) {
@@ -342,9 +347,10 @@ private fun HomePager(
     cameraActions: CameraActions,
     onNavigateToCameraPage: () -> Unit,
     onMoreClick: () -> Unit,
-    onShowFriendSheet: () -> Unit = {},
-    onRetryUpload: (String) -> Unit = {},
-    onDeleteFailedPost: (String) -> Unit = {}
+    onShowFriendSheet: () -> Unit,
+    onRetryUpload: (String) -> Unit,
+    onDeleteFailedPost: (String) -> Unit,
+    onDownloadImage: () -> Unit,
 ) {
     VerticalPager(
         state = pagerState,
@@ -361,6 +367,7 @@ private fun HomePager(
         }) { page ->
         when (page) {
             CAMERA_PAGE_INDEX -> CameraPage(
+                onDownloadImage = onDownloadImage,
                 cameraState = cameraState,
                 currentCaption = currentCaption,
                 isUploading = isUploading,

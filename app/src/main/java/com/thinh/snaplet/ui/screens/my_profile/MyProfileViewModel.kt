@@ -122,7 +122,8 @@ class MyProfileViewModel @Inject constructor(
 
     fun onInviteShareClick() {
         viewModelScope.launch {
-            val userName = userRepository.getCurrentUserProfile()?.userName?.takeIf { it.isNotBlank() }
+            val userName =
+                userRepository.getCurrentUserProfile()?.userName?.takeIf { it.isNotBlank() }
             val content = shareManager.buildInviteShareContent(userName)
             shareManager.openSystemChooser(content)
         }
@@ -130,7 +131,6 @@ class MyProfileViewModel @Inject constructor(
 
     fun onEditNameClick() {
         val state = uiState.value
-
         _uiState.update {
             it.copy(
                 isEditNameSheetVisible = true,
