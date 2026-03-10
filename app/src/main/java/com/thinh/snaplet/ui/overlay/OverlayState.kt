@@ -29,6 +29,7 @@ sealed interface ModalContent {
         val message: UiText,
         val confirmText: UiText,
         val cancelText: UiText?,
+        val confirmDestructive: Boolean = false,
         val onConfirm: () -> Unit
     ) : ModalContent
 

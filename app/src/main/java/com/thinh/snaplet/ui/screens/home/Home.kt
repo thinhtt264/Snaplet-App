@@ -303,7 +303,7 @@ private fun HomeScreen(
                 },
                 searchQuery = friendSearchQuery,
                 onSearchQueryChange = { friendSearchQuery = it },
-                onFriendRemove = viewModel::removeFriend,
+                onFriendRemove = viewModel::requestRemoveFriend,
                 onPendingAccept = viewModel::acceptFriendRequest
             )
         }

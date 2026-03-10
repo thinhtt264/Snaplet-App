@@ -2,7 +2,6 @@ package com.thinh.snaplet.ui.screens.home
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.net.Uri
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -200,7 +199,21 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun removeFriend(friend: RelationshipWithUser) {
+    fun requestRemoveFriend(friend: RelationshipWithUser) {
+        OverlayEventBus.showConfirmDialog(
+            title = UiText.StringResource(
+                R.string.remove_friend_confirm_title,
+                listOf(friend.displayName)
+            ),
+            message = UiText.StringResource(R.string.remove_friend_confirm_message),
+            confirmText = UiText.StringResource(R.string.delete),
+            cancelText = UiText.StringResource(R.string.cancel),
+            confirmDestructive = true,
+            onConfirm = { removeFriend(friend) },
+        )
+    }
+
+    private fun removeFriend(friend: RelationshipWithUser) {
         viewModelScope.launch {
             val state = _uiState.value.friendSheetState
             if (friend.status == RelationshipStatus.PENDING) {
@@ -227,7 +240,8 @@ class HomeViewModel @Inject constructor(
 
     fun shareToApp(app: ShareApp) {
         viewModelScope.launch {
-            val userName = userRepository.getCurrentUserProfile()?.userName?.takeIf { it.isNotBlank() }
+            val userName =
+                userRepository.getCurrentUserProfile()?.userName?.takeIf { it.isNotBlank() }
             val content = shareManager.buildInviteShareContent(userName)
             shareManager.shareToApp(app.packageName, content)
         }
@@ -235,7 +249,8 @@ class HomeViewModel @Inject constructor(
 
     fun shareOther() {
         viewModelScope.launch {
-            val userName = userRepository.getCurrentUserProfile()?.userName?.takeIf { it.isNotBlank() }
+            val userName =
+                userRepository.getCurrentUserProfile()?.userName?.takeIf { it.isNotBlank() }
             val content = shareManager.buildInviteShareContent(userName)
             shareManager.openSystemChooser(content)
         }

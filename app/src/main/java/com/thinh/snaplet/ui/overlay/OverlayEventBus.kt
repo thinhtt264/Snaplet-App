@@ -45,6 +45,7 @@ object OverlayEventBus {
         message: UiText,
         confirmText: UiText,
         cancelText: UiText? = null,
+        confirmDestructive: Boolean = false,
         onConfirm: () -> Unit,
         onDismiss: (() -> Unit)? = null,
     ) {
@@ -54,6 +55,7 @@ object OverlayEventBus {
                 message = message,
                 confirmText = confirmText,
                 cancelText = cancelText,
+                confirmDestructive = confirmDestructive,
                 onConfirm = onConfirm
             ),
             onDismiss = onDismiss,

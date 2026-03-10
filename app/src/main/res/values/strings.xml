@@ -71,6 +71,8 @@
     <string name="friend_sheet_other">Khác</string>
     <string name="friend_request_section_title">Yêu cầu kết bạn</string>
     <string name="accept">Chấp nhận</string>
+    <string name="remove_friend_confirm_title">Xóa %1$s khỏi Snaplet của bạn?</string>
+    <string name="remove_friend_confirm_message">Các bạn sẽ không còn có thể gửi ảnh cho nhau trên Snaplet. Lịch sử của bạn sẽ có thể được phục hồi nếu các bạn thêm lại nhau.</string>
     <string name="blocked">Bị chặn</string>
 
     <!-- Empty media (Locket) screen -->
