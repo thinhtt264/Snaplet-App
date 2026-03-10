@@ -48,8 +48,6 @@ class ShareManagerImpl @Inject constructor(
             "signal",
             "discord",
             "slack",
-            "kakao",
-            "wechat",
             "facebook.lite",
             // Social
             "facebook.katana",
