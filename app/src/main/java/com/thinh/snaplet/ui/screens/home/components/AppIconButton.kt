@@ -74,7 +74,11 @@ fun AppIconButton(
         ) {
             if (loading) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(iconSize), strokeWidth = 2.dp, color = contentColor
+                    modifier = Modifier
+                        .size(iconSize)
+                        .padding(2.dp),
+                    strokeWidth = 2.dp,
+                    color = contentColor
                 )
             } else {
                 when (icon) {

@@ -28,7 +28,6 @@ import com.thinh.snaplet.ui.components.image.ImageSize
 import com.thinh.snaplet.ui.components.image.LoadingStateConfig
 
 private val DEFAULT_AVATAR_BORDER_WIDTH = 2.dp
-private val AVATAR_BORDER_GAP = 4.dp
 
 // ─── LEVEL 1 ──────────────────────────────────────────────────
 @Composable
@@ -74,7 +73,7 @@ fun Avatar(
         firstName = firstName,
         modifier = modifier
             .border(width = borderWidth, color = borderColor, shape = CircleShape)
-            .padding(borderWidth + AVATAR_BORDER_GAP),
+            .padding(borderWidth * 2),
         size = size,
     )
 }
@@ -100,7 +99,7 @@ fun Avatar(
         )
 
         if (isUploading) {
-            val innerSize = size - (borderWidth + AVATAR_BORDER_GAP) * 2
+            val innerSize = size - (borderWidth * 2) * 2
             AvatarUploadingOverlay(size = innerSize)
         }
     }

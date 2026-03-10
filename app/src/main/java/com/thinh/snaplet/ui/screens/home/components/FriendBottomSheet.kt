@@ -243,11 +243,13 @@ private fun FriendListItem(
             avatarUrl = friend.avatarUrls.forThumbnail().ifBlank { null },
             firstName = friend.firstName,
             isConnectedUser = friend.status == RelationshipStatus.ACCEPTED,
+            borderWidth = 2.dp,
+            size = 40.dp
         )
         BaseText(
             text = friend.displayName,
             color = MaterialTheme.colorScheme.onBackground,
-            typography = MaterialTheme.typography.headlineSmall,
+            typography = MaterialTheme.typography.titleMedium,
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 12.dp),

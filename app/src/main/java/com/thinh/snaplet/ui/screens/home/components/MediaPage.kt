@@ -89,9 +89,7 @@ fun MediaPage(
             Spacer(Modifier.height(12.dp))
 
             PostMetadata(
-                post = post,
-                uploadStatus = uploadStatus,
-                onDeleteClick = onDeleteClick
+                post = post, uploadStatus = uploadStatus, onDeleteClick = onDeleteClick
             )
         }
 
@@ -134,8 +132,7 @@ private fun PostMediaContent(post: Post) {
             errorConfig = ErrorStateConfig(
                 backgroundColor = MaterialTheme.colorScheme.surface,
                 placeholder = ErrorPlaceholderConfig.WithPainter(
-                    painter = painterResource(CommonImages.PhotoPlaceholder),
-                    size = 84.dp
+                    painter = painterResource(CommonImages.PhotoPlaceholder), size = 84.dp
                 )
             )
         )
@@ -169,8 +166,7 @@ private fun UploadFailedOverlay(onRetryClick: () -> Unit) {
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.5f))
             .clickable(onClick = onRetryClick)
-            .zIndex(100f),
-        contentAlignment = Alignment.Center
+            .zIndex(100f), contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -195,8 +191,7 @@ private fun UploadFailedOverlay(onRetryClick: () -> Unit) {
                 .align(Alignment.TopEnd)
                 .padding(12.dp)
                 .size(28.dp)
-                .background(color = Red, shape = CircleShape),
-            contentAlignment = Alignment.Center
+                .background(color = Red, shape = CircleShape), contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Filled.Warning,
@@ -246,17 +241,26 @@ private fun PostMetadata(
             }
 
             else -> {
-                Avatar(
-                    avatarUrl = post.avatarUrls.forThumbnail(),
-                    firstName = post.firstName,
-                    size = 28.dp,
-                )
+                if (post.isOwnPost) {
+                    BaseText(
+                        text = stringResource(R.string.you),
+                        typography = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                } else {
+                    Avatar(
+                        avatarUrl = post.avatarUrls.forThumbnail(),
+                        firstName = post.firstName,
+                        size = 32.dp,
+                    )
 
-                BaseText(
-                    text = post.firstName,
-                    typography = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                    BaseText(
+                        text = post.firstName,
+                        typography = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
 
                 BaseText(
                     text = " ${formatTimeAgo(post.createdAt)}",
