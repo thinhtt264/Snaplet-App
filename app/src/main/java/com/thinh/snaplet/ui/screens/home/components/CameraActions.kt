@@ -45,7 +45,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.ui.components.AppIconButton
 import com.thinh.snaplet.ui.components.IconSpec
-import com.thinh.snaplet.ui.theme.GoldenPollen
 import com.thinh.snaplet.ui.theme.MotionTokens
 import pressScaleClickable
 import thenIf
@@ -183,7 +182,7 @@ fun CaptureButton(
     } else {
         1f
     }
-    val borderColor = GoldenPollen.copy(alpha = borderOpacity)
+    val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = borderOpacity)
 
     Box(
         modifier = modifier

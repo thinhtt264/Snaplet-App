@@ -82,7 +82,7 @@ fun FriendBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.statusBarsPadding(),
     ) {
         val focusManager = LocalFocusManager.current

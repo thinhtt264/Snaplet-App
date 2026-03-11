@@ -47,7 +47,7 @@ import com.thinh.snaplet.ui.components.image.ErrorPlaceholderConfig
 import com.thinh.snaplet.ui.components.image.ErrorStateConfig
 import com.thinh.snaplet.ui.components.image.ImageSize
 import com.thinh.snaplet.ui.screens.home.UploadStatus
-import com.thinh.snaplet.ui.theme.Red
+import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.formatTimeAgo
 
 private const val TOP_SPACE_RATIO = 0.15f
@@ -148,7 +148,7 @@ private fun PostMediaContent(post: Post) {
                     .background(
                         color = Color.Black.copy(alpha = 0.4f), shape = RoundedCornerShape(16.dp)
                     )
-                    .padding(vertical = 8.dp, horizontal = 12.dp)
+                    .padding(vertical = 6.dp, horizontal = 12.dp)
                     .widthIn(max = MediaItemDimensions.CAPTION_CONTAINER_MAX_WIDTH)
             ) {
                 BaseText(
@@ -193,7 +193,8 @@ private fun UploadFailedOverlay(onRetryClick: () -> Unit) {
                 .align(Alignment.TopEnd)
                 .padding(12.dp)
                 .size(28.dp)
-                .background(color = Red, shape = CircleShape), contentAlignment = Alignment.Center
+                .background(color = Error50, shape = CircleShape),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Filled.Warning,
@@ -237,7 +238,7 @@ private fun PostMetadata(
                         imageVector = Icons.Outlined.Delete,
                         contentDescription = "delete",
                         modifier = Modifier.size(36.dp),
-                        tint = Red
+                        tint = Error50
                     )
                 }
             }

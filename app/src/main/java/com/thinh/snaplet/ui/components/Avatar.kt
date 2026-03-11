@@ -111,7 +111,7 @@ private fun AvatarInitial(firstName: String) {
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.secondary),
+            .background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.Center
     ) {
         val fontSize = (minOf(maxWidth, maxHeight).value * 0.4f).sp

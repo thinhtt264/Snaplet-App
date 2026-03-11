@@ -61,7 +61,7 @@ fun TopAction(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 AppIconButton(
-                    containerColor = MaterialTheme.colorScheme.secondary,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     onClick = onProfileClick,
                     iconSize = ICON_SIZE,
                     iconDecoration = IconDecoration(padding = 6.dp),
@@ -81,7 +81,7 @@ fun TopAction(
                 Box(
                     modifier = Modifier
                         .background(
-                            MaterialTheme.colorScheme.secondary, shape = CircleShape
+                            MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape
                         )
                         .pressScaleClickable(onClick = onFriendsClick),
                     contentAlignment = Alignment.Center
@@ -118,7 +118,7 @@ fun TopAction(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 AppIconButton(
-                    containerColor = MaterialTheme.colorScheme.secondary,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     onClick = onChatClick,
                     iconSize = ICON_SIZE,
                     iconDecoration = IconDecoration(padding = 6.dp),
