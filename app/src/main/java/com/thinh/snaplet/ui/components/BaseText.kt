@@ -21,7 +21,7 @@ fun BaseText(
     typography: TextStyle = MaterialTheme.typography.bodyLarge,
     color: Color = Color.Unspecified,
     fontSize: TextUnit = TextUnit.Unspecified,
-    fontWeight: FontWeight? = FontWeight.Normal,
+    fontWeight: FontWeight? = null,
     fontStyle: FontStyle? = null,
     textAlign: TextAlign? = null,
     textDecoration: TextDecoration? = null,
@@ -32,8 +32,8 @@ fun BaseText(
 ) {
     val finalStyle = typography.copy(
         fontFamily = AppFontFamily,
-        fontWeight = fontWeight ?: typography.fontWeight ?: FontWeight.Normal,
-        fontStyle = fontStyle ?: typography.fontStyle ?: FontStyle.Normal,
+        fontWeight = fontWeight ?: typography.fontWeight,
+        fontStyle = fontStyle ?: typography.fontStyle,
         fontSize = if (fontSize != TextUnit.Unspecified) fontSize else typography.fontSize,
         lineHeight = if (lineHeight != TextUnit.Unspecified) lineHeight else typography.lineHeight,
         letterSpacing = if (letterSpacing != TextUnit.Unspecified) letterSpacing else typography.letterSpacing,

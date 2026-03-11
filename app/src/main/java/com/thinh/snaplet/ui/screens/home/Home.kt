@@ -365,7 +365,6 @@ private fun HomePager(
                 currentCaption = currentCaption,
                 isUploading = isUploading,
                 cameraActions = cameraActions,
-                isDownloading = showMoreButtonLoading
             )
 
             else -> {

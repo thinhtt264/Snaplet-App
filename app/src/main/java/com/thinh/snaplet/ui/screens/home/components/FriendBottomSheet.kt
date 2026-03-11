@@ -150,7 +150,7 @@ fun FriendBottomSheet(
                     BaseText(
                         text = stringResource(R.string.friend_sheet_find_from_apps),
                         color = MaterialTheme.colorScheme.onBackground,
-                        typography = MaterialTheme.typography.headlineSmall,
+                        typography = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(vertical = 24.dp)
                     )
                     Row(
@@ -188,7 +188,7 @@ fun FriendBottomSheet(
                     BaseText(
                         text = stringResource(R.string.friend_request_section_title),
                         color = MaterialTheme.colorScheme.onBackground,
-                        typography = MaterialTheme.typography.headlineSmall,
+                        typography = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(vertical = 24.dp)
                     )
                 }
@@ -207,7 +207,7 @@ fun FriendBottomSheet(
                     BaseText(
                         text = stringResource(R.string.friend_sheet_title),
                         color = MaterialTheme.colorScheme.onBackground,
-                        typography = MaterialTheme.typography.headlineSmall,
+                        typography = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(vertical = 24.dp)
                     )
                 }
@@ -251,7 +251,7 @@ private fun FriendListItem(
         BaseText(
             text = friend.displayName,
             color = MaterialTheme.colorScheme.onBackground,
-            typography = MaterialTheme.typography.titleMedium,
+            typography = MaterialTheme.typography.bodyMedium,
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 12.dp),
