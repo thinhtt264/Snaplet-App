@@ -1,0 +1,45 @@
+---
+description: Animation duration must use MotionTokens; add a new token when a different value is needed
+globs: "**/ui/**/*.kt"
+alwaysApply: false
+---
+
+# Animation Duration — MotionTokens
+
+Any animation config that has `durationMillis` (or equivalent) **must** use constants from `com.thinh.snaplet.ui.theme.MotionTokens`. Do not hardcode millis values.
+
+## Available tokens (`MotionTokens.kt`)
+
+- `MotionTokens.Instant` — 50ms (tap, ripple)
+- `MotionTokens.Fast` — 100ms (icon swap, small fade)
+- `MotionTokens.Normal` — 180ms (default fade, scale, crossfade)
+- `MotionTokens.Emphasized` — 250ms (overlay, modal)
+- `MotionTokens.Slow` — 350ms (sheet, panel)
+- `MotionTokens.VerySlow` — 500ms (heavy/deliberate transition, use sparingly)
+
+## Rules
+
+1. **Always use a token**: `durationMillis = MotionTokens.Normal` (or the appropriate token), never `durationMillis = 180`.
+2. **Need a different value**: Add a new constant to `MotionTokens.kt` (with a descriptive comment), then use that token in code.
+
+## Examples
+
+```kotlin
+// ❌ BAD — hardcoded values
+tween(durationMillis = 250)
+fadeIn(animationSpec = tween(durationMillis = 350))
+
+// ✅ GOOD — use MotionTokens
+tween(durationMillis = MotionTokens.Emphasized)
+fadeIn(animationSpec = tween(durationMillis = MotionTokens.Slow))
+```
+
+**Adding a new token when needed:**
+
+```kotlin
+// In MotionTokens.kt
+/** Shake / haptic-style feedback */
+const val Shake = 400
+```
+
+Use in UI: `durationMillis = MotionTokens.Shake`.
