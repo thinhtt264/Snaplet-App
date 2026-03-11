@@ -24,7 +24,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.thinh.snaplet.R
 import com.thinh.snaplet.ui.components.AppIconButton
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.components.IconDecoration
@@ -93,7 +95,9 @@ fun TopAction(
                             tint = Color.White,
                             modifier = Modifier.size(ICON_SIZE)
                         )
+
                         Spacer(modifier = Modifier.width(6.dp))
+
                         if (friendsCount != null) {
                             BaseText(
                                 text = friendsCount.toString(),
@@ -103,7 +107,9 @@ fun TopAction(
                             Spacer(modifier = Modifier.width(6.dp))
                         }
                         BaseText(
-                            text = "Bạn bè", color = Color.White, typography = Typography.bodyMedium
+                            text = stringResource(R.string.friends),
+                            color = Color.White,
+                            typography = Typography.bodyMedium
                         )
                     }
                 }

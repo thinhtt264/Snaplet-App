@@ -4,11 +4,16 @@ import android.graphics.Bitmap
 import android.os.SystemClock
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,7 +22,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,16 +29,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -71,8 +76,10 @@ import com.thinh.snaplet.ui.components.image.ImageSize
 import com.thinh.snaplet.ui.components.image.LoadingStateConfig
 import com.thinh.snaplet.ui.screens.home.CameraActions
 import com.thinh.snaplet.ui.screens.home.CameraState
+import com.thinh.snaplet.ui.theme.MotionTokens
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.ValidationConstants
+import kotlinx.coroutines.delay
 
 private const val TOP_SPACE_RATIO = 0.12f
 private const val SHAKE_DURATION = 500
@@ -93,14 +100,12 @@ fun CameraPage(
     cameraState: CameraState,
     currentCaption: String?,
     isUploading: Boolean,
-    isDownloading: Boolean,
     cameraActions: CameraActions,
     onDownloadImage: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
+        modifier = modifier.fillMaxSize()
     ) {
         val screenHeight = maxHeight
         val density = LocalDensity.current
@@ -142,24 +147,47 @@ fun CameraPage(
                 .padding(all = 16.dp)
                 .graphicsLayer { alpha = topActionsAlpha },
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.width(32.dp))
+            Box(modifier = Modifier.weight(1f))
 
             BaseText(
                 text = stringResource(id = R.string.send_to),
                 color = Color.White,
                 textAlign = TextAlign.Center,
-                typography = Typography.headlineSmall
+                typography = Typography.titleMedium
             )
 
-            AppIconButton(
-                loading = isDownloading,
-                containerColor = Color.Transparent,
-                onClick = onDownloadImage,
-                iconSize = 32.dp,
-                icon = IconSpec.Vector(Icons.Outlined.FileDownload, tint = Color.White)
-            )
+            var showCheckIcon by remember { mutableStateOf(false) }
+            LaunchedEffect(showCheckIcon) {
+                if (showCheckIcon) {
+                    delay(2000)
+                    showCheckIcon = false
+                }
+            }
+            Box(
+                modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd
+            ) {
+                AnimatedContent(
+                    targetState = showCheckIcon, transitionSpec = {
+                        fadeIn(animationSpec = tween(durationMillis = MotionTokens.Slow)).togetherWith(
+                            fadeOut(animationSpec = tween(durationMillis = MotionTokens.Slow))
+                        )
+                    }, label = "download_icon"
+                ) { isCheck ->
+                    AppIconButton(
+                        containerColor = Color.Transparent, onClick = {
+                            if (!isCheck) {
+                                onDownloadImage()
+                                showCheckIcon = true
+                            }
+                        }, iconSize = 32.dp, icon = IconSpec.Vector(
+                            if (isCheck) Icons.Outlined.CheckCircle else Icons.Outlined.FileDownload,
+                            tint = Color.White
+                        )
+                    )
+                }
+            }
         }
 
         Box(
@@ -284,9 +312,6 @@ private fun CaptionInput(
     var shakeTrigger by remember { mutableIntStateOf(0) }
     var lastShakeTime by remember { mutableLongStateOf(0L) }
     val shakeAngle = remember { Animatable(0f) }
-    var placeholderWidth by remember { mutableStateOf(Dp.Unspecified) }
-    val density = LocalDensity.current
-    val placeholderText = stringResource(R.string.add_caption_placeholder)
 
     LaunchedEffect(shakeTrigger) {
         if (shakeTrigger == 0) return@LaunchedEffect
@@ -312,6 +337,25 @@ private fun CaptionInput(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
 
+    val captionTextStyle = MaterialTheme.typography.titleSmall.copy(
+        fontWeight = FontWeight.Bold,
+        color = Color.White,
+        textAlign = TextAlign.Center,
+        lineHeight = MaterialTheme.typography.titleSmall.fontSize,
+        platformStyle = PlatformTextStyle(includeFontPadding = false),
+    )
+
+    val density = LocalDensity.current
+    val lineCount = remember { mutableIntStateOf(1) }
+
+    val fixedHeight by remember {
+        derivedStateOf {
+            with(density) {
+                captionTextStyle.fontSize.toDp() * lineCount.intValue + 24.dp
+            }
+        }
+    }
+
     Box(
         modifier = modifier
             .padding(bottom = 12.dp)
@@ -322,25 +366,26 @@ private fun CaptionInput(
             },
     ) {
         BasicTextField(
+            onTextLayout = { result ->
+                lineCount.intValue = result.lineCount
+            },
             interactionSource = interactionSource,
             value = caption.take(ValidationConstants.CAPTION_MAX_LENGTH),
             onValueChange = { newValue ->
-                if (newValue.length > ValidationConstants.CAPTION_MAX_LENGTH) {
+                val filtered = newValue.replace("\n", "")
+                if (filtered.length > ValidationConstants.CAPTION_MAX_LENGTH) {
                     shakeTrigger++
                 } else {
-                    onCaptionChange(newValue)
+                    onCaptionChange(filtered)
                 }
             },
             modifier = Modifier
-                .widthIn(min = placeholderWidth, max = 300.dp)
+                .widthIn(
+                    min = Dp.Unspecified,
+                    max = MediaItemDimensions.CAPTION_CONTAINER_MAX_WIDTH
+                )
                 .wrapContentWidth(),
-            textStyle = MaterialTheme.typography.titleSmall.copy(
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                textAlign = TextAlign.Center,
-                lineHeight = MaterialTheme.typography.titleSmall.fontSize,
-                platformStyle = PlatformTextStyle(includeFontPadding = false)
-            ),
+            textStyle = captionTextStyle,
             maxLines = 2,
             cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
             decorationBox = { innerTextField ->
@@ -348,17 +393,16 @@ private fun CaptionInput(
                     modifier = Modifier
                         .background(
                             color = Color.Black.copy(alpha = 0.4f),
-                            shape = RoundedCornerShape(20.dp)
+                            shape = RoundedCornerShape(16.dp)
                         )
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .height(fixedHeight)
+                        .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     if (caption.isEmpty()) {
                         BaseText(
-                            text = placeholderText,
-                            textAlign = TextAlign.Center,
-                            typography = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
+                            text = stringResource(R.string.add_caption_placeholder),
+                            typography = captionTextStyle,
                             color = if (isFocused) MaterialTheme.colorScheme.onSurface else Color.White
                         )
                     }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -145,9 +146,10 @@ private fun PostMediaContent(post: Post) {
                     .padding(bottom = 12.dp)
                     .padding(horizontal = 12.dp)
                     .background(
-                        color = Color.Black.copy(alpha = 0.4f), shape = CircleShape
+                        color = Color.Black.copy(alpha = 0.4f), shape = RoundedCornerShape(16.dp)
                     )
                     .padding(vertical = 8.dp, horizontal = 12.dp)
+                    .widthIn(max = MediaItemDimensions.CAPTION_CONTAINER_MAX_WIDTH)
             ) {
                 BaseText(
                     text = post.caption,

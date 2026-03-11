@@ -352,7 +352,7 @@ private fun InviteCard(
             firstName = firstName,
             isConnectedUser = true,
             size = 40.dp,
-            borderWidth = 1.dp,
+            borderWidth = 2.dp,
         )
 
         Column(
