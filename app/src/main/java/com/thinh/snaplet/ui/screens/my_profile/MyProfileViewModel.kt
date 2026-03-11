@@ -14,7 +14,7 @@ import com.thinh.snaplet.platform.share.ShareManager
 import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
-import com.thinh.snaplet.ui.theme.Red
+import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.onFailure
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -109,7 +109,7 @@ class MyProfileViewModel @Inject constructor(
                 _uiState.update { it.copy(isAvatarChanging = true) }
                 userRepository.deleteAvatar()
             } finally {
-                _uiState.update { it.copy(isAvatarChanging = true) }
+                _uiState.update { it.copy(isAvatarChanging = false) }
             }
         }
     }
@@ -187,7 +187,7 @@ class MyProfileViewModel @Inject constructor(
             SheetOption(
                 id = "logout",
                 label = UiText.StringResource(R.string.logout),
-                color = Red,
+                color = Error50,
                 onClick = ::handleLogout
             ), SheetOption(
                 id = "cancel", label = UiText.StringResource(R.string.cancel), onClick = { })
@@ -208,7 +208,7 @@ class MyProfileViewModel @Inject constructor(
             ), SheetOption(
                 id = "delete_avatar",
                 label = UiText.StringResource(R.string.delete_avatar),
-                color = Red,
+                color = Error50,
                 onClick = ::handleDeleteAvatar,
             ), SheetOption(
                 id = "cancel", label = UiText.StringResource(R.string.cancel), onClick = { })
