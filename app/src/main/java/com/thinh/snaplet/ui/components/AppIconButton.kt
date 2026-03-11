@@ -38,7 +38,10 @@ sealed interface IconSpec {
 
     /** Runtime drawable (e.g. app icon from PackageManager). Shown via ImageView – no manual bitmap conversion. */
     data class AndroidDrawable(val drawable: android.graphics.drawable.Drawable) : IconSpec
-    data class Painter(val painter: androidx.compose.ui.graphics.painter.Painter) : IconSpec
+    data class Painter(
+        val painter: androidx.compose.ui.graphics.painter.Painter,
+        val tint: Color = Color.Unspecified
+    ) : IconSpec
 
     /** Image loaded from URL via AsyncImage (e.g. avatar). */
     data class Url(
@@ -111,6 +114,7 @@ fun AppIconButton(
                         Icon(
                             painter = icon.painter,
                             contentDescription = null,
+                            tint = icon.tint,
                             modifier = Modifier.size(iconSize)
                         )
                     }

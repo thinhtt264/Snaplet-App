@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,9 +23,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.R
+import com.thinh.snaplet.ui.common.CommonImages
 import com.thinh.snaplet.ui.components.AppIconButton
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.components.IconDecoration
@@ -35,7 +36,7 @@ import com.thinh.snaplet.ui.theme.MotionTokens
 import com.thinh.snaplet.ui.theme.Typography
 import pressScaleClickable
 
-private val ICON_SIZE = 28.dp
+private val ICON_SIZE = 36.dp
 
 @Composable
 fun TopAction(
@@ -63,7 +64,7 @@ fun TopAction(
                     containerColor = MaterialTheme.colorScheme.secondary,
                     onClick = onProfileClick,
                     iconSize = ICON_SIZE,
-                    iconDecoration = IconDecoration(padding = 10.dp),
+                    iconDecoration = IconDecoration(padding = 6.dp),
                     icon = if (avatarUrl.isBlank()) {
                         IconSpec.Vector(Icons.Outlined.AccountCircle, tint = Color.White)
                     } else {
@@ -93,7 +94,7 @@ fun TopAction(
                             imageVector = Icons.Outlined.Group,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(ICON_SIZE)
+                            modifier = Modifier.size(28.dp)
                         )
 
                         Spacer(modifier = Modifier.width(6.dp))
@@ -120,8 +121,11 @@ fun TopAction(
                     containerColor = MaterialTheme.colorScheme.secondary,
                     onClick = onChatClick,
                     iconSize = ICON_SIZE,
-                    iconDecoration = IconDecoration(padding = 10.dp),
-                    icon = IconSpec.Vector(Icons.Outlined.ChatBubbleOutline, tint = Color.White)
+                    iconDecoration = IconDecoration(padding = 6.dp),
+                    icon = IconSpec.Painter(
+                        painterResource(CommonImages.ChatIcon),
+                        tint = Color.White
+                    )
                 )
             }
         }
