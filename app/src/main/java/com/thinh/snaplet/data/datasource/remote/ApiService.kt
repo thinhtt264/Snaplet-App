@@ -1,29 +1,30 @@
 package com.thinh.snaplet.data.datasource.remote
 
 import com.thinh.snaplet.data.model.BaseResponse
-import com.thinh.snaplet.data.model.CreatePostRequest
 import com.thinh.snaplet.data.model.EmailAvailabilityData
+import com.thinh.snaplet.data.model.FriendsCountData
 import com.thinh.snaplet.data.model.LoginRequest
 import com.thinh.snaplet.data.model.LoginResponse
-import com.thinh.snaplet.data.model.Post
-import com.thinh.snaplet.data.model.PostsFeedData
 import com.thinh.snaplet.data.model.RefreshTokenRequest
 import com.thinh.snaplet.data.model.RegisterRequest
-import com.thinh.snaplet.data.model.FriendsCountData
 import com.thinh.snaplet.data.model.Relationship
 import com.thinh.snaplet.data.model.RelationshipWithUserDto
-import com.thinh.snaplet.data.model.UpdateRelationshipRequest
 import com.thinh.snaplet.data.model.TokenResponse
+import com.thinh.snaplet.data.model.UpdateRelationshipRequest
 import com.thinh.snaplet.data.model.UsernameAvailabilityData
+import com.thinh.snaplet.data.model.media.ConfirmUploadData
+import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
+import com.thinh.snaplet.data.model.media.RequestUploadRequest
+import com.thinh.snaplet.data.model.media.UploadRequestData
+import com.thinh.snaplet.data.model.post.CreatePostRequest
+import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.model.post.PostsFeedData
+import com.thinh.snaplet.data.model.post.UnreadCountData
 import com.thinh.snaplet.data.model.user.AvatarUploadRequest
 import com.thinh.snaplet.data.model.user.AvatarUploadRequestResponse
 import com.thinh.snaplet.data.model.user.ConfirmAvatarUploadRequest
 import com.thinh.snaplet.data.model.user.UpdateDisplayNameRequest
 import com.thinh.snaplet.data.model.user.UserProfile
-import com.thinh.snaplet.data.model.media.ConfirmUploadData
-import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
-import com.thinh.snaplet.data.model.media.RequestUploadRequest
-import com.thinh.snaplet.data.model.media.UploadRequestData
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -34,6 +35,10 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ApiService {
+
+    companion object {
+        const val POSTS_STREAM_PATH: String = "posts/stream"
+    }
 
     @POST("auth/login")
     suspend fun login(
@@ -138,4 +143,10 @@ interface ApiService {
     suspend fun deletePost(
         @Path("postId") postId: String
     ): Response<BaseResponse<Unit>>
+
+    @GET("posts/unread-count")
+    suspend fun getUnreadCount(): Response<BaseResponse<UnreadCountData>>
+
+    @POST("posts/mark-seen")
+    suspend fun markSeen(): Response<BaseResponse<Unit>>
 }

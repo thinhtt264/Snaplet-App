@@ -10,10 +10,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.R
-import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.media.ImageTransform
+import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
 import com.thinh.snaplet.domain.feed.ShouldTriggerLoadMoreUseCase
@@ -26,6 +26,7 @@ import com.thinh.snaplet.domain.post.CreateTempPostUseCase
 import com.thinh.snaplet.domain.post.DeletePostUseCase
 import com.thinh.snaplet.domain.post.GetAvailablePostActionsUseCase
 import com.thinh.snaplet.domain.post.UploadPostUseCase
+import com.thinh.snaplet.domain.post.TrackNewPostsUseCase
 import com.thinh.snaplet.domain.post.ValidateRetryUploadUseCase
 import com.thinh.snaplet.domain.post.ValidateUploadPostUseCase
 import com.thinh.snaplet.domain.user.AcceptFriendRequestUseCase
@@ -42,6 +43,7 @@ import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
 import com.thinh.snaplet.ui.theme.Error50
+import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.FileUtils
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
@@ -83,7 +85,8 @@ class HomeViewModel @Inject constructor(
     private val removeFriendUseCase: RemoveFriendUseCase,
     private val removeRelationshipUseCase: RemoveRelationshipUseCase,
     private val userRepository: UserRepository,
-    private val shareManager: ShareManager
+    private val trackNewPostsUseCase: TrackNewPostsUseCase,
+    private val shareManager: ShareManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -129,6 +132,16 @@ class HomeViewModel @Inject constructor(
     init {
         loadNewsfeed()
         loadFriendsCount()
+        observeNewPosts()
+    }
+
+    private fun observeNewPosts() {
+        viewModelScope.launch {
+            trackNewPostsUseCase()
+                .collect { event ->
+                    Logger.d("🆕 New posts update: count=${event.count}, seq=${event.seq}")
+                }
+        }
     }
 
     private fun updateFriendSheetState(transform: (FriendBottomSheetState) -> FriendBottomSheetState) {

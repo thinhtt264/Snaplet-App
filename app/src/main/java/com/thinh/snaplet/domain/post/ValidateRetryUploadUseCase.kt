@@ -1,7 +1,7 @@
 package com.thinh.snaplet.domain.post
 
-import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.data.model.media.ImageTransform
+import com.thinh.snaplet.data.model.post.Post
 import javax.inject.Inject
 
 class ValidateRetryUploadUseCase @Inject constructor() {

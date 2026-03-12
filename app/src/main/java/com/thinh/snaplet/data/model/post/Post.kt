@@ -1,4 +1,4 @@
-package com.thinh.snaplet.data.model
+package com.thinh.snaplet.data.model.post
 
 import com.google.gson.annotations.SerializedName
 import com.thinh.snaplet.data.model.media.Media
@@ -53,4 +53,9 @@ data class CreatePostRequest(
     val visibility: String
 )
 
-typealias PostsFeedData = PaginatedResponse<Post>
+data class UnreadCountData(
+    @SerializedName("count")
+    val count: Int,
+)
+
+typealias PostsFeedData = com.thinh.snaplet.data.model.PaginatedResponse<Post>

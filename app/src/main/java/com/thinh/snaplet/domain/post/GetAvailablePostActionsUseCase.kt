@@ -1,6 +1,6 @@
 package com.thinh.snaplet.domain.post
 
-import com.thinh.snaplet.data.model.Post
+import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.domain.model.PostAction
 import javax.inject.Inject
 

@@ -17,3 +17,11 @@ annotation class BaseOkHttpClient
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class InternalOkHttpClient
+
+/**
+ * Base URL for backend API.
+ * Used to build absolute URLs for features that cannot use Retrofit (e.g. SSE).
+ */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ApiBaseUrl

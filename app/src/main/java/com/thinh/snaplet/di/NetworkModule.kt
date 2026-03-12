@@ -35,6 +35,11 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @ApiBaseUrl
+    fun provideApiBaseUrl(): String = BASE_URL
+
+    @Provides
+    @Singleton
     fun provideGson(): Gson {
         return GsonBuilder().serializeNulls() // Include null fields in JSON
             .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") // ISO 8601
@@ -207,4 +212,5 @@ object NetworkModule {
     fun provideApiService(retrofit: Retrofit): ApiService {
         return retrofit.create(ApiService::class.java)
     }
+
 }
