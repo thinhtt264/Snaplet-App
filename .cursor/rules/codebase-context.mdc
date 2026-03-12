@@ -1,0 +1,55 @@
+---
+description: Codebase map for SnapletApp – use to target relevant paths from the prompt instead of reading the whole codebase.
+alwaysApply: false
+globs: app/src/main/java/**/*.kt
+---
+# Codebase context (SnapletApp)
+Android app: Kotlin, Jetpack Compose, Hilt. Clean Architecture. Data flow: ApiService → RepositoryImpl (safeApiCall) → ViewModel (StateFlow) → Composable.
+**Rule:** From the user prompt, infer which area(s) apply, then read only those paths (and their direct dependencies). Do not read the entire codebase.
+## Package map (path under `app/src/main/java/com/thinh/snaplet/`)
+| Path | Role | Read when prompt is about… |
+|------|------|-----------------------------|
+| **Root** | | |
+| `MainActivity.kt`, `HiltApplication.kt` | App entry | app start, Application |
+| **ui/app** | App-level state, auth flow | app startup, auth state, splash |
+| **ui/screens/MainScreen.kt** | Main host, bottom nav | main layout, tabs |
+| **ui/screens/home/** | Home screen, ViewModel, state | home, feed |
+| **ui/screens/home/components/** | CameraPage, MediaPage, TopAction, BottomAction, FriendBottomSheet, CameraActions, CameraPermissionDenied, EmptyMediaPage, MediaItemDimensions | camera, chụp ảnh, media, bạn bè, quyền camera |
+| **ui/screens/login/** | Login screen + ViewModel | login, đăng nhập |
+| **ui/screens/login/components/** | LoginEmailPage, LoginPasswordPage, LoginPageContent | login UI |
+| **ui/screens/register/** | Register screen + ViewModel | register, đăng ký |
+| **ui/screens/register/components/** | RegisterEmailPage, UsernamePage, PasswordPage, RegisterPageContent | register UI |
+| **ui/screens/my_profile/** | MyProfile, EditDisplayNameBottomSheet | profile, tên hiển thị, avatar |
+| **ui/screens/image_crop/** | ImageCrop screen | crop, cắt ảnh |
+| **ui/screens/onboarding/** | Onboarding | onboarding |
+| **ui/screens/friend_request/** | Friend request overlay | friend request, lời mời kết bạn |
+| **ui/screens/friend_request/components/** | UserProfileCard, ActionButtons | friend request UI |
+| **ui/components/** | BaseText, BaseTextField, Avatar, PrimaryButton, FormTextField, CameraPreview, PermissionHandler, AppIconButton, StepAnimatedContent | UI components, form, camera preview, permission UI |
+| **ui/components/image/** | AsyncImage, AsyncImageConfig | load ảnh, Coil |
+| **ui/theme/** | Theme, Color, Typo, MotionTokens | theme, màu, typography |
+| **ui/overlay/** | OverlayHost, OverlayViewModel, OverlayState, OverlayEvent, OverlayEventBus | overlay, dialog, bottom sheet |
+| **ui/overlay/modal/** | GlobalModal, ConfirmDialog, FriendRequestModal | modal, dialog |
+| **ui/overlay/bottom_sheet/** | GlobalBottomSheet, OptionsSheet | bottom sheet |
+| **ui/common/** | UiText, CommonImages, ComposableExt | UI common, string resources, images |
+| **navigation/** | NavGraph, NavScreen, NavParam, NavActions, NavTransitions | navigation, route, deep link |
+| **di/** | Hilt modules (Network, Repository, Overlay, Permission, ImageLoading, PhotoPicker, Share) | DI, inject, module |
+| **data/datasource/remote/** | ApiService | API, endpoint, Retrofit |
+| **data/datasource/local/datastore/** | DataStoreManager, DataStoreKeys | DataStore, local storage |
+| **data/repository/** | MediaRepository(Impl), UserRepository(Impl) | repository, data layer |
+| **data/repository/auth/** | AuthRepository, AuthRepositoryImpl, AuthState | auth, login state |
+| **data/repository/device/** | DeviceRepository, DeviceRepositoryImpl, DeviceInfo | device, fingerprint |
+| **data/model/** | AuthModel, Relationship, BaseModel | DTO, API model |
+| **data/model/user/** | UserProfile, AvatarUrls, DisplayName, AvatarUpload | user model |
+| **data/model/media/** | MediaUpload, ImageTransform | media model |
+| **domain/post/** | UploadPost, ValidateUploadPost, DeletePost, CreateTempPost, GetAvailablePostActions, ValidateRetryUpload | post, upload, delete post |
+| **domain/user/** | RemoveFriend, UploadAvatar, GetRelationshipsByStatuses, GetDisplayableFriendsCount, GetRelationshipAction, RemoveRelationship | user, friend, avatar, relationship |
+| **domain/media/** | ValidateCaptureReadiness, DownloadPostImageUseCase | capture, download media |
+| **domain/feed/** | ShouldTriggerLoadMoreUseCase | feed, load more |
+| **domain/model/** | CaptureReadiness, UploadPostResult, PostAction, RelationshipAction, UploadAvatarResult | domain models |
+| **platform/photo_picker/** | PhotoPickerManager | photo picker, chọn ảnh |
+| **platform/permission/** | PermissionManager, PermissionState | permission |
+| **platform/share/** | ShareManager | share |
+| **platform/deeplink/** | DeepLinkManager, DeepLinkEvent | deep link |
+| **network/** | TokenAuthenticator, TokenRefreshCoordinator, FingerprintInterceptor | token, auth header, refresh |
+| **utils/** | Logger, FileUtils, CommonExtensions, ValidationConstants, InviteConstants | utils, validation, logging |
+| **utils/network/** | ApiResult, ApiError, ApiErrorCode, NetworkExtensions, JsonHolder | ApiResult, safeApiCall, API error |
