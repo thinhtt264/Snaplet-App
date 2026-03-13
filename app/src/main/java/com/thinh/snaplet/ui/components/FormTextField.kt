@@ -49,8 +49,8 @@ fun FormTextField(
             onValueChange = onValueChange,
             modifier = modifier.fillMaxWidth(),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = colorScheme.secondary,
-                unfocusedContainerColor = colorScheme.secondary,
+                focusedContainerColor = colorScheme.inverseOnSurface,
+                unfocusedContainerColor = colorScheme.inverseOnSurface,
                 unfocusedIndicatorColor = Color.Transparent
             ),
             placeholder = {
