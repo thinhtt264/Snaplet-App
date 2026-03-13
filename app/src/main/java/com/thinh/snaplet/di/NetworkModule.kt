@@ -18,6 +18,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.ConnectionPool
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -147,12 +148,9 @@ object NetworkModule {
     @Singleton
     @BaseOkHttpClient
     fun provideBaseOkHttpClient(): OkHttpClient {
-        return OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(true)
-            .build()
+        return OkHttpClient.Builder().connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS).writeTimeout(30, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true).build()
     }
 
     /**
@@ -169,22 +167,15 @@ object NetworkModule {
         chuckerInterceptor: ChuckerInterceptor,
         tokenAuthenticator: TokenAuthenticator
     ): OkHttpClient {
-        val builder = OkHttpClient.Builder()
-            .addInterceptor(fingerprintInterceptor)
-            .addInterceptor(authInterceptor)
-            .addInterceptor(chuckerInterceptor)
-            .addInterceptor(loggingInterceptor)
-            .authenticator(tokenAuthenticator)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(true)
-            .connectionPool(
+        val builder = OkHttpClient.Builder().addInterceptor(fingerprintInterceptor)
+            .addInterceptor(authInterceptor).addInterceptor(chuckerInterceptor)
+            .addInterceptor(loggingInterceptor).authenticator(tokenAuthenticator)
+            .connectTimeout(30, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS).retryOnConnectionFailure(true).connectionPool(
                 okhttp3.ConnectionPool(
                     maxIdleConnections = 5, keepAliveDuration = 5, timeUnit = TimeUnit.MINUTES
                 )
             )
-
         // Optional: SSL Certificate Pinning for security
         // .certificatePinner(
         //     CertificatePinner.Builder()
@@ -195,12 +186,41 @@ object NetworkModule {
         return builder.build()
     }
 
+    /**
+     * Stream OkHttpClient: long‑lived connections such as SSE.
+     * Reuses base client, adds auth + fingerprint, but intentionally skips Chucker.
+     */
+    @Provides
+    @Singleton
+    @StreamOkHttpClient
+    fun provideStreamOkHttpClient(
+        @BaseOkHttpClient baseClient: OkHttpClient,
+        dataStoreManager: DataStoreManager,
+        fingerprintInterceptor: FingerprintInterceptor,
+//        tokenAuthenticator: TokenAuthenticator
+    ): OkHttpClient {
+        val streamAuthInterceptor = Interceptor { chain ->
+            val original = chain.request()
+            val token = dataStoreManager.getAccessToken()
+            val builder = original.newBuilder()
+            builder.header("Authorization", "Bearer $token")
+            chain.proceed(builder.build())
+        }
+        return baseClient.newBuilder()
+//            .authenticator(tokenAuthenticator)
+            .connectionPool(ConnectionPool(2, 3, TimeUnit.MINUTES))
+            .addInterceptor(fingerprintInterceptor)
+            .addInterceptor(streamAuthInterceptor)
+            .readTimeout(0, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(false)
+            .connectTimeout(30, TimeUnit.SECONDS).build()
+    }
+
     /** Retrofit dùng Internal OkHttpClient (BE). */
     @Provides
     @Singleton
     fun provideRetrofit(
-        @InternalOkHttpClient okHttpClient: OkHttpClient,
-        gson: Gson
+        @InternalOkHttpClient okHttpClient: OkHttpClient, gson: Gson
     ): Retrofit {
         return Retrofit.Builder().baseUrl(BASE_URL).client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson)).build()
@@ -212,5 +232,4 @@ object NetworkModule {
     fun provideApiService(retrofit: Retrofit): ApiService {
         return retrofit.create(ApiService::class.java)
     }
-
 }

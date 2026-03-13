@@ -9,16 +9,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
 import javax.inject.Inject
 
-class TrackNewPostsUseCase @Inject constructor(
+class ObserverNewPostsUseCase @Inject constructor(
     private val postRepository: PostRepository,
 ) {
 
     operator fun invoke(): Flow<PostUpdateEvent> {
-        return postRepository.observePostStream()
-            .mapNotNull { event ->
+        return postRepository.observePostStream().mapNotNull { event ->
                 when (event) {
                     is SseEvent.Message -> {
-                        if (event.type != "posts_update") {
+                        val (type, data) = event
+                        Logger.d("📨 onEvent — type=$type data=$data")
+
+                        if (type != "posts_update") {
                             return@mapNotNull null
                         }
 
@@ -28,8 +30,16 @@ class TrackNewPostsUseCase @Inject constructor(
                                 PostUpdateEvent::class.java,
                             )
                         }.onFailure { throwable ->
-                            Logger.e(throwable, "⚠️ Failed to parse SSE posts_update payload: ${event.data}")
+                            Logger.e(
+                                throwable,
+                                "⚠️ Failed to parse SSE posts_update payload: ${event.data}"
+                            )
                         }.getOrNull()
+                    }
+
+                    is SseEvent.Opened -> {
+                        Logger.d("✅ SSE onOpen — HTTP ${event.response.code}")
+                        null
                     }
 
                     is SseEvent.Error -> {
@@ -37,10 +47,12 @@ class TrackNewPostsUseCase @Inject constructor(
                         null
                     }
 
-                    SseEvent.Closed -> {
+                    is SseEvent.Closed -> {
                         Logger.d("🛑 SSE Closed while tracking new posts")
                         null
                     }
+
+                    is SseEvent.MaxRetriesExceeded -> return@mapNotNull null
                 }
             }
     }

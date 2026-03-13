@@ -5,7 +5,6 @@ import com.thinh.snaplet.data.model.post.SseEvent
 import com.thinh.snaplet.data.model.post.UnreadCountData
 import com.thinh.snaplet.di.ApiBaseUrl
 import com.thinh.snaplet.network.SseClient
-import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.ApiResult
 import com.thinh.snaplet.utils.network.safeApiCall
 import kotlinx.coroutines.flow.Flow
@@ -18,10 +17,11 @@ class PostRepositoryImpl @Inject constructor(
     private val sseClient: SseClient,
     @ApiBaseUrl private val apiBaseUrl: String,
 ) : PostRepository {
+    private var postStream: Flow<SseEvent>? = null
 
     override fun observePostStream(): Flow<SseEvent> {
-        val url = apiBaseUrl + ApiService.POSTS_STREAM_PATH
-        return sseClient.connect(url)
+        return postStream ?: sseClient.connect(apiBaseUrl + ApiService.POSTS_STREAM_PATH)
+            .also { postStream = it }
     }
 
     override suspend fun getUnreadCount(): ApiResult<UnreadCountData> {

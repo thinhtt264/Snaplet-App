@@ -19,6 +19,14 @@ annotation class BaseOkHttpClient
 annotation class InternalOkHttpClient
 
 /**
+ * Stream OkHttpClient: long‑lived connections (SSE, websockets, etc.).
+ * Reuses base client but adds auth + fingerprint, without Chucker.
+ */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class StreamOkHttpClient
+
+/**
  * Base URL for backend API.
  * Used to build absolute URLs for features that cannot use Retrofit (e.g. SSE).
  */

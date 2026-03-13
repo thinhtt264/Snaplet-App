@@ -25,8 +25,8 @@ import com.thinh.snaplet.domain.model.UploadPostResult
 import com.thinh.snaplet.domain.post.CreateTempPostUseCase
 import com.thinh.snaplet.domain.post.DeletePostUseCase
 import com.thinh.snaplet.domain.post.GetAvailablePostActionsUseCase
+import com.thinh.snaplet.domain.post.ObserverNewPostsUseCase
 import com.thinh.snaplet.domain.post.UploadPostUseCase
-import com.thinh.snaplet.domain.post.TrackNewPostsUseCase
 import com.thinh.snaplet.domain.post.ValidateRetryUploadUseCase
 import com.thinh.snaplet.domain.post.ValidateUploadPostUseCase
 import com.thinh.snaplet.domain.user.AcceptFriendRequestUseCase
@@ -43,8 +43,8 @@ import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
 import com.thinh.snaplet.ui.theme.Error50
-import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.FileUtils
+import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -85,7 +85,7 @@ class HomeViewModel @Inject constructor(
     private val removeFriendUseCase: RemoveFriendUseCase,
     private val removeRelationshipUseCase: RemoveRelationshipUseCase,
     private val userRepository: UserRepository,
-    private val trackNewPostsUseCase: TrackNewPostsUseCase,
+    private val observerNewPostsUseCase: ObserverNewPostsUseCase,
     private val shareManager: ShareManager,
 ) : ViewModel() {
 
@@ -137,7 +137,7 @@ class HomeViewModel @Inject constructor(
 
     private fun observeNewPosts() {
         viewModelScope.launch {
-            trackNewPostsUseCase()
+            observerNewPostsUseCase()
                 .collect { event ->
                     Logger.d("🆕 New posts update: count=${event.count}, seq=${event.seq}")
                 }
@@ -546,6 +546,7 @@ class HomeViewModel @Inject constructor(
                             message = UiText.StringResource(R.string.delete_photo_message),
                             confirmText = UiText.StringResource(R.string.delete),
                             onConfirm = { deletePost(post.id) },
+                            confirmDestructive = true
                         )
                     })
 

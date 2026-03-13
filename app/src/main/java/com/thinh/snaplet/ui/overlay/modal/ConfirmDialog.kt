@@ -42,7 +42,7 @@ internal fun ConfirmDialog(
                 BaseText(
                     text = cancelText.asString(context),
                     typography = typography.titleSmall,
-                    color = if (content.confirmDestructive) colorScheme.onSurface else colorScheme.error
+                    color = if (content.confirmDestructive) colorScheme.primary else colorScheme.onSurface
                 )
             }
         },
