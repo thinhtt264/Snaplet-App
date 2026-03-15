@@ -9,6 +9,7 @@ import com.google.gson.GsonBuilder
 import com.thinh.snaplet.BuildConfig
 import com.thinh.snaplet.data.datasource.local.datastore.DataStoreManager
 import com.thinh.snaplet.data.datasource.remote.ApiService
+import com.thinh.snaplet.platform.socket.SocketConfig
 import com.thinh.snaplet.network.FingerprintInterceptor
 import com.thinh.snaplet.network.TokenAuthenticator
 import com.thinh.snaplet.network.TokenRefreshCoordinator
@@ -32,6 +33,13 @@ object NetworkModule {
 
     private val BASE_URL = if (BuildConfig.DEBUG) "http://10.0.2.2:4040/api/v1/"
     else "https://api-stg.snaplet.site/api/v1/"
+
+    private val SOCKET_BASE_URL = if (BuildConfig.DEBUG) "http://10.0.2.2:4040"
+    else "https://api-stg.snaplet.site"
+
+    @Provides
+    @Singleton
+    fun provideSocketConfig(): SocketConfig = SocketConfig(baseUrl = SOCKET_BASE_URL)
 
     @Provides
     @Singleton

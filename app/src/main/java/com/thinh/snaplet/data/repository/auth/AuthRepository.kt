@@ -30,4 +30,6 @@ interface AuthRepository {
     suspend fun checkUsernameAvailability(username: String): ApiResult<Boolean>
 
     suspend fun refreshToken(): ApiResult<TokenResponse>
+
+    suspend fun getAccessToken(): String?
 }

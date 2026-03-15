@@ -7,6 +7,7 @@ import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.auth.AuthRepository
 import com.thinh.snaplet.data.repository.device.DeviceRepository
 import com.thinh.snaplet.navigation.AuthGraph
+import com.thinh.snaplet.platform.socket.SocketManager
 import com.thinh.snaplet.navigation.HomeGraph
 import com.thinh.snaplet.platform.deeplink.DeepLinkEvent
 import com.thinh.snaplet.platform.deeplink.DeepLinkManager
@@ -32,16 +33,15 @@ class AppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val deviceRepository: DeviceRepository,
     private val deepLinkManager: DeepLinkManager,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val socketManager: SocketManager
 ) : ViewModel() {
 
     private val _uiState: MutableStateFlow<AppUiState> = MutableStateFlow(AppUiState())
     val uiState = _uiState.asStateFlow()
 
     private val _uiEvent = MutableSharedFlow<AppUiEvent>(
-        replay = 0,
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.SUSPEND
+        replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.SUSPEND
     )
     val uiEvent = _uiEvent.asSharedFlow()
 
@@ -67,6 +67,10 @@ class AppViewModel @Inject constructor(
                         startDestination = if (isAuthenticated) HomeGraph else AuthGraph
                     )
                 }
+
+                if (isAuthenticated) {
+                    socketManager.connect()
+                }
             } catch (_: Exception) {
                 _uiState.update { it.copy(startDestination = AuthGraph) }
             } finally {
@@ -78,12 +82,14 @@ class AppViewModel @Inject constructor(
     }
 
     private fun observeAuthState() {
-        authRepository.authState
-            .onEach { authState ->
+        authRepository.authState.onEach { authState ->
                 if (!isInitialized) return@onEach
 
                 when (authState) {
                     is AuthState.Authenticated -> {
+                        viewModelScope.launch {
+                            socketManager.connect()
+                        }
                         _uiEvent.emit(AppUiEvent.NavigateToHomeGraph)
                         pendingFriendRequestUserName?.let { userName ->
                             pendingFriendRequestUserName = null
@@ -92,16 +98,15 @@ class AppViewModel @Inject constructor(
                     }
 
                     is AuthState.Unauthenticated -> {
+                        socketManager.disconnect()
                         _uiEvent.emit(AppUiEvent.NavigateToAuthGraph)
                     }
                 }
-            }
-            .catch { e ->
+            }.catch { e ->
                 if (isInitialized) {
                     _uiEvent.emit(AppUiEvent.NavigateToAuthGraph)
                 }
-            }
-            .launchIn(viewModelScope)
+            }.launchIn(viewModelScope)
     }
 
     private fun observeDeepLinkEvents() {
@@ -120,14 +125,11 @@ class AppViewModel @Inject constructor(
             return
         }
         val profileResult = userRepository.getUserProfile(userName)
-        profileResult.fold(
-            onSuccess = { userProfile ->
-                val state = FriendRequestUiState(userProfile = userProfile)
-                OverlayEventBus.showModal(ModalContent.FriendRequest(state = state))
-            },
-            onFailure = { error ->
-                Logger.e("❌ Failed to load user profile: ${error.message}")
-            }
-        )
+        profileResult.fold(onSuccess = { userProfile ->
+            val state = FriendRequestUiState(userProfile = userProfile)
+            OverlayEventBus.showModal(ModalContent.FriendRequest(state = state))
+        }, onFailure = { error ->
+            Logger.e("❌ Failed to load user profile: ${error.message}")
+        })
     }
 }

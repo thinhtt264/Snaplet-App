@@ -113,4 +113,8 @@ class AuthRepositoryImpl @Inject constructor(
             )
         })
     }
+
+    override suspend fun getAccessToken(): String? {
+        return dataStoreManager.getAccessToken() ?: dataStoreManager.loadAccessToken()
+    }
 }

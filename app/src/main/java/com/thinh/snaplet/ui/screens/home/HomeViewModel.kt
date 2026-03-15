@@ -34,7 +34,9 @@ import com.thinh.snaplet.domain.user.GetRelationshipActionUseCase
 import com.thinh.snaplet.domain.user.GetRelationshipsByStatusesUseCase
 import com.thinh.snaplet.domain.user.RemoveFriendUseCase
 import com.thinh.snaplet.domain.user.RemoveRelationshipUseCase
+import com.thinh.snaplet.domain.feed.ObserveNewPostEventUseCase
 import com.thinh.snaplet.platform.permission.Permission
+import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.platform.permission.PermissionManager
 import com.thinh.snaplet.platform.share.ShareApp
 import com.thinh.snaplet.platform.share.ShareManager
@@ -50,7 +52,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -83,7 +87,8 @@ class HomeViewModel @Inject constructor(
     private val removeFriendUseCase: RemoveFriendUseCase,
     private val removeRelationshipUseCase: RemoveRelationshipUseCase,
     private val userRepository: UserRepository,
-    private val shareManager: ShareManager
+    private val shareManager: ShareManager,
+    private val observeNewPostEvent: ObserveNewPostEventUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -129,6 +134,11 @@ class HomeViewModel @Inject constructor(
     init {
         loadNewsfeed()
         loadFriendsCount()
+        observeNewPostEvent()
+            .onEach { event ->
+                Logger.d("HomeViewModel: new_post received count=${event.count} seq=${event.seq}")
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun updateFriendSheetState(transform: (FriendBottomSheetState) -> FriendBottomSheetState) {

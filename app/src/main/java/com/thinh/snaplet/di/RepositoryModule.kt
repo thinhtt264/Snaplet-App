@@ -8,6 +8,8 @@ import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.data.repository.MediaRepositoryImpl
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.UserRepositoryImpl
+import com.thinh.snaplet.data.repository.post.PostRepository
+import com.thinh.snaplet.data.repository.post.PostRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -41,4 +43,8 @@ abstract class RepositoryModule {
     abstract fun bindDeviceRepository(
         repository: DeviceRepositoryImpl
     ): DeviceRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPostRepository(impl: PostRepositoryImpl): PostRepository
 }
