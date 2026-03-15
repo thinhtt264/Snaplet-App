@@ -41,7 +41,7 @@ import com.thinh.snaplet.platform.share.ShareManager
 import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
-import com.thinh.snaplet.ui.theme.Red
+import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.FileUtils
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
@@ -526,7 +526,7 @@ class HomeViewModel @Inject constructor(
                 is PostAction.Delete -> SheetOption(
                     id = "delete",
                     label = UiText.StringResource(R.string.delete),
-                    color = Red,
+                    color = Error50,
                     onClick = {
                         OverlayEventBus.showConfirmDialog(
                             title = UiText.StringResource(R.string.delete_photo_title),
@@ -539,7 +539,7 @@ class HomeViewModel @Inject constructor(
                 is PostAction.Report -> SheetOption(
                     id = "report",
                     label = UiText.StringResource(R.string.report),
-                    color = Red,
+                    color = Error50,
                     onClick = {})
 
                 is PostAction.Cancel -> SheetOption(

@@ -60,10 +60,7 @@ import com.thinh.snaplet.navigation.CollectNavResult
 import com.thinh.snaplet.navigation.NavResultKeys
 import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText
-import com.thinh.snaplet.ui.theme.DarkGray
-import com.thinh.snaplet.ui.theme.GoldenPollen
-import com.thinh.snaplet.ui.theme.Gray
-import com.thinh.snaplet.ui.theme.Red
+import com.thinh.snaplet.ui.theme.Error50
 import pressScaleClickable
 
 private sealed interface ProfileMenuItem {
@@ -320,7 +317,7 @@ private fun ProfileHeader(
         BaseText(
             text = editPhotoLabel,
             typography = MaterialTheme.typography.bodyMedium,
-            color = GoldenPollen,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .pressScaleClickable(onClick = onEditPhotoClick)
                 .padding(vertical = 4.dp)
@@ -342,7 +339,7 @@ private fun InviteCard(
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.secondary)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .pressScaleClickable(onClick = onShareClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -369,7 +366,7 @@ private fun InviteCard(
             BaseText(
                 text = "snaplet.cam/$userName",
                 typography = MaterialTheme.typography.bodySmall,
-                color = Gray,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
 
@@ -408,7 +405,7 @@ private fun ProfileMenuItemRow(
     item: ProfileMenuItem, modifier: Modifier = Modifier
 ) {
     val textColor = when (item) {
-        is ProfileMenuItem.Danger -> Red
+        is ProfileMenuItem.Danger -> Error50
         else -> Color.White
     }
     val onClick: () -> Unit = when (item) {
@@ -443,7 +440,7 @@ private fun ProfileMenuItemRow(
                 BaseText(
                     text = item.subtitle,
                     typography = MaterialTheme.typography.bodySmall,
-                    color = Gray,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -452,9 +449,9 @@ private fun ProfileMenuItemRow(
             Switch(
                 checked = item.isChecked, onCheckedChange = null, colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
-                    checkedTrackColor = GoldenPollen,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
                     uncheckedThumbColor = Color.White,
-                    uncheckedTrackColor = DarkGray,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 )
             )
         }
