@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -46,6 +47,8 @@ class AppViewModel @Inject constructor(
     val uiEvent = _uiEvent.asSharedFlow()
 
     private var isInitialized = false
+    private val isAuthenticated = MutableStateFlow(false)
+    private val isForegrounded = MutableStateFlow(false)
 
     /** Pending friend request deeplink (userName) to show after login in this session. */
     private var pendingFriendRequestUserName: String? = null
@@ -53,6 +56,32 @@ class AppViewModel @Inject constructor(
     init {
         initializeApp()
         observeAuthState()
+        observeSocketSync()
+    }
+
+    /**
+     * Called by MainActivity when app visibility changes (onStart/onStop).
+     * We always update foreground state; actual connect/disconnect is handled
+     * reactively by [observeSocketSync] based on auth + foreground.
+     */
+    fun onAppVisibilityChanged(isVisible: Boolean) {
+        isForegrounded.value = isVisible
+    }
+
+    private fun observeSocketSync() {
+        combine(isAuthenticated, isForegrounded) { authenticated, foregrounded ->
+            authenticated && foregrounded
+        }
+            .onEach { shouldConnect ->
+                if (shouldConnect) {
+                    viewModelScope.launch {
+                        socketManager.connect()
+                    }
+                } else {
+                    socketManager.disconnect()
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun initializeApp() {
@@ -60,16 +89,14 @@ class AppViewModel @Inject constructor(
             try {
                 deviceRepository.getOrCreateFingerprint()
 
-                val isAuthenticated = authRepository.isAuthenticated()
+                val authenticated = authRepository.isAuthenticated()
+
+                isAuthenticated.value = authenticated
 
                 _uiState.update {
                     it.copy(
-                        startDestination = if (isAuthenticated) HomeGraph else AuthGraph
+                        startDestination = if (authenticated) HomeGraph else AuthGraph
                     )
-                }
-
-                if (isAuthenticated) {
-                    socketManager.connect()
                 }
             } catch (_: Exception) {
                 _uiState.update { it.copy(startDestination = AuthGraph) }
@@ -84,12 +111,9 @@ class AppViewModel @Inject constructor(
     private fun observeAuthState() {
         authRepository.authState.onEach { authState ->
                 if (!isInitialized) return@onEach
-
                 when (authState) {
                     is AuthState.Authenticated -> {
-                        viewModelScope.launch {
-                            socketManager.connect()
-                        }
+                        isAuthenticated.value = true
                         _uiEvent.emit(AppUiEvent.NavigateToHomeGraph)
                         pendingFriendRequestUserName?.let { userName ->
                             pendingFriendRequestUserName = null
@@ -98,7 +122,7 @@ class AppViewModel @Inject constructor(
                     }
 
                     is AuthState.Unauthenticated -> {
-                        socketManager.disconnect()
+                        isAuthenticated.value = false
                         _uiEvent.emit(AppUiEvent.NavigateToAuthGraph)
                     }
                 }

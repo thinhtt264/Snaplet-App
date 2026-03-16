@@ -23,6 +23,16 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var deepLinkManager: DeepLinkManager
 
+    override fun onStart() {
+        super.onStart()
+        appViewModel.onAppVisibilityChanged(isVisible = true)
+    }
+
+    override fun onStop() {
+        appViewModel.onAppVisibilityChanged(isVisible = false)
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen().apply {
             setKeepOnScreenCondition { appViewModel.uiState.value.isLoading }

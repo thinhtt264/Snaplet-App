@@ -198,7 +198,6 @@ object NetworkModule {
         return builder.build()
     }
 
-    /** Retrofit dùng Internal OkHttpClient (BE). */
     @Provides
     @Singleton
     fun provideRetrofit(
@@ -209,7 +208,6 @@ object NetworkModule {
             .addConverterFactory(GsonConverterFactory.create(gson)).build()
     }
 
-    /** Provide ApiService Retrofit interface implementation */
     @Provides
     @Singleton
     fun provideApiService(retrofit: Retrofit): ApiService {
