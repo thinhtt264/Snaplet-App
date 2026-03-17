@@ -2,10 +2,13 @@ package com.thinh.snaplet
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.thinh.snaplet.platform.deeplink.DeepLinkManager
@@ -42,7 +45,9 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch { deepLinkManager.handleDeepLink(intent) }
 
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            navigationBarStyle = SystemBarStyle.dark(Color.Transparent.toArgb())
+        )
         setContent { MainScreen(appViewModel) }
     }
 

@@ -1,9 +1,14 @@
 package com.thinh.snaplet.data.repository.post
 
+import com.thinh.snaplet.data.datasource.remote.ApiService
+import com.thinh.snaplet.data.model.MarkPostsSeenRequest
+import com.thinh.snaplet.data.model.UnreadPostsCountData
 import com.thinh.snaplet.data.model.post.NewPostUpdate
 import com.thinh.snaplet.platform.socket.SocketEvent
 import com.thinh.snaplet.platform.socket.SocketManager
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.network.ApiResult
+import com.thinh.snaplet.utils.network.safeApiCall
 import com.thinh.snaplet.utils.network.GsonHolder.gson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
@@ -13,22 +18,37 @@ import javax.inject.Singleton
 
 @Singleton
 class PostRepositoryImpl @Inject constructor(
-    private val socketManager: SocketManager
+    private val socketManager: SocketManager,
+    private val apiService: ApiService,
 ) : PostRepository {
 
     override val newPostMessages: Flow<NewPostUpdate> =
         socketManager.messages
             .filter { it.event == SocketEvent.NEW_POST }
             .mapNotNull { message ->
-                val raw = message.args.firstOrNull() ?: return@mapNotNull null
-                val jsonString = when (raw) {
-                    is String -> raw
-                    else -> raw.toString()
-                }
+                val jsonString = message.args ?: return@mapNotNull null
                 runCatching {
                     gson.fromJson(jsonString, NewPostUpdate::class.java)
                 }.onFailure {
                     Logger.e("PostRepository: parse new_post failed: ${it.message}")
                 }.getOrNull()
             }
+
+    override suspend fun getUnreadPostsCount(): ApiResult<Int> {
+        return safeApiCall(
+            apiCall = { apiService.getUnreadPostsCount() },
+            transform = { data: UnreadPostsCountData -> data.count }
+        )
+    }
+
+    override suspend fun markPostsSeen(
+        lastSeenPostCreatedAt: String,
+    ): ApiResult<Unit> {
+        val body = MarkPostsSeenRequest(
+            lastSeenPostCreatedAt = lastSeenPostCreatedAt,
+        )
+        return safeApiCall(
+            apiCall = { apiService.markPostsSeen(body) }
+        )
+    }
 }

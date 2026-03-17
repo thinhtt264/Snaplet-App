@@ -9,10 +9,10 @@ import com.google.gson.GsonBuilder
 import com.thinh.snaplet.BuildConfig
 import com.thinh.snaplet.data.datasource.local.datastore.DataStoreManager
 import com.thinh.snaplet.data.datasource.remote.ApiService
-import com.thinh.snaplet.platform.socket.SocketConfig
 import com.thinh.snaplet.network.FingerprintInterceptor
 import com.thinh.snaplet.network.TokenAuthenticator
 import com.thinh.snaplet.network.TokenRefreshCoordinator
+import com.thinh.snaplet.platform.socket.SocketConfig
 import com.thinh.snaplet.utils.Logger
 import dagger.Module
 import dagger.Provides
@@ -31,10 +31,10 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private val BASE_URL = if (BuildConfig.DEBUG) "http://10.0.2.2:4040/api/v1/"
+    private val BASE_URL = if (BuildConfig.DEBUG) "https://api-stg.snaplet.site/api/v1/"
     else "https://api-stg.snaplet.site/api/v1/"
 
-    private val SOCKET_BASE_URL = if (BuildConfig.DEBUG) "http://10.0.2.2:4040"
+    private val SOCKET_BASE_URL = if (BuildConfig.DEBUG) "https://api-stg.snaplet.site"
     else "https://api-stg.snaplet.site"
 
     @Provides

@@ -1,7 +1,7 @@
 ---
 description: Animation duration must use MotionTokens; add a new token when a different value is needed
 globs: "**/ui/**/*.kt"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Animation Duration — MotionTokens

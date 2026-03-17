@@ -65,7 +65,7 @@ fun CameraAction(
     onCancelCapture: () -> Unit,
     onSwitchCamera: () -> Unit,
     onUploadPost: () -> Unit,
-    isUploading: Boolean = false
+    isUploading: Boolean = false,
 ) {
     Row(
         modifier = modifier

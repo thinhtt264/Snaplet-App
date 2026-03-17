@@ -7,6 +7,8 @@ import com.thinh.snaplet.data.model.LoginRequest
 import com.thinh.snaplet.data.model.LoginResponse
 import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.data.model.PostsFeedData
+import com.thinh.snaplet.data.model.UnreadPostsCountData
+import com.thinh.snaplet.data.model.MarkPostsSeenRequest
 import com.thinh.snaplet.data.model.RefreshTokenRequest
 import com.thinh.snaplet.data.model.RegisterRequest
 import com.thinh.snaplet.data.model.FriendsCountData
@@ -137,5 +139,14 @@ interface ApiService {
     @DELETE("posts/{postId}")
     suspend fun deletePost(
         @Path("postId") postId: String
+    ): Response<BaseResponse<Unit>>
+
+    @GET("posts/unread-count")
+    suspend fun getUnreadPostsCount(
+    ): Response<BaseResponse<UnreadPostsCountData>>
+
+    @POST("posts/mark-seen")
+    suspend fun markPostsSeen(
+        @Body body: MarkPostsSeenRequest
     ): Response<BaseResponse<Unit>>
 }

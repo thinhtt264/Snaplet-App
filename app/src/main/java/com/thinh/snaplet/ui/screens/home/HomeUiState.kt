@@ -32,6 +32,9 @@ data class HomeUiState(
     val uploadStatuses: Map<String, UploadStatus> = emptyMap(),
     val isDownloading: Boolean = false,
 
+    /** Number of unread posts for history badge. */
+    val unreadPostsCount: Int = 0,
+
     /** Snackbar message to show. UI shows then calls onSnackbarDismissed(). */
     val snackbarMessage: UiText? = null,
 

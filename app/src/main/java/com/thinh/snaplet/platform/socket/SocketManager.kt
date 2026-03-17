@@ -151,9 +151,26 @@ class SocketManager @Inject constructor(
         SocketEvent.entries
             .forEach { event ->
                 s.on(event.eventName) { args ->
-                    Logger.d("$LOG_TAG: event=${event.eventName} args=$args")
+                    val raw = args.getOrNull(0)
+                    val payload = when (raw) {
+                        is String -> raw
+                        is JSONObject -> raw.toString()
+                        else -> null
+                    }
+
+                    if (payload == null) {
+                        Logger.w("$LOG_TAG: ignore event=${event.eventName} because payload is not String/JSONObject. raw=$raw")
+                        return@on
+                    }
+
+                    Logger.d("$LOG_TAG: event=${event.eventName} payload=$payload")
                     scope.launch {
-                        _messages.emit(SocketMessage(event = event, args = args.toList()))
+                        _messages.emit(
+                            SocketMessage(
+                                event = event,
+                                args = payload
+                            )
+                        )
                     }
                 }
             }

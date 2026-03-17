@@ -75,6 +75,7 @@
     <string name="post_deleted">Post deleted</string>
     <string name="upload_failed_tap_to_retry">Upload failed. Tap to retry</string>
     <string name="uploading">Uploading…</string>
+    <string name="history_label">History</string>
 
     <!-- My Profile -->
     <string name="profile_back">Back</string>

@@ -54,3 +54,13 @@ data class CreatePostRequest(
 )
 
 typealias PostsFeedData = PaginatedResponse<Post>
+
+data class UnreadPostsCountData(
+    @SerializedName("count")
+    val count: Int
+)
+
+data class MarkPostsSeenRequest(
+    @SerializedName("lastSeenPostCreatedAt")
+    val lastSeenPostCreatedAt: String
+)

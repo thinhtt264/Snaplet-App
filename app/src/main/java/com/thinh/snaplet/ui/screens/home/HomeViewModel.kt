@@ -15,7 +15,10 @@ import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.repository.UserRepository
+import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
+import com.thinh.snaplet.domain.feed.ObserveNewPostEventUseCase
+import com.thinh.snaplet.domain.feed.ShouldMarkLatestPostAsSeenUseCase
 import com.thinh.snaplet.domain.feed.ShouldTriggerLoadMoreUseCase
 import com.thinh.snaplet.domain.media.DownloadPostImageUseCase
 import com.thinh.snaplet.domain.media.ValidateCaptureReadinessUseCase
@@ -34,9 +37,7 @@ import com.thinh.snaplet.domain.user.GetRelationshipActionUseCase
 import com.thinh.snaplet.domain.user.GetRelationshipsByStatusesUseCase
 import com.thinh.snaplet.domain.user.RemoveFriendUseCase
 import com.thinh.snaplet.domain.user.RemoveRelationshipUseCase
-import com.thinh.snaplet.domain.feed.ObserveNewPostEventUseCase
 import com.thinh.snaplet.platform.permission.Permission
-import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.platform.permission.PermissionManager
 import com.thinh.snaplet.platform.share.ShareApp
 import com.thinh.snaplet.platform.share.ShareManager
@@ -45,6 +46,7 @@ import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
 import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.FileUtils
+import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,12 +54,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -88,7 +90,9 @@ class HomeViewModel @Inject constructor(
     private val removeRelationshipUseCase: RemoveRelationshipUseCase,
     private val userRepository: UserRepository,
     private val shareManager: ShareManager,
-    private val observeNewPostEvent: ObserveNewPostEventUseCase
+    private val observeNewPostEvent: ObserveNewPostEventUseCase,
+    private val postRepository: PostRepository,
+    private val shouldMarkLatestPostAsSeenUseCase: ShouldMarkLatestPostAsSeenUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -100,8 +104,7 @@ class HomeViewModel @Inject constructor(
     )
 
     val uiState: StateFlow<HomeUiState> = combine(
-        _uiState,
-        userRepository.observeMyUserProfile()
+        _uiState, userRepository.observeMyUserProfile()
     ) { state, profile ->
         state.copy(profileAvatarUrl = profile?.avatarUrls?.forThumbnail().orEmpty())
     }.stateIn(
@@ -124,6 +127,7 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(shouldScrollToFirstPost = false) }
     }
 
+    private var lastMarkedPostId: String? = null
     private var currentVisibleIndex: Int = -1
     private val currentPostVisible: Post?
         get() = _uiState.value.posts.getOrNull(currentVisibleIndex)
@@ -134,11 +138,29 @@ class HomeViewModel @Inject constructor(
     init {
         loadNewsfeed()
         loadFriendsCount()
-        observeNewPostEvent()
-            .onEach { event ->
-                Logger.d("HomeViewModel: new_post received count=${event.count} seq=${event.seq}")
+        loadUnreadPostsCount()
+        observeNewPostEvent().onEach { event ->
+            Logger.d("HomeViewModel: new_post received count=${event.count} seq=${event.seq}")
+        }.launchIn(viewModelScope)
+    }
+
+    private fun loadUnreadPostsCount() {
+        viewModelScope.launch {
+            postRepository.getUnreadPostsCount().onSuccess { count ->
+                _uiState.update { it.copy(unreadPostsCount = count) }
             }
-            .launchIn(viewModelScope)
+        }
+    }
+
+    private fun tryMarkSeen() {
+        val state = _uiState.value
+        val postToMark = shouldMarkLatestPostAsSeenUseCase(
+            currentVisibleIndex = currentVisibleIndex,
+            posts = state.posts,
+            lastMarkedPostId = lastMarkedPostId
+        ) ?: return
+        lastMarkedPostId = postToMark.id
+        onFeedViewed(postToMark)
     }
 
     private fun updateFriendSheetState(transform: (FriendBottomSheetState) -> FriendBottomSheetState) {
@@ -150,6 +172,12 @@ class HomeViewModel @Inject constructor(
             getDisplayableFriendsCountUseCase().onSuccess { count ->
                 updateFriendSheetState { it.copy(friendsCount = count) }
             }
+        }
+    }
+
+    private fun onFeedViewed(post: Post) {
+        viewModelScope.launch {
+            postRepository.markPostsSeen(post.createdAt)
         }
     }
 
@@ -212,8 +240,7 @@ class HomeViewModel @Inject constructor(
     fun requestRemoveFriend(friend: RelationshipWithUser) {
         OverlayEventBus.showConfirmDialog(
             title = UiText.StringResource(
-                R.string.remove_friend_confirm_title,
-                listOf(friend.displayName)
+                R.string.remove_friend_confirm_title, listOf(friend.displayName)
             ),
             message = UiText.StringResource(R.string.remove_friend_confirm_message),
             confirmText = UiText.StringResource(R.string.delete),
@@ -304,6 +331,7 @@ class HomeViewModel @Inject constructor(
 
     fun onItemVisible(currentIndex: Int) {
         currentVisibleIndex = currentIndex
+        tryMarkSeen()
 
         val state = _uiState.value
         val shouldLoad = shouldTriggerLoadMoreUseCase(
@@ -658,8 +686,7 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
 
         viewModelScope.launch {
-            val isFrontCamera =
-                state.cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
+            val isFrontCamera = state.cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
 
             val processedPath = withContext(Dispatchers.IO) {
                 FileUtils.flipAndCompressImage(
