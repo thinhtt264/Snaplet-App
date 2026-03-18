@@ -31,7 +31,7 @@ internal fun OptionsSheet(
             BaseText(
                 text = content.title.asString(context),
                 textAlign = TextAlign.Center,
-                typography = MaterialTheme.typography.headlineSmall,
+                typography = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier
                     .fillMaxWidth()

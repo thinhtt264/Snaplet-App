@@ -251,7 +251,6 @@ fun ImageCropper(
         frameW: Float, frameH: Float
     ) -> Unit = { _, _, _, _, _, _ -> },
 ) {
-    val context = LocalContext.current
     val density = LocalDensity.current
     val handleZonePx = with(density) { HANDLE_ZONE.toPx() }
     val maxFrameHPx = with(density) { maxFrameHeight.toPx() }
@@ -406,6 +405,7 @@ fun ImageCropper(
             contentDescription = null,
             contentScale = ContentScale.FillWidth,
             resizeSize = ImageSize.Original,
+            crossfadeDuration = 0,
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.Center)

@@ -14,8 +14,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -264,13 +262,7 @@ private fun HistoryButton(
             modifier = Modifier.clickable(onClick = onClick)
         ) {
             AnimatedContent(
-                targetState = hasUnread, transitionSpec = {
-                    (fadeIn(animationSpec = tween(durationMillis = MotionTokens.Normal)) + scaleIn(
-                        initialScale = 0.8f
-                    )) togetherWith (fadeOut(animationSpec = tween(durationMillis = MotionTokens.Fast)) + scaleOut(
-                        targetScale = 0.8f
-                    ))
-                }, label = "HistoryButtonBadge"
+                targetState = hasUnread, label = "HistoryButtonBadge"
             ) { showBadge ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

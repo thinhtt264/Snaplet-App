@@ -14,6 +14,7 @@ import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.media.ImageTransform
+import com.thinh.snaplet.data.model.post.NewPostUpdate
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
@@ -67,6 +68,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.Date
 import javax.inject.Inject
 
 @HiltViewModel
@@ -127,7 +129,7 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(shouldScrollToFirstPost = false) }
     }
 
-    private var lastMarkedPostId: String? = null
+    private var lastMarkedPostCreatedAt: Date? = null
     private var currentVisibleIndex: Int = -1
     private val currentPostVisible: Post?
         get() = _uiState.value.posts.getOrNull(currentVisibleIndex)
@@ -135,13 +137,14 @@ class HomeViewModel @Inject constructor(
     /** Temp posts for retry only: lookup by id to get imagePath/transform/caption. Not in UI state. */
     private var tempPosts: List<Post> = emptyList()
 
+    /** Local seq for unread posts updates. Seq is -1 by default. */
+    private var unreadPostsSeq: Int = -1
+
     init {
         loadNewsfeed()
         loadFriendsCount()
         loadUnreadPostsCount()
-        observeNewPostEvent().onEach { event ->
-            Logger.d("HomeViewModel: new_post received count=${event.count} seq=${event.seq}")
-        }.launchIn(viewModelScope)
+        observeUnreadPostsUpdates()
     }
 
     private fun loadUnreadPostsCount() {
@@ -152,14 +155,29 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun observeUnreadPostsUpdates() {
+        observeNewPostEvent()
+            .onEach(::handleNewPostUpdate)
+            .launchIn(viewModelScope)
+    }
+
+    private fun handleNewPostUpdate(event: NewPostUpdate) {
+        Logger.d("HomeViewModel: posts_unread_updated received count=${event.count} seq=${event.seq}")
+        val currentSeq = unreadPostsSeq
+        if (event.seq > currentSeq) {
+            unreadPostsSeq = event.seq
+            _uiState.update { it.copy(unreadPostsCount = event.count) }
+        }
+    }
+
     private fun tryMarkSeen() {
         val state = _uiState.value
         val postToMark = shouldMarkLatestPostAsSeenUseCase(
             currentVisibleIndex = currentVisibleIndex,
             posts = state.posts,
-            lastMarkedPostId = lastMarkedPostId
+            lastSeenPostCreatedAt = lastMarkedPostCreatedAt
         ) ?: return
-        lastMarkedPostId = postToMark.id
+        lastMarkedPostCreatedAt = postToMark.createdAt
         onFeedViewed(postToMark)
     }
 
@@ -528,7 +546,7 @@ class HomeViewModel @Inject constructor(
                         state.copy(
                             posts = state.posts.map { if (it.id == tempPostId) it.copy(id = realPostId) else it },
                             uploadStatuses = state.uploadStatuses - tempPostId,
-                            snackbarMessage = UiText.DynamicString("Post uploaded successfully")
+                            // snackbarMessage = UiText.DynamicString("Post uploaded successfully")
                         )
                     }
                 }
@@ -571,6 +589,7 @@ class HomeViewModel @Inject constructor(
                             message = UiText.StringResource(R.string.delete_photo_message),
                             confirmText = UiText.StringResource(R.string.delete),
                             onConfirm = { deletePost(post.id) },
+                            confirmDestructive = true
                         )
                     })
 
@@ -644,7 +663,7 @@ class HomeViewModel @Inject constructor(
                         uploadStatuses = state.uploadStatuses - postId
                     )
                 }
-                _uiState.update { it.copy(snackbarMessage = UiText.StringResource(R.string.post_deleted)) }
+                // _uiState.update { it.copy(snackbarMessage = UiText.StringResource(R.string.post_deleted)) }
             }.onFailure { error ->
                 _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
             }

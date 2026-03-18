@@ -17,3 +17,11 @@ annotation class BaseOkHttpClient
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class InternalOkHttpClient
+
+/**
+ * Logging Interceptor: custom HTTP logger (method, url, headers, body, status).
+ * Distinguishes from AuthInterceptor which also provides okhttp3.Interceptor.
+ */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class LoggingInterceptor

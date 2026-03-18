@@ -1,7 +1,7 @@
 package com.thinh.snaplet.platform.socket
 
 enum class SocketEvent(val eventName: String) {
-    NEW_POST("new_post"),
+    POSTS_UNREAD_UPDATED("posts_unread_updated"),
     // NEW_CHAT("new_chat"),
     UNKNOWN("unknown");
 

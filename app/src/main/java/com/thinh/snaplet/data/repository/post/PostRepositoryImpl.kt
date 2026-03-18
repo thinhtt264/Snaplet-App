@@ -13,6 +13,7 @@ import com.thinh.snaplet.utils.network.GsonHolder.gson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.mapNotNull
+import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,13 +25,13 @@ class PostRepositoryImpl @Inject constructor(
 
     override val newPostMessages: Flow<NewPostUpdate> =
         socketManager.messages
-            .filter { it.event == SocketEvent.NEW_POST }
+            .filter { it.event == SocketEvent.POSTS_UNREAD_UPDATED }
             .mapNotNull { message ->
                 val jsonString = message.args ?: return@mapNotNull null
                 runCatching {
                     gson.fromJson(jsonString, NewPostUpdate::class.java)
                 }.onFailure {
-                    Logger.e("PostRepository: parse new_post failed: ${it.message}")
+                    Logger.e("PostRepository: parse posts_unread_updated failed: ${it.message}")
                 }.getOrNull()
             }
 
@@ -42,7 +43,7 @@ class PostRepositoryImpl @Inject constructor(
     }
 
     override suspend fun markPostsSeen(
-        lastSeenPostCreatedAt: String,
+        lastSeenPostCreatedAt: Date,
     ): ApiResult<Unit> {
         val body = MarkPostsSeenRequest(
             lastSeenPostCreatedAt = lastSeenPostCreatedAt,

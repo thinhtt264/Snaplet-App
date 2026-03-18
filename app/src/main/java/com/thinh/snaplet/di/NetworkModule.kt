@@ -14,6 +14,7 @@ import com.thinh.snaplet.network.TokenAuthenticator
 import com.thinh.snaplet.network.TokenRefreshCoordinator
 import com.thinh.snaplet.platform.socket.SocketConfig
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.UtcDateDeserializer
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -21,9 +22,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.Date
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -45,25 +46,55 @@ object NetworkModule {
     @Singleton
     fun provideGson(): Gson {
         return GsonBuilder().serializeNulls() // Include null fields in JSON
-            .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") // ISO 8601
+            .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX") // ISO 8601 with timezone offset/Z
+            .registerTypeAdapter(Date::class.java, UtcDateDeserializer())
             .create()
     }
 
     /**
-     * Provide HTTP Logging Interceptor Logs all HTTP requests/responses for
-     * debugging
+     * Provide HTTP Logging Interceptor
+     * Logs method, url, request headers/body, and response status — debug only.
      */
     @Provides
     @Singleton
-    fun provideLoggingInterceptor(): HttpLoggingInterceptor {
-        return HttpLoggingInterceptor { message ->
-            Logger.d("🌐 HTTP: $message")
-        }.apply {
-            level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.BODY // Full logs in debug
-            } else {
-                HttpLoggingInterceptor.Level.BASIC // Minimal logs in release
+    @LoggingInterceptor
+    fun provideLoggingInterceptor(): Interceptor {
+        return Interceptor { chain ->
+            val request = chain.request()
+
+            if (!BuildConfig.DEBUG) return@Interceptor chain.proceed(request)
+
+            val reqBody = request.body?.let { body ->
+                val buffer = okio.Buffer()
+                body.writeTo(buffer)
+                buffer.readUtf8()
             }
+
+            Logger.d(buildString {
+                appendLine("┌── REQUEST ─────────────────────────────")
+                appendLine("│ ${request.method} ${request.url}")
+                request.headers.forEach { (name, value) ->
+                    if (name.lowercase() !in listOf("accept-encoding", "connection")) {
+                        appendLine("│ $name: $value")
+                    }
+                }
+                if (!reqBody.isNullOrBlank()) appendLine("│ Body: $reqBody")
+                append("└────────────────────────────────────────")
+            })
+
+            val startMs = System.currentTimeMillis()
+            val response = chain.proceed(request)
+            val durationMs = System.currentTimeMillis() - startMs
+            val responseBody = response.peekBody(Long.MAX_VALUE).string()
+
+            Logger.d(buildString {
+                appendLine("┌── RESPONSE ────────────────────────────")
+                appendLine("│ ${response.code} ${request.method} ${request.url} (${durationMs}ms)")
+                appendLine("│ Body: $responseBody")
+                append("└────────────────────────────────────────")
+            })
+
+            response
         }
     }
 
@@ -166,7 +197,7 @@ object NetworkModule {
     @Singleton
     @InternalOkHttpClient
     fun provideInternalOkHttpClient(
-        loggingInterceptor: HttpLoggingInterceptor,
+        @LoggingInterceptor loggingInterceptor: Interceptor,
         authInterceptor: Interceptor,
         fingerprintInterceptor: FingerprintInterceptor,
         chuckerInterceptor: ChuckerInterceptor,

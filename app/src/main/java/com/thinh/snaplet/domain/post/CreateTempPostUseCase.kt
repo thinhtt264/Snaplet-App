@@ -6,8 +6,7 @@ import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.model.media.Media
 import com.thinh.snaplet.data.model.user.UserProfile
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Locale
+import java.util.Date
 import javax.inject.Inject
 
 /**
@@ -15,8 +14,6 @@ import javax.inject.Inject
  * Pure data transformation – no I/O.
  */
 class CreateTempPostUseCase @Inject constructor() {
-
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US)
 
     operator fun invoke(
         id: String,
@@ -46,7 +43,7 @@ class CreateTempPostUseCase @Inject constructor() {
             media = listOf(tempMedia),
             caption = caption,
             visibility = "friend-only",
-            createdAt = dateFormat.format(System.currentTimeMillis()),
+            createdAt = Date(),
             isOwnPost = true
         )
     }

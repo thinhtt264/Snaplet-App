@@ -80,7 +80,7 @@ fun FormTextField(
             BaseText(
                 text = errorMessage ?: "",
                 typography = typography.bodySmall,
-                color = colorScheme.onError,
+                color = colorScheme.error,
                 modifier = Modifier.padding(start = 16.dp, top = 4.dp)
             )
         }
