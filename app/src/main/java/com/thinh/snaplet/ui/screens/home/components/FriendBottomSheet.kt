@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +30,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +76,11 @@ fun FriendBottomSheet(
     onPendingAccept: (RelationshipWithUser) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val isReady by remember(friendSheetState.shareApps, friendSheetState.friendList) {
+        derivedStateOf {
+            friendSheetState.shareApps.isNotEmpty() && friendSheetState.friendList.isNotEmpty()
+        }
+    }
 
     LaunchedEffect(Unit) {
         onSheetVisible()
@@ -85,6 +92,18 @@ fun FriendBottomSheet(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.statusBarsPadding(),
     ) {
+        if (!isReady) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .navigationBarsPadding(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(52.dp))
+            }
+            return@ModalBottomSheet
+        }
+
         val focusManager = LocalFocusManager.current
         val current = friendSheetState.friendsCount ?: 0
 
