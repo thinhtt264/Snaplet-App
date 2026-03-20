@@ -41,6 +41,7 @@ import com.thinh.snaplet.ui.screens.home.components.CameraPage
 import com.thinh.snaplet.ui.screens.home.components.EmptyMediaPage
 import com.thinh.snaplet.ui.screens.home.components.FriendBottomSheet
 import com.thinh.snaplet.ui.screens.home.components.MediaPage
+import com.thinh.snaplet.ui.screens.home.components.NewPostsBanner
 import com.thinh.snaplet.ui.screens.home.components.TopAction
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
@@ -98,7 +99,7 @@ fun Home(
     val snackBarHostState = remember { SnackbarHostState() }
 
     val scrollToFirstPost: suspend () -> Unit = {
-        if (pagerState.currentPage == CAMERA_PAGE_INDEX) {
+        if (pagerState.currentPage != 1) {
             pagerState.animateScrollToPage(1)
         }
     }
@@ -277,8 +278,7 @@ private fun HomeScreen(
                     uiState.posts.isEmpty() -> "empty_media"
                     else -> uiState.posts[page - 1].id
                 }
-            }
-        ) { page ->
+            }) { page ->
             when (page) {
                 CAMERA_PAGE_INDEX -> CameraPage(
                     onDownloadImage = viewModel::downloadCaptureImage,
@@ -304,12 +304,21 @@ private fun HomeScreen(
                             onCaptureClick = onNavigateToCameraPage,
                             onMoreClick = onMoreClick,
                             onRetryClick = { viewModel.retryUpload(post.id) },
-                            onDeleteClick = { viewModel.deleteFailedPost(post.id) }
-                        )
+                            onDeleteClick = { viewModel.deleteFailedPost(post.id) })
                     }
                 }
             }
         }
+
+        NewPostsBanner(
+            bannerMessage = uiState.bannerMessage,
+            isEligiblePage = pagerState.currentPage > CAMERA_PAGE_INDEX &&
+                    uiState.unreadPostsCount > 0,
+            onClick = viewModel::onNewPostsBannerTapped,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 76.dp)
+        )
 
         TopAction(
             hasCaptureImage = uiState.cameraState.capturedImagePath != null,

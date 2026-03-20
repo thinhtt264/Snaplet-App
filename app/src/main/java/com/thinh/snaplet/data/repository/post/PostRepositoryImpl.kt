@@ -2,6 +2,8 @@ package com.thinh.snaplet.data.repository.post
 
 import com.thinh.snaplet.data.datasource.remote.ApiService
 import com.thinh.snaplet.data.model.MarkPostsSeenRequest
+import com.thinh.snaplet.data.model.Post
+import com.thinh.snaplet.data.model.PostsFeedData
 import com.thinh.snaplet.data.model.UnreadPostsCountData
 import com.thinh.snaplet.data.model.post.NewPostUpdate
 import com.thinh.snaplet.platform.socket.SocketEvent
@@ -39,6 +41,18 @@ class PostRepositoryImpl @Inject constructor(
         return safeApiCall(
             apiCall = { apiService.getUnreadPostsCount() },
             transform = { data: UnreadPostsCountData -> data.count }
+        )
+    }
+
+    override suspend fun getNewsfeed(limit: Int, cursor: String?): ApiResult<PostsFeedData> {
+        return safeApiCall(
+            apiCall = { apiService.getPostsFeed(limit = limit, cursor = cursor) },
+        )
+    }
+
+    override suspend fun getNewerPost(since: String, limit: Int): ApiResult<List<Post>> {
+        return safeApiCall(
+            apiCall = { apiService.getNewerFeed(since = since, limit = limit) },
         )
     }
 

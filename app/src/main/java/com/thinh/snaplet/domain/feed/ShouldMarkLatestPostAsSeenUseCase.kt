@@ -4,33 +4,23 @@ import com.thinh.snaplet.data.model.Post
 import java.util.Date
 import javax.inject.Inject
 
-/**
- * Decides whether the latest post in the feed should be marked as seen.
- *
- * Current business rules:
- * - Do nothing if no item is currently visible (index == -1)
- * - Do nothing if there is no post
- * - Do nothing if the latest post was already marked as seen
- * - Ignore optimistic temp posts and own posts
- * - Within the visible range [0, currentVisibleIndex], return the newest eligible post (smallest index)
- */
+/** Oldest unread (non-own) post at or before [viewedPost] in feed order; excludes items newer than [viewedPost] when the list was prepended. */
 class ShouldMarkLatestPostAsSeenUseCase @Inject constructor() {
 
     operator fun invoke(
-        currentVisibleIndex: Int,
         posts: List<Post>,
-        lastSeenPostCreatedAt: Date?
+        lastSeenPostCreatedAt: Date?,
+        viewedPost: Post,
     ): Post? {
-        if (currentVisibleIndex < 0) return null
         if (posts.isEmpty()) return null
+        val anchorIndex = posts.indexOfFirst { it.id == viewedPost.id }
+        if (anchorIndex < 0) return null
 
-        val lastVisibleIndex = currentVisibleIndex.coerceAtMost(posts.lastIndex)
-
-        return posts.take(lastVisibleIndex + 1)
+        return posts
+            .take(anchorIndex + 1)
+            .filter { !it.createdAt.after(viewedPost.createdAt) }
             .firstOrNull { post ->
-                // Skip own posts – only friends' posts count for unread
                 if (post.isOwnPost) return@firstOrNull false
-
                 lastSeenPostCreatedAt?.let { post.createdAt.after(it) } ?: true
             }
     }

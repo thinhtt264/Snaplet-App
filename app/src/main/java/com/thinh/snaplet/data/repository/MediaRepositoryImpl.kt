@@ -7,7 +7,6 @@ import android.webkit.MimeTypeMap
 import com.thinh.snaplet.data.datasource.remote.ApiService
 import com.thinh.snaplet.data.model.CreatePostRequest
 import com.thinh.snaplet.data.model.Post
-import com.thinh.snaplet.data.model.PostsFeedData
 import com.thinh.snaplet.data.model.media.ConfirmUploadData
 import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
 import com.thinh.snaplet.data.model.media.ImageTransform
@@ -109,14 +108,6 @@ class MediaRepositoryImpl @Inject constructor(
                 Result.failure(e)
             }
         }
-
-    override suspend fun getNewsfeed(limit: Int, cursor: String?): ApiResult<PostsFeedData> {
-        return safeApiCall(
-            apiCall = {
-                apiService.getPostsFeed(limit = limit, cursor = cursor)
-            }
-        )
-    }
 
     override suspend fun requestUpload(
         items: List<String>,

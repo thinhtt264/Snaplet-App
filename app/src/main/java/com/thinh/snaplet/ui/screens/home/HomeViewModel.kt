@@ -17,13 +17,16 @@ import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.model.post.NewPostUpdate
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.post.PostRepository
+import com.thinh.snaplet.domain.feed.FetchNewerFeedUseCase
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
+import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase.Companion.FEED_PAGE_LIMIT
 import com.thinh.snaplet.domain.feed.ObserveNewPostEventUseCase
 import com.thinh.snaplet.domain.feed.ShouldMarkLatestPostAsSeenUseCase
 import com.thinh.snaplet.domain.feed.ShouldTriggerLoadMoreUseCase
 import com.thinh.snaplet.domain.media.DownloadPostImageUseCase
 import com.thinh.snaplet.domain.media.ValidateCaptureReadinessUseCase
 import com.thinh.snaplet.domain.model.CaptureReadiness
+import com.thinh.snaplet.domain.model.NewerFeedResult
 import com.thinh.snaplet.domain.model.PostAction
 import com.thinh.snaplet.domain.model.UploadPostResult
 import com.thinh.snaplet.domain.post.CreateTempPostUseCase
@@ -47,11 +50,11 @@ import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
 import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.FileUtils
-import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -67,14 +70,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.Locale
 import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
+import kotlin.math.min
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val permissionManager: PermissionManager,
     private val getNewsfeedUseCase: GetNewsfeedUseCase,
+    private val fetchNewerFeedUseCase: FetchNewerFeedUseCase,
     private val shouldTriggerLoadMoreUseCase: ShouldTriggerLoadMoreUseCase,
     private val validateCaptureReadinessUseCase: ValidateCaptureReadinessUseCase,
     private val createTempPostUseCase: CreateTempPostUseCase,
@@ -96,6 +101,10 @@ class HomeViewModel @Inject constructor(
     private val postRepository: PostRepository,
     private val shouldMarkLatestPostAsSeenUseCase: ShouldMarkLatestPostAsSeenUseCase,
 ) : ViewModel() {
+
+    private companion object {
+        private const val DEBOUNCE_MS = 500L
+    }
 
     private val _uiState = MutableStateFlow(
         HomeUiState(
@@ -131,14 +140,18 @@ class HomeViewModel @Inject constructor(
 
     private var lastMarkedPostCreatedAt: Date? = null
     private var currentVisibleIndex: Int = -1
+
+    /** [Post.id] for the item the user is viewing; set when [currentVisibleIndex] changes. */
+    private var viewedPostId: String? = null
     private val currentPostVisible: Post?
         get() = _uiState.value.posts.getOrNull(currentVisibleIndex)
 
     /** Temp posts for retry only: lookup by id to get imagePath/transform/caption. Not in UI state. */
     private var tempPosts: List<Post> = emptyList()
 
-    /** Local seq for unread posts updates. Seq is -1 by default. */
-    private var unreadPostsSeq: Int = -1
+    private var socketSeqNum: Int = -1
+
+    private var newerJob: Job? = null
 
     init {
         loadNewsfeed()
@@ -156,26 +169,84 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun observeUnreadPostsUpdates() {
-        observeNewPostEvent()
-            .onEach(::handleNewPostUpdate)
-            .launchIn(viewModelScope)
+        observeNewPostEvent().onEach(::handleNewPostUpdate).launchIn(viewModelScope)
     }
 
     private fun handleNewPostUpdate(event: NewPostUpdate) {
-        Logger.d("HomeViewModel: posts_unread_updated received count=${event.count} seq=${event.seq}")
-        val currentSeq = unreadPostsSeq
+        val currentSeq = socketSeqNum
         if (event.seq > currentSeq) {
-            unreadPostsSeq = event.seq
-            _uiState.update { it.copy(unreadPostsCount = event.count) }
+            socketSeqNum = event.seq
+            onNewPostEvent(event.count)
+        }
+    }
+
+    private fun onNewPostEvent(count: Int) {
+        _uiState.update { it.copy(unreadPostsCount = count) }
+
+        newerJob?.cancel()
+        newerJob = viewModelScope.launch {
+            runNewerFetch()
+        }
+    }
+
+    private suspend fun runNewerFetch() {
+        val currentState = _uiState.value
+        val unread = currentState.unreadPostsCount
+        when (
+            val result = fetchNewerFeedUseCase(
+                unreadCount = unread,
+                currentPosts = currentState.posts,
+            )
+        ) {
+            is NewerFeedResult.NewPosts -> {
+                val merged = result.mergedHead + result.tail
+                val showBanner = currentVisibleIndex >= 0 && unread > 0
+
+                val displayUnreadCount = min(unread, 9)
+                _uiState.update {
+                    it.copy(
+                        posts = merged,
+                        bannerMessage = if (showBanner) {
+                            UiText.PluralResource(
+                                R.plurals.new_posts_banner,
+                                displayUnreadCount,
+                                args = listOf(displayUnreadCount),
+                            )
+                        } else {
+                            null
+                        },
+                    )
+                }
+            }
+
+            is NewerFeedResult.Refresh -> loadNewsfeed(isLoadMore = false)
+
+            is NewerFeedResult.Empty -> Unit
+        }
+    }
+
+    fun onNewPostsBannerTapped() {
+        newerJob?.cancel()
+        _uiState.update {
+            it.copy(
+                bannerMessage = null,
+                shouldScrollToFirstPost = true,
+            )
         }
     }
 
     private fun tryMarkSeen() {
+        if (currentVisibleIndex < 0) return
+        if (currentVisibleIndex > FetchNewerFeedUseCase.FEED_MAX_PAGE_INDEX) return
+
         val state = _uiState.value
+        val viewedPost = viewedPostId?.let { id -> state.posts.firstOrNull { it.id == id } }
+            ?: state.posts.getOrNull(currentVisibleIndex)
+            ?: return
         val postToMark = shouldMarkLatestPostAsSeenUseCase(
-            currentVisibleIndex = currentVisibleIndex,
             posts = state.posts,
-            lastSeenPostCreatedAt = lastMarkedPostCreatedAt
+            lastSeenPostCreatedAt = lastMarkedPostCreatedAt,
+            viewedPost = viewedPost,
         ) ?: return
         lastMarkedPostCreatedAt = postToMark.createdAt
         onFeedViewed(postToMark)
@@ -326,7 +397,9 @@ class HomeViewModel @Inject constructor(
 
             val cursor = if (isLoadMore) state.nextCursor else null
 
-            getNewsfeedUseCase(cursor = cursor).fold(onSuccess = { feedData ->
+            getNewsfeedUseCase(
+                limit = FEED_PAGE_LIMIT, cursor = cursor
+            ).fold(onSuccess = { feedData ->
                 _uiState.update {
                     it.copy(
                         posts = if (isLoadMore) it.posts + feedData.data else feedData.data,
@@ -348,7 +421,15 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onItemVisible(currentIndex: Int) {
+        val previousIndex = currentVisibleIndex
         currentVisibleIndex = currentIndex
+
+        val posts = _uiState.value.posts
+        when {
+            currentIndex < 0 -> viewedPostId = null
+            currentIndex != previousIndex -> viewedPostId = posts.getOrNull(currentIndex)?.id
+        }
+
         tryMarkSeen()
 
         val state = _uiState.value

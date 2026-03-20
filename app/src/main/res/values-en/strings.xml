@@ -66,6 +66,11 @@
     <string name="friend_request_section_title">Friend requests</string>
     <string name="accept">Accept</string>
     <string name="blocked">Blocked</string>
+    
+    <plurals name="new_posts_banner">
+        <item quantity="one">%d new post</item>
+        <item quantity="other">%d new posts</item>
+    </plurals>
 
     <!-- Empty media (Locket) screen -->
     <string name="empty_media_title">Send your first Locket</string>

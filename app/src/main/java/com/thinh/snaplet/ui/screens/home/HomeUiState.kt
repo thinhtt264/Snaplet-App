@@ -35,6 +35,9 @@ data class HomeUiState(
     /** Number of unread posts for history badge. */
     val unreadPostsCount: Int = 0,
 
+    /** Banner message shown on top of feed. null = hidden. */
+    val bannerMessage: UiText? = null,
+
     /** Snackbar message to show. UI shows then calls onSnackbarDismissed(). */
     val snackbarMessage: UiText? = null,
 

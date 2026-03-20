@@ -53,6 +53,12 @@ interface ApiService {
         @Query("cursor") cursor: String? = null
     ): Response<BaseResponse<PostsFeedData>>
 
+    @GET("posts/feed/newer")
+    suspend fun getNewerFeed(
+        @Query("since") since: String,
+        @Query("limit") limit: Int,
+    ): Response<BaseResponse<List<Post>>>
+
     @GET("users/profile/{username}")
     suspend fun getUserProfile(
         @Path("username") username: String

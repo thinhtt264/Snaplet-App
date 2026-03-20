@@ -1,18 +1,21 @@
 package com.thinh.snaplet.domain.feed
 
 import com.thinh.snaplet.data.model.PostsFeedData
-import com.thinh.snaplet.data.repository.MediaRepository
+import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.utils.network.ApiResult
 import javax.inject.Inject
 
-/**
- * Loads the newsfeed (initial or paginated).
- * ViewModel decides when to call (initial load vs load more).
- */
 class GetNewsfeedUseCase @Inject constructor(
-    private val mediaRepository: MediaRepository
+    private val postRepository: PostRepository
 ) {
-    suspend operator fun invoke(limit: Int = 5, cursor: String? = null): ApiResult<PostsFeedData> {
-        return mediaRepository.getNewsfeed(limit = limit, cursor = cursor)
+    companion object {
+        const val FEED_PAGE_LIMIT = 5
+    }
+
+    suspend operator fun invoke(
+        limit: Int = FEED_PAGE_LIMIT,
+        cursor: String? = null,
+    ): ApiResult<PostsFeedData> {
+        return postRepository.getNewsfeed(limit = limit, cursor = cursor)
     }
 }

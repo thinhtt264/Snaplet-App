@@ -78,6 +78,11 @@
     <string name="history_label">Lịch sử</string>
     <string name="blocked">Bị chặn</string>
 
+    <plurals name="new_posts_banner">
+        <item quantity="one">%d bài viết mới</item>
+        <item quantity="other">%d bài viết mới</item>
+    </plurals>
+
     <!-- Empty media (Locket) screen -->
     <string name="empty_media_title">Gửi Locket đầu tiên của bạn</string>
     <string name="empty_media_subtitle">Ảnh của bạn sẽ xuất hiện trên màn hình chính của bạn bè</string>

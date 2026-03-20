@@ -50,7 +50,7 @@ import com.thinh.snaplet.ui.screens.home.UploadStatus
 import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.formatTimeAgo
 
-private const val TOP_SPACE_RATIO = 0.15f
+private const val TOP_SPACE_RATIO = 0.16f
 
 @Composable
 fun MediaPage(
