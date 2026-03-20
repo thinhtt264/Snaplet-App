@@ -1,6 +1,6 @@
 package com.thinh.snaplet.domain.feed
 
-import com.thinh.snaplet.data.model.Post
+import com.thinh.snaplet.data.model.post.Post
 import java.util.Date
 import javax.inject.Inject
 

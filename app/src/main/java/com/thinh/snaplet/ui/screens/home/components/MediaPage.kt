@@ -38,7 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.thinh.snaplet.R
-import com.thinh.snaplet.data.model.Post
+import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.ui.common.CommonImages
 import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText

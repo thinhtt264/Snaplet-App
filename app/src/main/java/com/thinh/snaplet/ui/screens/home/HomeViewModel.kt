@@ -10,11 +10,11 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.R
-import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.model.post.NewPostUpdate
+import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.domain.feed.FetchNewerFeedUseCase

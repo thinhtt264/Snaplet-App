@@ -1,9 +1,9 @@
 package com.thinh.snaplet.domain.post
 
-import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.data.model.media.ImageSizes
 import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.model.media.Media
+import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.data.model.user.UserProfile
 import java.io.File
 import java.util.Date

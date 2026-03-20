@@ -2,8 +2,8 @@ package com.thinh.snaplet.ui.screens.home
 
 import android.graphics.Bitmap
 import androidx.camera.core.CameraSelector
-import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.data.model.RelationshipWithUser
+import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.domain.model.RelationshipAction
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.platform.share.ShareApp

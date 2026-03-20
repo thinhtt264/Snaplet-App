@@ -1,11 +1,11 @@
 package com.thinh.snaplet.data.repository.post
 
-import com.thinh.snaplet.data.model.Post
-import com.thinh.snaplet.data.model.PostsFeedData
 import com.thinh.snaplet.data.model.post.NewPostUpdate
+import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.model.post.PostsFeedData
 import com.thinh.snaplet.utils.network.ApiResult
-import java.util.Date
 import kotlinx.coroutines.flow.Flow
+import java.util.Date
 
 interface PostRepository {
     val newPostMessages: Flow<NewPostUpdate>
