@@ -237,14 +237,16 @@ fun CameraPage(
             )
         }
 
-        HistoryButton(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(start = 6.dp, bottom = 28.dp)
-                .navigationBarsPadding(),
-            unreadPostsCount = unreadPostsCount,
-            onClick = onHistoryClick,
-        )
+        if (cameraState.capturedImagePath == null) {
+            HistoryButton(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(start = 6.dp, bottom = 28.dp)
+                    .navigationBarsPadding(),
+                unreadPostsCount = unreadPostsCount,
+                onClick = onHistoryClick,
+            )
+        }
     }
 }
 
