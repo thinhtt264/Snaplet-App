@@ -112,4 +112,9 @@
     <string name="profile_change_avatar_title">Your profile picture will be displayed to everyone.</string>
     <string name="profile_edit_name_title">Edit your name</string>
     <string name="profile_edit_name_save">Save</string>
+
+    <!-- Force logout (session expired) -->
+    <string name="force_logout_title">Your login session has expired</string>
+    <string name="force_logout_message">Your account was just signed in on another device. This session has ended.</string>
+    <string name="force_logout_button">Log out</string>
 </resources>

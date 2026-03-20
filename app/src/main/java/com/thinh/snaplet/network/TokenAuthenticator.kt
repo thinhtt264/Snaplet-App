@@ -24,17 +24,20 @@ class TokenAuthenticator @Inject constructor(
     }
 
     override fun authenticate(route: Route?, response: Response): Request? {
+        if (tokenRefreshCoordinator.isForceLogoutTriggered()) {
+            return null
+        }
+
         val requestUrl = response.request.url.toString()
 
         if (requestUrl.contains(REFRESH_TOKEN_ENDPOINT)) {
-            runBlocking { authRepository.get().forceLogout() }
             return null
         }
 
         val retryCount = responseCount(response)
         if (retryCount >= MAX_RETRY_ATTEMPTS) {
             Logger.e("❌ Max retry attempts ($MAX_RETRY_ATTEMPTS) reached, giving up")
-            runBlocking { authRepository.get().forceLogout() }
+            tokenRefreshCoordinator.forceLogout()
             return null
         }
 
@@ -44,7 +47,6 @@ class TokenAuthenticator @Inject constructor(
 
         Logger.d("🔄 Authenticator triggered for 401 response (attempt $retryCount)")
 
-        // Get new access token - will wait if refresh is already in progress
         val newAccessToken = runBlocking {
             tokenRefreshCoordinator.getNewAccessToken()
         }
@@ -53,7 +55,6 @@ class TokenAuthenticator @Inject constructor(
             Logger.d("✅ Retrying request with new access token")
             response.request.newBuilder().header("Authorization", "Bearer $newAccessToken").build()
         } else {
-            Logger.e("❌ Token refresh failed, cannot retry")
             null
         }
     }

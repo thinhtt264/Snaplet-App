@@ -1,9 +1,12 @@
 package com.thinh.snaplet.network
 
 import com.thinh.snaplet.data.repository.auth.AuthRepository
+import com.thinh.snaplet.ui.overlay.ModalContent
+import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.utils.Logger
 import dagger.Lazy
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -14,48 +17,103 @@ class TokenRefreshCoordinator @Inject constructor(
     private val authRepository: Lazy<AuthRepository>
 ) {
     private val mutex = Mutex()
-
-    // Shared deferred for all waiting requests
     private var ongoingRefresh: CompletableDeferred<String?>? = null
+    private val forceLogoutMutex = Mutex()
+
+    @Volatile
+    private var forceLogoutTriggered: Boolean = false
+
+    fun isForceLogoutTriggered(): Boolean = forceLogoutTriggered
 
     suspend fun getNewAccessToken(): String? {
-        mutex.withLock {
-            // If there's already an ongoing refresh, return it
-            val existingRefresh = ongoingRefresh
-            if (existingRefresh != null) {
-                Logger.d("⏳ Waiting for ongoing token refresh...")
-                return existingRefresh.await()
-            }
-
-            // No ongoing refresh - start a new one
-            Logger.d("🔒 Starting new token refresh...")
-            val newRefresh = CompletableDeferred<String?>()
-            ongoingRefresh = newRefresh
-
-            return try {
-                val result = authRepository.get().refreshToken()
-
-                val newToken = result.fold(
-                    onSuccess = { tokenResponse ->
-                        tokenResponse.accessToken
-                    },
-                    onFailure = { error ->
-                        Logger.e("❌ Token refresh failed: ${error.message}")
-                        authRepository.get().forceLogout()
-                        null
-                    }
-                )
-
-                newRefresh.complete(newToken)
-                newToken
-            } catch (e: Exception) {
-                Logger.e("❌ Token refresh exception: ${e.message}")
-                authRepository.get().forceLogout()
-                newRefresh.complete(null)
-                null
-            } finally {
-                ongoingRefresh = null
+        if (forceLogoutTriggered) return null
+        val (deferred, isOwner) = mutex.withLock {
+            val existing = ongoingRefresh
+            if (existing != null) {
+                existing to false
+            } else {
+                val new = CompletableDeferred<String?>()
+                ongoingRefresh = new
+                new to true
             }
         }
+
+        if (!isOwner) {
+            Logger.d("⏳ Waiting for ongoing refresh...")
+            return deferred.await()
+        }
+
+        return executeRefreshWithRetry(deferred)
+    }
+
+    private suspend fun executeRefreshWithRetry(
+        deferred: CompletableDeferred<String?>,
+        isRetry: Boolean = false
+    ): String? {
+        return try {
+            if (forceLogoutTriggered) return null
+            val result = authRepository.get().refreshToken()
+
+            val newToken = result.fold(
+                onSuccess = { tokenResponse ->
+                    tokenResponse.accessToken
+                },
+                onFailure = { error ->
+                    when {
+                        error.httpCode == 401 -> {
+                            triggerForceLogoutFlow()
+                            null
+                        }
+
+                        !isRetry -> {
+                            Logger.w("⚠️ Refresh failed (${error.httpCode}), retrying")
+                            return executeRefreshWithRetry(deferred, isRetry = true)
+                        }
+
+                        else -> {
+                            triggerForceLogoutFlow()
+                            null
+                        }
+                    }
+                }
+            )
+
+            deferred.complete(newToken)
+            newToken
+        } catch (e: Exception) {
+            if (!isRetry) {
+                Logger.w("⚠️ Refresh exception: ${e.message}, retrying")
+                return executeRefreshWithRetry(deferred, isRetry = true)
+            }
+            deferred.complete(null)
+            triggerForceLogoutFlow()
+            null
+        } finally {
+            mutex.withLock { ongoingRefresh = null }
+        }
+    }
+
+    private suspend fun triggerForceLogoutFlow() {
+        if (forceLogoutTriggered) return
+
+        forceLogoutMutex.withLock {
+            if (forceLogoutTriggered) return
+            forceLogoutTriggered = true
+
+            Logger.e("🛑 Force logout popup shown; cancel refresh/retry until user confirms")
+
+            OverlayEventBus.showModal(
+                isBlocking = true,
+                content = ModalContent.ForceLogoutDialog(
+                    onConfirm = {
+                        runBlocking { authRepository.get().forceLogout() }
+                    }
+                )
+            )
+        }
+    }
+
+    fun forceLogout() {
+        runBlocking { triggerForceLogoutFlow() }
     }
 }

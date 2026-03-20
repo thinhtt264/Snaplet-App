@@ -13,11 +13,13 @@ sealed interface OverlayState {
         data class Modal(
             val content: ModalContent,
             val onDismiss: (() -> Unit)? = null,
+            val isBlocking: Boolean = false,
         ) : Visible
 
         data class BottomSheet(
             val content: BottomSheetContent,
             val onDismiss: (() -> Unit)? = null,
+            val isBlocking: Boolean = false,
         ) : Visible
     }
 }
@@ -30,6 +32,10 @@ sealed interface ModalContent {
         val confirmText: UiText,
         val cancelText: UiText?,
         val confirmDestructive: Boolean = false,
+        val onConfirm: () -> Unit
+    ) : ModalContent
+
+    data class ForceLogoutDialog(
         val onConfirm: () -> Unit
     ) : ModalContent
 

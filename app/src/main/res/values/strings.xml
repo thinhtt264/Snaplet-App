@@ -122,4 +122,9 @@
     <string name="delete_avatar">Xóa ảnh hồ sơ</string>
     <string name="profile_edit_name_title">Sửa tên của bạn</string>
     <string name="profile_edit_name_save">Lưu</string>
+
+    <!-- Force logout (session expired) -->
+    <string name="force_logout_title">Phiên đăng nhập đã hết hạn</string>
+    <string name="force_logout_message">Tài khoản của bạn vừa đăng nhập trên một thiết bị khác. Phiên này đã bị kết thúc.</string>
+    <string name="force_logout_button">Đăng xuất</string>
 </resources>
