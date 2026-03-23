@@ -50,14 +50,13 @@ data class Relationship(
     val updatedAt: String
 )
 
-data class FriendsCountData(
-    @SerializedName("count")
-    val count: Int
+data class RelationshipCounts(
+    @SerializedName("acceptedFriendCount")
+    val acceptedFriendCount: Int,
+    @SerializedName("pendingRequestCount")
+    val pendingRequestCount: Int,
 )
 
-/**
- * API response item for GET /relationships (status as string from server).
- */
 data class RelationshipWithUserDto(
     @SerializedName("id")
     val id: String,

@@ -325,7 +325,7 @@ private fun HomeScreen(
             onProfileClick = onProfileClick,
             onFriendsClick = { showFriendSheet = true },
             onChatClick = { /* TODO */ },
-            friendsCount = uiState.friendSheetState.friendsCount,
+            relationshipCounts = uiState.friendSheetState.relationshipCounts,
             avatarUrl = uiState.profileAvatarUrl.orEmpty(),
             modifier = Modifier
                 .fillMaxWidth()

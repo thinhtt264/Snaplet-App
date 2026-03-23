@@ -8,6 +8,7 @@ import com.thinh.snaplet.data.model.RefreshTokenRequest
 import com.thinh.snaplet.data.model.RegisterRequest
 import com.thinh.snaplet.data.model.TokenResponse
 import com.thinh.snaplet.data.model.user.UserProfile
+import com.thinh.snaplet.network.SessionController
 import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.ApiResult
 import com.thinh.snaplet.utils.network.onSuccess
@@ -17,7 +18,9 @@ import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
-    private val apiService: ApiService, private val dataStoreManager: DataStoreManager
+    private val apiService: ApiService,
+    private val dataStoreManager: DataStoreManager,
+    private val sessionController: SessionController,
 ) : AuthRepository {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
@@ -33,6 +36,7 @@ class AuthRepositoryImpl @Inject constructor(
             )
             dataStoreManager.saveUserProfile(result.user)
             _authState.value = AuthState.Authenticated
+            sessionController.onNewAuthenticatedSession()
         }, transform = { response -> response.user })
     }
 
@@ -55,6 +59,7 @@ class AuthRepositoryImpl @Inject constructor(
             )
             dataStoreManager.saveUserProfile(result.user)
             _authState.value = AuthState.Authenticated
+            sessionController.onNewAuthenticatedSession()
         }, transform = { response -> response.user })
     }
 

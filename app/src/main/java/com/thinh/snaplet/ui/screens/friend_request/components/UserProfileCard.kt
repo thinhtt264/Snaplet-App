@@ -1,21 +1,23 @@
 package com.thinh.snaplet.ui.screens.friend_request.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -44,8 +46,15 @@ internal fun UserProfileCard(
     onRefreshPending: () -> Unit = {},
     onAcceptRequest: () -> Unit = {},
 ) {
+    val shape = RoundedCornerShape(24.dp)
+
     Column(
-        modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier
+//            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh, shape)
+            .border(2.dp, MaterialTheme.colorScheme.surfaceVariant, shape)
+            .padding(top = 60.dp, bottom = 40.dp, start = 24.dp, end = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Avatar(
             avatarUrl = state.userProfile?.avatarUrls?.forMedium().orEmpty(),
@@ -54,7 +63,7 @@ internal fun UserProfileCard(
             isConnectedUser = false
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(52.dp))
 
         BaseText(
             text = state.userProfile?.displayName.orEmpty(),
@@ -63,16 +72,12 @@ internal fun UserProfileCard(
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(36.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Box(
             modifier = Modifier.height(50.dp), contentAlignment = Alignment.Center
         ) {
             when {
-                state.isLoading -> {
-                    CircularProgressIndicator(modifier.fillMaxHeight(), strokeWidth = 3.dp)
-                }
-
                 state.isCurrentUser -> {
                     Box(
                         modifier = Modifier

@@ -10,9 +10,9 @@ class RemoveFriendUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(
         relationshipId: String,
-        currentFriendsCount: Int?
+        currentAcceptedFriendCount: Int?
     ): ApiResult<Unit> {
-        if (currentFriendsCount == null || currentFriendsCount <= 0) {
+        if (currentAcceptedFriendCount == null || currentAcceptedFriendCount <= 0) {
             return ApiResult.Failure(
                 ApiError(httpCode = 400, message = "No friends to remove")
             )

@@ -6,17 +6,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,7 +38,7 @@ fun FriendRequestOverlayContent(
 
     Box(
         modifier = modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         AnimatedContent(
             targetState = state.isLoading, transitionSpec = {
@@ -52,25 +48,18 @@ fun FriendRequestOverlayContent(
             if (hasContent) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     UserProfileCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant,
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                            .padding(vertical = 40.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         state = uiState,
                         onSendRequest = { viewModel.sendFriendRequest() },
                         onRefreshPending = { viewModel.refreshPending() },
-                        onAcceptRequest = { viewModel.acceptFriendRequest() }
-                    )
+                        onAcceptRequest = { viewModel.acceptFriendRequest() })
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(28.dp))
 
                     ActionButtons(onDismiss = { viewModel.dismiss() })
                 }
             } else {
-                CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                CircularProgressIndicator(modifier = Modifier.size(32.dp))
             }
         }
     }

@@ -2,6 +2,7 @@ package com.thinh.snaplet.ui.screens.home
 
 import android.graphics.Bitmap
 import androidx.camera.core.CameraSelector
+import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.domain.model.RelationshipAction
@@ -73,7 +74,7 @@ data class CameraState(
 }
 
 data class FriendBottomSheetState(
-    val friendsCount: Int? = null,
+    val relationshipCounts: RelationshipCounts? = null,
     val friendList: List<RelationshipWithUser> = emptyList(),
     val pendingList: List<PendingListItemState> = emptyList(),
     val isLoadingFriendList: Boolean = false,

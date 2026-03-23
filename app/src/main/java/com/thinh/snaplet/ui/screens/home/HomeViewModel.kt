@@ -36,7 +36,6 @@ import com.thinh.snaplet.domain.post.UploadPostUseCase
 import com.thinh.snaplet.domain.post.ValidateRetryUploadUseCase
 import com.thinh.snaplet.domain.post.ValidateUploadPostUseCase
 import com.thinh.snaplet.domain.user.AcceptFriendRequestUseCase
-import com.thinh.snaplet.domain.user.GetDisplayableFriendsCountUseCase
 import com.thinh.snaplet.domain.user.GetRelationshipActionUseCase
 import com.thinh.snaplet.domain.user.GetRelationshipsByStatusesUseCase
 import com.thinh.snaplet.domain.user.RemoveFriendUseCase
@@ -89,7 +88,6 @@ class HomeViewModel @Inject constructor(
     private val getAvailablePostActionsUseCase: GetAvailablePostActionsUseCase,
     private val deletePostUseCase: DeletePostUseCase,
     private val downloadPostImageUseCase: DownloadPostImageUseCase,
-    private val getDisplayableFriendsCountUseCase: GetDisplayableFriendsCountUseCase,
     private val getRelationshipsByStatusesUseCase: GetRelationshipsByStatusesUseCase,
     private val getRelationshipActionUseCase: GetRelationshipActionUseCase,
     private val acceptFriendRequestUseCase: AcceptFriendRequestUseCase,
@@ -155,7 +153,7 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadNewsfeed()
-        loadFriendsCount()
+        loadRelationshipCounts()
         loadUnreadPostsCount()
         observeUnreadPostsUpdates()
     }
@@ -256,10 +254,10 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(friendSheetState = transform(it.friendSheetState)) }
     }
 
-    private fun loadFriendsCount() {
+    private fun loadRelationshipCounts() {
         viewModelScope.launch {
-            getDisplayableFriendsCountUseCase().onSuccess { count ->
-                updateFriendSheetState { it.copy(friendsCount = count) }
+            userRepository.getRelationshipCounts().onSuccess { counts ->
+                updateFriendSheetState { it.copy(relationshipCounts = counts) }
             }
         }
     }
@@ -319,7 +317,7 @@ class HomeViewModel @Inject constructor(
                         friendList = state.friendList + acceptedRelationship
                     )
                 }
-                loadFriendsCount()
+                loadRelationshipCounts()
             }.onFailure { error ->
                 _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
             }
@@ -351,12 +349,12 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
                 }
             } else {
-                val currentCount = state.friendsCount
-                removeFriendUseCase(friend.id, currentCount).onSuccess {
+                val currentAccepted = state.relationshipCounts?.acceptedFriendCount
+                removeFriendUseCase(friend.id, currentAccepted).onSuccess {
                     updateFriendSheetState { s ->
                         s.copy(friendList = s.friendList.filterNot { it.id == friend.id })
                     }
-                    loadFriendsCount()
+                    loadRelationshipCounts()
                 }.onFailure { error ->
                     _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
                 }

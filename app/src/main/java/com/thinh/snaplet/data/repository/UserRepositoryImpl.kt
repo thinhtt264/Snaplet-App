@@ -4,6 +4,7 @@ import android.webkit.MimeTypeMap
 import com.thinh.snaplet.data.datasource.local.datastore.DataStoreManager
 import com.thinh.snaplet.data.datasource.remote.ApiService
 import com.thinh.snaplet.data.model.Relationship
+import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.RelationshipWithUserDto
@@ -64,10 +65,9 @@ class UserRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun getFriendsCount(): ApiResult<Int> {
+    override suspend fun getRelationshipCounts(): ApiResult<RelationshipCounts> {
         return safeApiCall(
-            apiCall = { apiService.getFriendsCount() },
-            transform = { it.count }
+            apiCall = { apiService.getRelationshipCounts() },
         )
     }
 

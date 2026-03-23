@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,12 +28,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.R
+import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.ui.common.CommonImages
 import com.thinh.snaplet.ui.components.AppIconButton
 import com.thinh.snaplet.ui.components.BaseText
+import com.thinh.snaplet.ui.components.CappedCountBadge
 import com.thinh.snaplet.ui.components.IconDecoration
 import com.thinh.snaplet.ui.components.IconSpec
 import com.thinh.snaplet.ui.theme.MotionTokens
+import com.thinh.snaplet.ui.theme.Primary80
 import com.thinh.snaplet.ui.theme.Typography
 import pressScaleClickable
 
@@ -46,8 +50,10 @@ fun TopAction(
     onFriendsClick: () -> Unit,
     onChatClick: () -> Unit,
     avatarUrl: String,
-    friendsCount: Int? = null
+    relationshipCounts: RelationshipCounts? = null
 ) {
+    val pendingForBadge = relationshipCounts?.pendingRequestCount ?: 0
+
     Box(modifier = modifier) {
         AnimatedVisibility(
             visible = !hasCaptureImage,
@@ -78,39 +84,52 @@ fun TopAction(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                Box(
-                    modifier = Modifier
-                        .background(
-                            MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape
-                        )
-                        .pressScaleClickable(onClick = onFriendsClick),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                Box {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                MaterialTheme.colorScheme.surfaceContainerHigh, shape = CircleShape
+                            )
+                            .pressScaleClickable(onClick = onFriendsClick),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Group,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Group,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            )
 
-                        Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
 
-                        if (friendsCount != null) {
+                            relationshipCounts?.let { counts ->
+                                BaseText(
+                                    text = counts.acceptedFriendCount.toString(),
+                                    color = Color.White,
+                                    typography = Typography.bodyMedium
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                            }
                             BaseText(
-                                text = friendsCount.toString(),
+                                text = stringResource(R.string.friends),
                                 color = Color.White,
                                 typography = Typography.bodyMedium
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
                         }
-                        BaseText(
-                            text = stringResource(R.string.friends),
-                            color = Color.White,
-                            typography = Typography.bodyMedium
+                    }
+                    if (pendingForBadge > 0) {
+                        CappedCountBadge(
+                            count = pendingForBadge,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 6.dp, y = (-8).dp),
+                            backgroundColor = Primary80,
+                            shape = CircleShape,
+                            minSize = 24.dp,
                         )
                     }
                 }
@@ -123,8 +142,7 @@ fun TopAction(
                     iconSize = ICON_SIZE,
                     iconDecoration = IconDecoration(padding = 6.dp),
                     icon = IconSpec.Painter(
-                        painterResource(CommonImages.ChatIcon),
-                        tint = Color.White
+                        painterResource(CommonImages.ChatIcon), tint = Color.White
                     )
                 )
             }

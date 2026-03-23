@@ -105,7 +105,7 @@ fun FriendBottomSheet(
         }
 
         val focusManager = LocalFocusManager.current
-        val current = friendSheetState.friendsCount ?: 0
+        val current = friendSheetState.relationshipCounts?.acceptedFriendCount ?: 0
 
         LazyColumn(
             modifier = Modifier

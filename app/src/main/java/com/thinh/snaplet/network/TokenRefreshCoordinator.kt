@@ -9,24 +9,29 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class TokenRefreshCoordinator @Inject constructor(
-    private val authRepository: Lazy<AuthRepository>
-) {
+    private val authRepository: Lazy<AuthRepository>,
+) : SessionController {
+
     private val mutex = Mutex()
     private var ongoingRefresh: CompletableDeferred<String?>? = null
     private val forceLogoutMutex = Mutex()
 
-    @Volatile
-    private var forceLogoutTriggered: Boolean = false
+    private val forceLogoutTriggered = AtomicBoolean(false)
 
-    fun isForceLogoutTriggered(): Boolean = forceLogoutTriggered
+    fun isForceLogoutTriggered(): Boolean = forceLogoutTriggered.get()
+
+    override fun onNewAuthenticatedSession() {
+        forceLogoutTriggered.set(false)
+    }
 
     suspend fun getNewAccessToken(): String? {
-        if (forceLogoutTriggered) return null
+        if (forceLogoutTriggered.get()) return null
         val (deferred, isOwner) = mutex.withLock {
             val existing = ongoingRefresh
             if (existing != null) {
@@ -51,7 +56,7 @@ class TokenRefreshCoordinator @Inject constructor(
         isRetry: Boolean = false
     ): String? {
         return try {
-            if (forceLogoutTriggered) return null
+            if (forceLogoutTriggered.get()) return null
             val result = authRepository.get().refreshToken()
 
             val newToken = result.fold(
@@ -94,21 +99,18 @@ class TokenRefreshCoordinator @Inject constructor(
     }
 
     private suspend fun triggerForceLogoutFlow() {
-        if (forceLogoutTriggered) return
-
         forceLogoutMutex.withLock {
-            if (forceLogoutTriggered) return
-            forceLogoutTriggered = true
+            if (forceLogoutTriggered.getAndSet(true)) return@withLock
 
-            Logger.e("🛑 Force logout popup shown; cancel refresh/retry until user confirms")
+            Logger.e("🛑 Force logout popup shown; cancel refresh/retry until user confirmed")
 
             OverlayEventBus.showModal(
                 isBlocking = true,
                 content = ModalContent.ForceLogoutDialog(
                     onConfirm = {
                         runBlocking { authRepository.get().forceLogout() }
-                    }
-                )
+                    },
+                ),
             )
         }
     }
