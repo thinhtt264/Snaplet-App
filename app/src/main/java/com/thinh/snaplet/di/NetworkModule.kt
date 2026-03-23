@@ -10,6 +10,7 @@ import com.thinh.snaplet.BuildConfig
 import com.thinh.snaplet.data.datasource.local.datastore.DataStoreManager
 import com.thinh.snaplet.data.datasource.remote.ApiService
 import com.thinh.snaplet.network.FingerprintInterceptor
+import com.thinh.snaplet.network.SessionController
 import com.thinh.snaplet.network.TokenAuthenticator
 import com.thinh.snaplet.network.TokenRefreshCoordinator
 import com.thinh.snaplet.platform.socket.SocketConfig
@@ -149,18 +150,6 @@ object NetworkModule {
     }
 
     /**
-     * Provide TokenRefreshCoordinator Manages token refresh operations with
-     * mutex lock and request cancellation
-     */
-    @Provides
-    @Singleton
-    fun provideTokenRefreshCoordinator(
-        authRepository: dagger.Lazy<com.thinh.snaplet.data.repository.auth.AuthRepository>
-    ): TokenRefreshCoordinator {
-        return TokenRefreshCoordinator(authRepository)
-    }
-
-    /**
      * Provide TokenAuthenticator Handles 401 responses and token refresh using
      * OkHttp Authenticator pattern
      */
@@ -172,6 +161,15 @@ object NetworkModule {
     ): TokenAuthenticator {
         return TokenAuthenticator(tokenRefreshCoordinator, authRepository)
     }
+
+    /**
+     * Session latch reset after login/register; same instance as [TokenRefreshCoordinator].
+     */
+    @Provides
+    @Singleton
+    fun provideSessionController(
+        tokenRefreshCoordinator: TokenRefreshCoordinator,
+    ): SessionController = tokenRefreshCoordinator
 
     /**
      * Base OkHttpClient: basic, default configuration (timeouts, retry).
