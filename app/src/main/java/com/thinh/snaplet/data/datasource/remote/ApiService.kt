@@ -2,7 +2,7 @@ package com.thinh.snaplet.data.datasource.remote
 
 import com.thinh.snaplet.data.model.BaseResponse
 import com.thinh.snaplet.data.model.EmailAvailabilityData
-import com.thinh.snaplet.data.model.FriendsCountData
+import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.LoginRequest
 import com.thinh.snaplet.data.model.LoginResponse
 import com.thinh.snaplet.data.model.RefreshTokenRequest
@@ -74,8 +74,8 @@ interface ApiService {
         @Body body: Map<String, String>
     ): Response<BaseResponse<Relationship?>>
 
-    @GET("relationships/friends/count")
-    suspend fun getFriendsCount(): Response<BaseResponse<FriendsCountData>>
+    @GET("relationships/count")
+    suspend fun getRelationshipCounts(): Response<BaseResponse<RelationshipCounts>>
 
     @GET("relationships")
     suspend fun getRelationshipsByStatus(

@@ -1,6 +1,7 @@
 package com.thinh.snaplet.data.repository
 
 import com.thinh.snaplet.data.model.Relationship
+import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.user.UserProfile
@@ -16,7 +17,7 @@ interface UserRepository {
 
     suspend fun getRelationshipWithUser(userId: String): ApiResult<Relationship?>
 
-    suspend fun getFriendsCount(): ApiResult<Int>
+    suspend fun getRelationshipCounts(): ApiResult<RelationshipCounts>
 
     suspend fun getMyFriendList(): ApiResult<List<RelationshipWithUser>>
 
