@@ -1,29 +1,31 @@
 package com.thinh.snaplet.data.datasource.remote
 
 import com.thinh.snaplet.data.model.BaseResponse
-import com.thinh.snaplet.data.model.CreatePostRequest
 import com.thinh.snaplet.data.model.EmailAvailabilityData
+import com.thinh.snaplet.data.model.FriendsCountData
 import com.thinh.snaplet.data.model.LoginRequest
 import com.thinh.snaplet.data.model.LoginResponse
-import com.thinh.snaplet.data.model.Post
-import com.thinh.snaplet.data.model.PostsFeedData
 import com.thinh.snaplet.data.model.RefreshTokenRequest
 import com.thinh.snaplet.data.model.RegisterRequest
-import com.thinh.snaplet.data.model.FriendsCountData
 import com.thinh.snaplet.data.model.Relationship
 import com.thinh.snaplet.data.model.RelationshipWithUserDto
-import com.thinh.snaplet.data.model.UpdateRelationshipRequest
 import com.thinh.snaplet.data.model.TokenResponse
+import com.thinh.snaplet.data.model.UpdateRelationshipRequest
 import com.thinh.snaplet.data.model.UsernameAvailabilityData
+import com.thinh.snaplet.data.model.media.ConfirmUploadData
+import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
+import com.thinh.snaplet.data.model.media.RequestUploadRequest
+import com.thinh.snaplet.data.model.media.UploadRequestData
+import com.thinh.snaplet.data.model.post.CreatePostRequest
+import com.thinh.snaplet.data.model.post.MarkPostsSeenRequest
+import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.model.post.PostsFeedData
+import com.thinh.snaplet.data.model.post.UnreadPostsCountData
 import com.thinh.snaplet.data.model.user.AvatarUploadRequest
 import com.thinh.snaplet.data.model.user.AvatarUploadRequestResponse
 import com.thinh.snaplet.data.model.user.ConfirmAvatarUploadRequest
 import com.thinh.snaplet.data.model.user.UpdateDisplayNameRequest
 import com.thinh.snaplet.data.model.user.UserProfile
-import com.thinh.snaplet.data.model.media.ConfirmUploadData
-import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
-import com.thinh.snaplet.data.model.media.RequestUploadRequest
-import com.thinh.snaplet.data.model.media.UploadRequestData
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -50,6 +52,12 @@ interface ApiService {
         @Query("limit") limit: Int = 10,
         @Query("cursor") cursor: String? = null
     ): Response<BaseResponse<PostsFeedData>>
+
+    @GET("posts/feed/newer")
+    suspend fun getNewerFeed(
+        @Query("since") since: String,
+        @Query("limit") limit: Int,
+    ): Response<BaseResponse<List<Post>>>
 
     @GET("users/profile/{username}")
     suspend fun getUserProfile(
@@ -100,6 +108,9 @@ interface ApiService {
         @Body body: RefreshTokenRequest
     ): Response<BaseResponse<TokenResponse>>
 
+    @POST("auth/logout")
+    suspend fun logout(): Response<BaseResponse<Unit>>
+
     @POST("media/upload/request")
     suspend fun requestUpload(
         @Body body: RequestUploadRequest
@@ -137,5 +148,14 @@ interface ApiService {
     @DELETE("posts/{postId}")
     suspend fun deletePost(
         @Path("postId") postId: String
+    ): Response<BaseResponse<Unit>>
+
+    @GET("posts/unread-count")
+    suspend fun getUnreadPostsCount(
+    ): Response<BaseResponse<UnreadPostsCountData>>
+
+    @POST("posts/mark-seen")
+    suspend fun markPostsSeen(
+        @Body body: MarkPostsSeenRequest
     ): Response<BaseResponse<Unit>>
 }

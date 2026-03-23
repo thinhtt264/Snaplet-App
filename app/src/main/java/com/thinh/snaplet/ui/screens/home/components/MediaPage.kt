@@ -38,7 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.thinh.snaplet.R
-import com.thinh.snaplet.data.model.Post
+import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.ui.common.CommonImages
 import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText
@@ -50,7 +50,7 @@ import com.thinh.snaplet.ui.screens.home.UploadStatus
 import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.formatTimeAgo
 
-private const val TOP_SPACE_RATIO = 0.15f
+private const val TOP_SPACE_RATIO = 0.16f
 
 @Composable
 fun MediaPage(

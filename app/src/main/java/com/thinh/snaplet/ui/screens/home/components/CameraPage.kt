@@ -5,6 +5,7 @@ import android.os.SystemClock
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -14,7 +15,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -22,6 +25,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +33,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,6 +42,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,8 +58,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -81,7 +91,7 @@ import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.ValidationConstants
 import kotlinx.coroutines.delay
 
-private const val TOP_SPACE_RATIO = 0.12f
+private const val TOP_SPACE_RATIO = 0.11f
 private const val SHAKE_DURATION = 500
 private const val SHAKE_COOLDOWN = 600L
 
@@ -102,6 +112,8 @@ fun CameraPage(
     isUploading: Boolean,
     cameraActions: CameraActions,
     onDownloadImage: () -> Unit,
+    unreadPostsCount: Int,
+    onHistoryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(
@@ -127,7 +139,7 @@ fun CameraPage(
         )
 
         val actionOffsetPx = remember {
-            with(density) { (screenHeight * (2.2f / 3f)).toPx() }
+            with(density) { (screenHeight * (2f / 3f)).toPx() }
         }
 
         var imeFullHeightPx by remember { mutableFloatStateOf(imeHeightPx) }
@@ -212,6 +224,7 @@ fun CameraPage(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .graphicsLayer { translationY = actionOffsetPx }) {
+
             CameraAction(
                 modifier = Modifier.navigationBarsPadding(),
                 capturedImagePath = cameraState.capturedImagePath,
@@ -223,8 +236,104 @@ fun CameraPage(
                 isUploading = isUploading,
             )
         }
+
+        if (cameraState.capturedImagePath == null) {
+            HistoryButton(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(start = 6.dp, bottom = 28.dp)
+                    .navigationBarsPadding(),
+                unreadPostsCount = unreadPostsCount,
+                onClick = onHistoryClick,
+            )
+        }
     }
 }
+
+@Composable
+private fun HistoryButton(
+    modifier: Modifier = Modifier,
+    unreadPostsCount: Int,
+    onClick: () -> Unit,
+) {
+    val hasUnread = unreadPostsCount > 0
+
+    Box(modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable(onClick = onClick)
+        ) {
+            AnimatedContent(
+                targetState = hasUnread, label = "HistoryButtonBadge"
+            ) { showBadge ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.animateContentSize()
+                ) {
+                    if (showBadge) {
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(all = 2.dp)
+                                .size(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                BaseText(
+                                    text = if (unreadPostsCount > 9) "9" else unreadPostsCount.toString(),
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Bold,
+                                    typography = MaterialTheme.typography.labelLarge
+                                )
+
+                                if (unreadPostsCount > 9) {
+                                    Spacer(Modifier.width(2.dp))
+                                    Canvas(modifier = Modifier.size(8.dp)) {
+                                        val strokeWidth = 1.5.dp.toPx()
+                                        val cx = size.width / 2
+                                        val cy = size.height / 2
+                                        drawLine(
+                                            Color.Black,
+                                            Offset(0f, cy),
+                                            Offset(size.width, cy),
+                                            strokeWidth,
+                                            StrokeCap.Round
+                                        )
+                                        drawLine(
+                                            Color.Black,
+                                            Offset(cx, 0f),
+                                            Offset(cx, size.height),
+                                            strokeWidth,
+                                            StrokeCap.Round
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    BaseText(
+                        text = stringResource(id = R.string.history_label),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        typography = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+
+                    Icon(
+                        Icons.Outlined.KeyboardArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp),
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun MediaDisplaySection(
@@ -381,8 +490,7 @@ private fun CaptionInput(
             },
             modifier = Modifier
                 .widthIn(
-                    min = Dp.Unspecified,
-                    max = MediaItemDimensions.CAPTION_CONTAINER_MAX_WIDTH
+                    min = Dp.Unspecified, max = MediaItemDimensions.CAPTION_CONTAINER_MAX_WIDTH
                 )
                 .wrapContentWidth(),
             textStyle = captionTextStyle,

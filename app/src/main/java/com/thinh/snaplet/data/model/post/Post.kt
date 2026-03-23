@@ -1,8 +1,9 @@
-package com.thinh.snaplet.data.model
+package com.thinh.snaplet.data.model.post
 
 import com.google.gson.annotations.SerializedName
 import com.thinh.snaplet.data.model.media.Media
 import com.thinh.snaplet.data.model.user.AvatarUrls
+import java.util.Date
 
 data class Post(
     @SerializedName("id")
@@ -33,7 +34,7 @@ data class Post(
     val visibility: String,
 
     @SerializedName("createdAt")
-    val createdAt: String,
+    val createdAt: Date,
 
     @SerializedName("isOwnPost")
     val isOwnPost: Boolean,
@@ -53,4 +54,14 @@ data class CreatePostRequest(
     val visibility: String
 )
 
-typealias PostsFeedData = PaginatedResponse<Post>
+typealias PostsFeedData = com.thinh.snaplet.data.model.PaginatedResponse<Post>
+
+data class UnreadPostsCountData(
+    @SerializedName("count")
+    val count: Int
+)
+
+data class MarkPostsSeenRequest(
+    @SerializedName("lastSeenPostCreatedAt")
+    val lastSeenPostCreatedAt: Date
+)

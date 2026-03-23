@@ -19,7 +19,7 @@ interface AuthRepository {
         password: String
     ): ApiResult<UserProfile>
 
-    suspend fun logout()
+    suspend fun logout(): ApiResult<Unit>
 
     suspend fun forceLogout()
 
@@ -30,4 +30,6 @@ interface AuthRepository {
     suspend fun checkUsernameAvailability(username: String): ApiResult<Boolean>
 
     suspend fun refreshToken(): ApiResult<TokenResponse>
+
+    suspend fun getAccessToken(): String?
 }

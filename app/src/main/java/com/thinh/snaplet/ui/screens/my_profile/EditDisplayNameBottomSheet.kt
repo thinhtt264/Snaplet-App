@@ -57,7 +57,7 @@ fun EditDisplayNameBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.statusBarsPadding(),
     ) {
         Column(
@@ -131,4 +131,3 @@ fun EditDisplayNameBottomSheet(
         }
     }
 }
-

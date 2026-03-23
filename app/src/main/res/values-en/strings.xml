@@ -66,6 +66,11 @@
     <string name="friend_request_section_title">Friend requests</string>
     <string name="accept">Accept</string>
     <string name="blocked">Blocked</string>
+    
+    <plurals name="new_posts_banner">
+        <item quantity="one">%d new post</item>
+        <item quantity="other">%d new posts</item>
+    </plurals>
 
     <!-- Empty media (Locket) screen -->
     <string name="empty_media_title">Send your first Locket</string>
@@ -75,6 +80,7 @@
     <string name="post_deleted">Post deleted</string>
     <string name="upload_failed_tap_to_retry">Upload failed. Tap to retry</string>
     <string name="uploading">Uploading…</string>
+    <string name="history_label">History</string>
 
     <!-- My Profile -->
     <string name="profile_back">Back</string>
@@ -106,4 +112,9 @@
     <string name="profile_change_avatar_title">Your profile picture will be displayed to everyone.</string>
     <string name="profile_edit_name_title">Edit your name</string>
     <string name="profile_edit_name_save">Save</string>
+
+    <!-- Force logout (session expired) -->
+    <string name="force_logout_title">Your login session has expired</string>
+    <string name="force_logout_message">Your account was just signed in on another device. This session has ended.</string>
+    <string name="force_logout_button">Log out</string>
 </resources>

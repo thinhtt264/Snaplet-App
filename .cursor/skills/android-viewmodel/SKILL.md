@@ -76,3 +76,12 @@ Example: need one value → `val x = result.fold(onSuccess = { it }, onFailure =
 
 *   **Use `fold`** when you need to **produce a single value** (e.g. assign to `_uiState.value`) and **both** success and failure branches **return that same type** (e.g. `UiState.Success(data)` vs `UiState.Error(message)`).
 *   **Use `onSuccess` / `onFailure`** when you only need **side effects** (update state per branch, set snackbar in state, etc.) and do **not** need one derived value.
+
+### 7. Real-time `Flow` events from repository (unread/new messages)
+*   When a repository exposes a long-lived `Flow` of updates (e.g. realtime socket/websocket events), process them inside the ViewModel and update `uiState` accordingly.
+*   Prefer structured handling:
+    *   Use `onEach { ... }.launchIn(viewModelScope)` (or a derived `stateIn` when the UI state is directly representable as a stream).
+    *   If events include ordering metadata (e.g. `seq`), gate/ignore out-of-order or duplicate events in the ViewModel.
+*   If an event triggers an in-flight refresh/fetch:
+    *   Cancel the previous job before starting a new one to avoid races (e.g. `newerJob?.cancel()` then `newerJob = viewModelScope.launch { ... }`).
+    *   Keep the fetch/orchestration in use cases; the ViewModel should mainly coordinate state transitions and job lifecycles.

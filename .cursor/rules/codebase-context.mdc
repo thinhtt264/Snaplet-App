@@ -35,17 +35,19 @@ Android app: Kotlin, Jetpack Compose, Hilt. Clean Architecture. Data flow: ApiSe
 | **di/** | Hilt modules (Network, Repository, Overlay, Permission, ImageLoading, PhotoPicker, Share) | DI, inject, module |
 | **data/datasource/remote/** | ApiService | API, endpoint, Retrofit |
 | **data/datasource/local/datastore/** | DataStoreManager, DataStoreKeys | DataStore, local storage |
-| **data/repository/** | MediaRepository(Impl), UserRepository(Impl) | repository, data layer |
+| **data/repository/** | MediaRepository(Impl), UserRepository(Impl), PostRepository(Impl) | repository, data layer |
 | **data/repository/auth/** | AuthRepository, AuthRepositoryImpl, AuthState | auth, login state |
 | **data/repository/device/** | DeviceRepository, DeviceRepositoryImpl, DeviceInfo | device, fingerprint |
-| **data/model/** | AuthModel, Relationship, BaseModel | DTO, API model |
+| **data/repository/post/** | PostRepository, PostRepositoryImpl | posts, feed, unread/new post events |
+| **data/model/** | AuthModel, Relationship, BaseModel, Post, PostsFeedData, UnreadPostsCountData, MarkPostsSeenRequest | DTO, API model |
 | **data/model/user/** | UserProfile, AvatarUrls, DisplayName, AvatarUpload | user model |
 | **data/model/media/** | MediaUpload, ImageTransform | media model |
+| **data/model/post/** | NewPostUpdate | realtime new post event payload |
 | **domain/post/** | UploadPost, ValidateUploadPost, DeletePost, CreateTempPost, GetAvailablePostActions, ValidateRetryUpload | post, upload, delete post |
 | **domain/user/** | RemoveFriend, UploadAvatar, GetRelationshipsByStatuses, GetDisplayableFriendsCount, GetRelationshipAction, RemoveRelationship | user, friend, avatar, relationship |
 | **domain/media/** | ValidateCaptureReadiness, DownloadPostImageUseCase | capture, download media |
-| **domain/feed/** | ShouldTriggerLoadMoreUseCase | feed, load more |
-| **domain/model/** | CaptureReadiness, UploadPostResult, PostAction, RelationshipAction, UploadAvatarResult | domain models |
+| **domain/feed/** | ShouldTriggerLoadMoreUseCase, GetNewsfeedUseCase, FetchNewerFeedUseCase, ObserveNewPostEventUseCase, ShouldMarkLatestPostAsSeenUseCase | feed, load more, unread/new post notification |
+| **domain/model/** | CaptureReadiness, UploadPostResult, PostAction, RelationshipAction, UploadAvatarResult, NewerFeedResult | domain models |
 | **platform/photo_picker/** | PhotoPickerManager | photo picker, chọn ảnh |
 | **platform/permission/** | PermissionManager, PermissionState | permission |
 | **platform/share/** | ShareManager | share |

@@ -5,9 +5,9 @@ import androidx.compose.ui.unit.dp
 
 object MediaItemDimensions {
 
-    val MEDIA_HEIGHT: Dp = 400.dp
+    val MEDIA_HEIGHT: Dp = 390.dp
 
-    val MEDIA_CORNER_RADIUS: Dp = 36.dp
+    val MEDIA_CORNER_RADIUS: Dp = 40.dp
 
     val CAPTION_CONTAINER_MAX_WIDTH: Dp = 288.dp
 }

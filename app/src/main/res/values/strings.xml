@@ -74,7 +74,14 @@
     <string name="accept">Chấp nhận</string>
     <string name="remove_friend_confirm_title">Xóa %1$s khỏi Snaplet của bạn?</string>
     <string name="remove_friend_confirm_message">Các bạn sẽ không còn có thể gửi ảnh cho nhau trên Snaplet. Lịch sử của bạn sẽ có thể được phục hồi nếu các bạn thêm lại nhau.</string>
+
+    <string name="history_label">Lịch sử</string>
     <string name="blocked">Bị chặn</string>
+
+    <plurals name="new_posts_banner">
+        <item quantity="one">%d bài viết mới</item>
+        <item quantity="other">%d bài viết mới</item>
+    </plurals>
 
     <!-- Empty media (Locket) screen -->
     <string name="empty_media_title">Gửi Locket đầu tiên của bạn</string>
@@ -115,4 +122,9 @@
     <string name="delete_avatar">Xóa ảnh hồ sơ</string>
     <string name="profile_edit_name_title">Sửa tên của bạn</string>
     <string name="profile_edit_name_save">Lưu</string>
+
+    <!-- Force logout (session expired) -->
+    <string name="force_logout_title">Phiên đăng nhập đã hết hạn</string>
+    <string name="force_logout_message">Tài khoản của bạn vừa đăng nhập trên một thiết bị khác. Phiên này đã bị kết thúc.</string>
+    <string name="force_logout_button">Đăng xuất</string>
 </resources>

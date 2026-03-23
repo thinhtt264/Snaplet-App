@@ -1,5 +1,10 @@
 package com.thinh.snaplet.ui.components.image
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -20,6 +25,7 @@ import coil.compose.SubcomposeAsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.size.Size
+import com.thinh.snaplet.ui.theme.MotionTokens
 
 // ===== AsyncImage - Level 1: Simplest =====
 @Composable
@@ -64,6 +70,7 @@ fun AsyncImage(
     crossfadeDuration: Int = 300,
 ) {
     SubcomposeAsyncImage(
+        modifier = modifier,
         model = ImageRequest.Builder(LocalContext.current).data(imageUrl)
             .crossfade(crossfadeDuration).size(resizeSize.toCoilSize())
             .memoryCachePolicy(CachePolicy.ENABLED).diskCachePolicy(CachePolicy.ENABLED)
@@ -71,25 +78,55 @@ fun AsyncImage(
         contentDescription = contentDescription,
         contentScale = contentScale
     ) {
-        when (painter.state) {
-            is AsyncImagePainter.State.Success -> {
-                Image(
-                    painter = painter,
-                    contentDescription = contentDescription,
-                    contentScale = contentScale,
-                    modifier = modifier
+        val uiState = when (painter.state) {
+            is AsyncImagePainter.State.Success -> AsyncImageUiState.Success
+            is AsyncImagePainter.State.Loading -> AsyncImageUiState.Loading
+            else -> AsyncImageUiState.Error
+        }
+
+        AnimatedContent(
+            targetState = uiState,
+            transitionSpec = {
+                fadeIn(
+                    animationSpec = tween(durationMillis = MotionTokens.Emphasized)
+                ) togetherWith fadeOut(
+                    animationSpec = tween(durationMillis = MotionTokens.Emphasized)
                 )
-            }
+            },
+            label = "AsyncImageStateAnimatedContent",
+        ) { target ->
+            when (target) {
+                AsyncImageUiState.Success -> {
+                    Image(
+                        painter = painter,
+                        contentDescription = contentDescription,
+                        contentScale = contentScale,
+                        modifier = Modifier.matchParentSize()
+                    )
+                }
 
-            is AsyncImagePainter.State.Loading -> {
-                AsyncImageLoadingState(config = loadingConfig)
-            }
+                AsyncImageUiState.Loading -> {
+                    AsyncImageLoadingState(
+                        config = loadingConfig,
+                        modifier = Modifier.matchParentSize()
+                    )
+                }
 
-            else -> {
-                AsyncImageErrorState(config = errorConfig)
+                AsyncImageUiState.Error -> {
+                    AsyncImageErrorState(
+                        config = errorConfig,
+                        modifier = Modifier.matchParentSize()
+                    )
+                }
             }
         }
     }
+}
+
+private enum class AsyncImageUiState {
+    Loading,
+    Success,
+    Error,
 }
 
 @Composable

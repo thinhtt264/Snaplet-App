@@ -34,7 +34,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.ui.components.PermissionHandler
 import com.thinh.snaplet.ui.screens.home.components.BottomAction
@@ -42,7 +41,9 @@ import com.thinh.snaplet.ui.screens.home.components.CameraPage
 import com.thinh.snaplet.ui.screens.home.components.EmptyMediaPage
 import com.thinh.snaplet.ui.screens.home.components.FriendBottomSheet
 import com.thinh.snaplet.ui.screens.home.components.MediaPage
+import com.thinh.snaplet.ui.screens.home.components.NewPostsBanner
 import com.thinh.snaplet.ui.screens.home.components.TopAction
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 
 private const val CAMERA_PAGE_INDEX = 0
@@ -61,8 +62,7 @@ data class CameraActions(
 
 @Composable
 fun Home(
-    onProfileClick: () -> Unit = {},
-    viewModel: HomeViewModel = hiltViewModel()
+    onProfileClick: () -> Unit = {}, viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -98,6 +98,12 @@ fun Home(
 
     val snackBarHostState = remember { SnackbarHostState() }
 
+    val scrollToFirstPost: suspend () -> Unit = {
+        if (pagerState.currentPage != 1) {
+            pagerState.animateScrollToPage(1)
+        }
+    }
+
     PermissionHandler(
         permission = Permission.Camera, onPermissionResult = viewModel::onPermissionResult
     ) { requestPermission ->
@@ -108,11 +114,7 @@ fun Home(
             context = context,
             snackBarHostState = snackBarHostState,
             requestPermission = requestPermission,
-            onScrollToFirstPost = {
-                if (pagerState.currentPage == CAMERA_PAGE_INDEX) pagerState.animateScrollToPage(
-                    1
-                )
-            }
+            onScrollToFirstPost = scrollToFirstPost,
         )
 
         HomeScreen(
@@ -122,6 +124,9 @@ fun Home(
             cameraActions = cameraActions,
             onNavigateToCameraPage = {
                 scope.launch { pagerState.animateScrollToPage(CAMERA_PAGE_INDEX) }
+            },
+            onScrollToFirstPost = {
+                scope.launch { scrollToFirstPost() }
             },
             onItemVisible = viewModel::onItemVisible,
             onMoreClick = viewModel::onShowMoreOptions,
@@ -228,6 +233,7 @@ private fun HomeStateEffects(
     }
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 private fun HomeScreen(
     pagerState: PagerState,
@@ -235,6 +241,7 @@ private fun HomeScreen(
     viewModel: HomeViewModel,
     cameraActions: CameraActions,
     onNavigateToCameraPage: () -> Unit,
+    onScrollToFirstPost: () -> Unit,
     onItemVisible: (currentIndex: Int) -> Unit,
     onMoreClick: () -> Unit,
     onProfileClick: () -> Unit = {},
@@ -254,30 +261,63 @@ private fun HomeScreen(
 
     LaunchedEffect(pagerState.currentPage) {
         val currentPage = pagerState.currentPage
-        if (currentPage > CAMERA_PAGE_INDEX) {
-            val postIndex = currentPage - 1
-            onItemVisible(postIndex)
-        }
+        val postIndex = currentPage - 1
+        onItemVisible(postIndex)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        HomePager(
-            pagerState = pagerState,
-            posts = uiState.posts,
-            uploadStatuses = uiState.uploadStatuses,
-            showMoreButtonLoading = isDownloading,
-            cameraState = uiState.cameraState,
-            currentCaption = uiState.currentCaption,
-            isUploading = uiState.uploadStatuses.values.any { it is UploadStatus.Uploading },
-            showLocalBottomAction = !showGlobalBottomAction,
+        VerticalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
             userScrollEnabled = userScrollEnabled,
-            cameraActions = cameraActions,
-            onNavigateToCameraPage = onNavigateToCameraPage,
-            onMoreClick = onMoreClick,
-            onShowFriendSheet = { showFriendSheet = true },
-            onRetryUpload = viewModel::retryUpload,
-            onDeleteFailedPost = viewModel::deleteFailedPost,
-            onDownloadImage = viewModel::downloadCaptureImage
+            horizontalAlignment = Alignment.CenterHorizontally,
+            beyondViewportPageCount = 1,
+            key = { page ->
+                when {
+                    page == CAMERA_PAGE_INDEX -> "camera"
+                    uiState.posts.isEmpty() -> "empty_media"
+                    else -> uiState.posts[page - 1].id
+                }
+            }) { page ->
+            when (page) {
+                CAMERA_PAGE_INDEX -> CameraPage(
+                    onDownloadImage = viewModel::downloadCaptureImage,
+                    cameraState = uiState.cameraState,
+                    currentCaption = uiState.currentCaption,
+                    isUploading = uiState.uploadStatuses.values.any { it is UploadStatus.Uploading },
+                    cameraActions = cameraActions,
+                    unreadPostsCount = uiState.unreadPostsCount,
+                    onHistoryClick = onScrollToFirstPost,
+                )
+
+                else -> {
+                    if (uiState.posts.isEmpty()) {
+                        EmptyMediaPage(onAddFriendClick = { showFriendSheet = true })
+                    } else {
+                        val post = uiState.posts[page - 1]
+                        MediaPage(
+                            post = post,
+                            uploadStatus = uiState.uploadStatuses[post.id],
+                            showBottomAction = !showGlobalBottomAction,
+                            showMoreButtonLoading = isDownloading,
+                            onGridClick = { /* TODO */ },
+                            onCaptureClick = onNavigateToCameraPage,
+                            onMoreClick = onMoreClick,
+                            onRetryClick = { viewModel.retryUpload(post.id) },
+                            onDeleteClick = { viewModel.deleteFailedPost(post.id) })
+                    }
+                }
+            }
+        }
+
+        NewPostsBanner(
+            bannerMessage = uiState.bannerMessage,
+            isEligiblePage = pagerState.currentPage > CAMERA_PAGE_INDEX &&
+                    uiState.unreadPostsCount > 0,
+            onClick = viewModel::onNewPostsBannerTapped,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 76.dp)
         )
 
         TopAction(
@@ -322,69 +362,6 @@ private fun HomeScreen(
                     .navigationBarsPadding()
                     .padding(horizontal = 32.dp, vertical = 24.dp)
             )
-        }
-    }
-}
-
-@Composable
-private fun HomePager(
-    pagerState: PagerState,
-    posts: List<Post>,
-    uploadStatuses: Map<String, UploadStatus>,
-    showMoreButtonLoading: Boolean,
-    cameraState: CameraState,
-    currentCaption: String?,
-    isUploading: Boolean,
-    showLocalBottomAction: Boolean,
-    userScrollEnabled: Boolean,
-    cameraActions: CameraActions,
-    onNavigateToCameraPage: () -> Unit,
-    onMoreClick: () -> Unit,
-    onShowFriendSheet: () -> Unit,
-    onRetryUpload: (String) -> Unit,
-    onDeleteFailedPost: (String) -> Unit,
-    onDownloadImage: () -> Unit,
-) {
-    VerticalPager(
-        state = pagerState,
-        modifier = Modifier.fillMaxSize(),
-        userScrollEnabled = userScrollEnabled,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        beyondViewportPageCount = 1,
-        key = { page ->
-            when {
-                page == CAMERA_PAGE_INDEX -> "camera"
-                posts.isEmpty() -> "empty_media"
-                else -> posts[page - 1].id
-            }
-        }) { page ->
-        when (page) {
-            CAMERA_PAGE_INDEX -> CameraPage(
-                onDownloadImage = onDownloadImage,
-                cameraState = cameraState,
-                currentCaption = currentCaption,
-                isUploading = isUploading,
-                cameraActions = cameraActions,
-            )
-
-            else -> {
-                if (posts.isEmpty()) {
-                    EmptyMediaPage(onAddFriendClick = onShowFriendSheet)
-                } else {
-                    val post = posts[page - 1]
-                    MediaPage(
-                        post = post,
-                        uploadStatus = uploadStatuses[post.id],
-                        showBottomAction = showLocalBottomAction,
-                        showMoreButtonLoading = showMoreButtonLoading,
-                        onGridClick = { /* TODO */ },
-                        onCaptureClick = onNavigateToCameraPage,
-                        onMoreClick = onMoreClick,
-                        onRetryClick = { onRetryUpload(post.id) },
-                        onDeleteClick = { onDeleteFailedPost(post.id) }
-                    )
-                }
-            }
         }
     }
 }

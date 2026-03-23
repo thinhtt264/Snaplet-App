@@ -18,13 +18,13 @@ fun OverlayHost() {
         is OverlayState.None -> Unit
         is OverlayState.Visible.Modal -> GlobalModal(
             content = current.content,
-            onDismiss = overlayViewModel::dismiss
+            onDismiss = if (current.isBlocking) overlayViewModel::dismissForce else overlayViewModel::dismiss
         )
 
         is OverlayState.Visible.BottomSheet ->
             GlobalBottomSheet(
                 content = current.content,
-                onDismiss = overlayViewModel::dismiss,
+                onDismiss = if (current.isBlocking) overlayViewModel::dismissForce else overlayViewModel::dismiss,
             )
     }
 }

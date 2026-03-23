@@ -2,8 +2,8 @@ package com.thinh.snaplet.ui.screens.home
 
 import android.graphics.Bitmap
 import androidx.camera.core.CameraSelector
-import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.data.model.RelationshipWithUser
+import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.domain.model.RelationshipAction
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.platform.share.ShareApp
@@ -31,6 +31,12 @@ data class HomeUiState(
 
     val uploadStatuses: Map<String, UploadStatus> = emptyMap(),
     val isDownloading: Boolean = false,
+
+    /** Number of unread posts for history badge. */
+    val unreadPostsCount: Int = 0,
+
+    /** Banner message shown on top of feed. null = hidden. */
+    val bannerMessage: UiText? = null,
 
     /** Snackbar message to show. UI shows then calls onSnackbarDismissed(). */
     val snackbarMessage: UiText? = null,

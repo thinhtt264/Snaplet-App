@@ -19,23 +19,39 @@ class OverlayViewModel @Inject constructor() : ViewModel() {
 
     init {
         OverlayEventBus.events.onEach { event ->
+            val current = _overlayState.value
+            val currentIsBlocking = when (current) {
+                is OverlayState.Visible.Modal -> current.isBlocking
+                is OverlayState.Visible.BottomSheet -> current.isBlocking
+                OverlayState.None -> false
+            }
+
             when (event) {
-                is OverlayEvent.ShowBottomSheet -> _overlayState.update {
-                    OverlayState.Visible.BottomSheet(
-                        content = event.content,
-                        onDismiss = event.onDismiss,
-                    )
+                is OverlayEvent.ShowBottomSheet -> {
+                    if (currentIsBlocking) return@onEach
+                    _overlayState.update {
+                        OverlayState.Visible.BottomSheet(
+                            content = event.content,
+                            onDismiss = event.onDismiss,
+                            isBlocking = event.isBlocking,
+                        )
+                    }
                 }
 
-                is OverlayEvent.ShowModal -> _overlayState.update {
-                    OverlayState.Visible.Modal(
-                        content = event.content,
-                        onDismiss = event.onDismiss,
-                    )
+                is OverlayEvent.ShowModal -> {
+                    if (currentIsBlocking) return@onEach
+                    _overlayState.update {
+                        OverlayState.Visible.Modal(
+                            content = event.content,
+                            onDismiss = event.onDismiss,
+                            isBlocking = event.isBlocking,
+                        )
+                    }
                 }
 
                 is OverlayEvent.Dismiss -> {
-                    val current = _overlayState.value
+                    if (currentIsBlocking && !event.force) return@onEach
+
                     (current as? OverlayState.Visible.Modal)?.onDismiss?.invoke()
                         ?: (current as? OverlayState.Visible.BottomSheet)?.onDismiss?.invoke()
                     _overlayState.value = OverlayState.None
@@ -45,6 +61,10 @@ class OverlayViewModel @Inject constructor() : ViewModel() {
     }
 
     fun dismiss() {
-        OverlayEventBus.dismiss()
+        OverlayEventBus.dismiss(force = false)
+    }
+
+    fun dismissForce() {
+        OverlayEventBus.dismiss(force = true)
     }
 }

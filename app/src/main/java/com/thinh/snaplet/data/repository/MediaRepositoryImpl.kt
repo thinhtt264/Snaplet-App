@@ -5,21 +5,20 @@ import android.content.Context
 import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import com.thinh.snaplet.data.datasource.remote.ApiService
-import com.thinh.snaplet.data.model.CreatePostRequest
-import com.thinh.snaplet.data.model.Post
-import com.thinh.snaplet.data.model.PostsFeedData
 import com.thinh.snaplet.data.model.media.ConfirmUploadData
-import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
 import com.thinh.snaplet.data.model.media.ImageTransform
+import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
 import com.thinh.snaplet.data.model.media.RequestUploadRequest
 import com.thinh.snaplet.data.model.media.UploadRequestData
 import com.thinh.snaplet.data.model.media.UploadRequestItem
+import com.thinh.snaplet.data.model.post.CreatePostRequest
+import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.di.BaseOkHttpClient
 import com.thinh.snaplet.utils.Logger
-import dagger.hilt.android.qualifiers.ApplicationContext
 import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.ApiResult
 import com.thinh.snaplet.utils.network.safeApiCall
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -50,7 +49,7 @@ class MediaRepositoryImpl @Inject constructor(
             try {
                 val inputStream: InputStream = when {
                     imageSource.startsWith("http://", ignoreCase = true) ||
-                    imageSource.startsWith("https://", ignoreCase = true) -> {
+                            imageSource.startsWith("https://", ignoreCase = true) -> {
                         val response = baseOkHttpClient.newCall(
                             Request.Builder().url(imageSource).build()
                         ).execute()
@@ -61,6 +60,7 @@ class MediaRepositoryImpl @Inject constructor(
                         }
                         response.body!!.byteStream()
                     }
+
                     else -> {
                         val path = imageSource.removePrefix("file://")
                         val file = File(path)
@@ -109,14 +109,6 @@ class MediaRepositoryImpl @Inject constructor(
                 Result.failure(e)
             }
         }
-
-    override suspend fun getNewsfeed(limit: Int, cursor: String?): ApiResult<PostsFeedData> {
-        return safeApiCall(
-            apiCall = {
-                apiService.getPostsFeed(limit = limit, cursor = cursor)
-            }
-        )
-    }
 
     override suspend fun requestUpload(
         items: List<String>,

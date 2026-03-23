@@ -1,14 +1,11 @@
 package com.thinh.snaplet.data.repository
 
-import com.thinh.snaplet.data.model.Post
-import com.thinh.snaplet.data.model.PostsFeedData
 import com.thinh.snaplet.data.model.media.ConfirmUploadData
 import com.thinh.snaplet.data.model.media.UploadRequestData
+import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.utils.network.ApiResult
 
 interface MediaRepository {
-
-    suspend fun getNewsfeed(limit: Int = 5, cursor: String? = null): ApiResult<PostsFeedData>
 
     suspend fun downloadImage(imageSource: String): Result<String>
 

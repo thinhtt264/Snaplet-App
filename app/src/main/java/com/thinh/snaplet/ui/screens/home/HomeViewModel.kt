@@ -10,16 +10,23 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.R
-import com.thinh.snaplet.data.model.Post
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.media.ImageTransform
+import com.thinh.snaplet.data.model.post.NewPostUpdate
+import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.data.repository.UserRepository
+import com.thinh.snaplet.data.repository.post.PostRepository
+import com.thinh.snaplet.domain.feed.FetchNewerFeedUseCase
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
+import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase.Companion.FEED_PAGE_LIMIT
+import com.thinh.snaplet.domain.feed.ObserveNewPostEventUseCase
+import com.thinh.snaplet.domain.feed.ShouldMarkLatestPostAsSeenUseCase
 import com.thinh.snaplet.domain.feed.ShouldTriggerLoadMoreUseCase
 import com.thinh.snaplet.domain.media.DownloadPostImageUseCase
 import com.thinh.snaplet.domain.media.ValidateCaptureReadinessUseCase
 import com.thinh.snaplet.domain.model.CaptureReadiness
+import com.thinh.snaplet.domain.model.NewerFeedResult
 import com.thinh.snaplet.domain.model.PostAction
 import com.thinh.snaplet.domain.model.UploadPostResult
 import com.thinh.snaplet.domain.post.CreateTempPostUseCase
@@ -47,6 +54,7 @@ import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -54,19 +62,24 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import kotlin.math.min
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val permissionManager: PermissionManager,
     private val getNewsfeedUseCase: GetNewsfeedUseCase,
+    private val fetchNewerFeedUseCase: FetchNewerFeedUseCase,
     private val shouldTriggerLoadMoreUseCase: ShouldTriggerLoadMoreUseCase,
     private val validateCaptureReadinessUseCase: ValidateCaptureReadinessUseCase,
     private val createTempPostUseCase: CreateTempPostUseCase,
@@ -83,8 +96,15 @@ class HomeViewModel @Inject constructor(
     private val removeFriendUseCase: RemoveFriendUseCase,
     private val removeRelationshipUseCase: RemoveRelationshipUseCase,
     private val userRepository: UserRepository,
-    private val shareManager: ShareManager
+    private val shareManager: ShareManager,
+    private val observeNewPostEvent: ObserveNewPostEventUseCase,
+    private val postRepository: PostRepository,
+    private val shouldMarkLatestPostAsSeenUseCase: ShouldMarkLatestPostAsSeenUseCase,
 ) : ViewModel() {
+
+    private companion object {
+        private const val DEBOUNCE_MS = 500L
+    }
 
     private val _uiState = MutableStateFlow(
         HomeUiState(
@@ -95,8 +115,7 @@ class HomeViewModel @Inject constructor(
     )
 
     val uiState: StateFlow<HomeUiState> = combine(
-        _uiState,
-        userRepository.observeMyUserProfile()
+        _uiState, userRepository.observeMyUserProfile()
     ) { state, profile ->
         state.copy(profileAvatarUrl = profile?.avatarUrls?.forThumbnail().orEmpty())
     }.stateIn(
@@ -119,16 +138,118 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(shouldScrollToFirstPost = false) }
     }
 
+    private var lastMarkedPostCreatedAt: Date? = null
     private var currentVisibleIndex: Int = -1
+
+    /** [Post.id] for the item the user is viewing; set when [currentVisibleIndex] changes. */
+    private var viewedPostId: String? = null
     private val currentPostVisible: Post?
         get() = _uiState.value.posts.getOrNull(currentVisibleIndex)
 
     /** Temp posts for retry only: lookup by id to get imagePath/transform/caption. Not in UI state. */
     private var tempPosts: List<Post> = emptyList()
 
+    private var socketSeqNum: Int = -1
+
+    private var newerJob: Job? = null
+
     init {
         loadNewsfeed()
         loadFriendsCount()
+        loadUnreadPostsCount()
+        observeUnreadPostsUpdates()
+    }
+
+    private fun loadUnreadPostsCount() {
+        viewModelScope.launch {
+            postRepository.getUnreadPostsCount().onSuccess { count ->
+                _uiState.update { it.copy(unreadPostsCount = count) }
+            }
+        }
+    }
+
+    private fun observeUnreadPostsUpdates() {
+        observeNewPostEvent().onEach(::handleNewPostUpdate).launchIn(viewModelScope)
+    }
+
+    private fun handleNewPostUpdate(event: NewPostUpdate) {
+        val currentSeq = socketSeqNum
+        if (event.seq > currentSeq) {
+            socketSeqNum = event.seq
+            onNewPostEvent(event.count)
+        }
+    }
+
+    private fun onNewPostEvent(count: Int) {
+        _uiState.update { it.copy(unreadPostsCount = count) }
+
+        newerJob?.cancel()
+        newerJob = viewModelScope.launch {
+            runNewerFetch()
+        }
+    }
+
+    private suspend fun runNewerFetch() {
+        val currentState = _uiState.value
+        val unread = currentState.unreadPostsCount
+        when (
+            val result = fetchNewerFeedUseCase(
+                unreadCount = unread,
+                currentPosts = currentState.posts,
+            )
+        ) {
+            is NewerFeedResult.NewPosts -> {
+                val merged = result.mergedHead + result.tail
+                val showBanner = currentVisibleIndex >= 0 && unread > 0
+
+                val displayUnreadCount = min(unread, 9)
+                _uiState.update {
+                    it.copy(
+                        posts = merged,
+                        bannerMessage = if (showBanner) {
+                            UiText.PluralResource(
+                                R.plurals.new_posts_banner,
+                                displayUnreadCount,
+                                args = listOf(displayUnreadCount),
+                            )
+                        } else {
+                            null
+                        },
+                    )
+                }
+            }
+
+            is NewerFeedResult.Refresh -> loadNewsfeed(isLoadMore = false)
+
+            is NewerFeedResult.Empty -> Unit
+        }
+    }
+
+    fun onNewPostsBannerTapped() {
+        newerJob?.cancel()
+        _uiState.update {
+            it.copy(
+                bannerMessage = null,
+                shouldScrollToFirstPost = true,
+            )
+        }
+    }
+
+    private fun tryMarkSeen() {
+        if (currentVisibleIndex < 0) return
+        if (currentVisibleIndex > FetchNewerFeedUseCase.FEED_MAX_PAGE_INDEX) return
+
+        val state = _uiState.value
+        val viewedPost = viewedPostId?.let { id -> state.posts.firstOrNull { it.id == id } }
+            ?: state.posts.getOrNull(currentVisibleIndex)
+            ?: return
+        val postToMark = shouldMarkLatestPostAsSeenUseCase(
+            posts = state.posts,
+            lastSeenPostCreatedAt = lastMarkedPostCreatedAt,
+            viewedPost = viewedPost,
+        ) ?: return
+        lastMarkedPostCreatedAt = postToMark.createdAt
+        onFeedViewed(postToMark)
     }
 
     private fun updateFriendSheetState(transform: (FriendBottomSheetState) -> FriendBottomSheetState) {
@@ -140,6 +261,12 @@ class HomeViewModel @Inject constructor(
             getDisplayableFriendsCountUseCase().onSuccess { count ->
                 updateFriendSheetState { it.copy(friendsCount = count) }
             }
+        }
+    }
+
+    private fun onFeedViewed(post: Post) {
+        viewModelScope.launch {
+            postRepository.markPostsSeen(post.createdAt)
         }
     }
 
@@ -202,8 +329,7 @@ class HomeViewModel @Inject constructor(
     fun requestRemoveFriend(friend: RelationshipWithUser) {
         OverlayEventBus.showConfirmDialog(
             title = UiText.StringResource(
-                R.string.remove_friend_confirm_title,
-                listOf(friend.displayName)
+                R.string.remove_friend_confirm_title, listOf(friend.displayName)
             ),
             message = UiText.StringResource(R.string.remove_friend_confirm_message),
             confirmText = UiText.StringResource(R.string.delete),
@@ -271,7 +397,9 @@ class HomeViewModel @Inject constructor(
 
             val cursor = if (isLoadMore) state.nextCursor else null
 
-            getNewsfeedUseCase(cursor = cursor).fold(onSuccess = { feedData ->
+            getNewsfeedUseCase(
+                limit = FEED_PAGE_LIMIT, cursor = cursor
+            ).fold(onSuccess = { feedData ->
                 _uiState.update {
                     it.copy(
                         posts = if (isLoadMore) it.posts + feedData.data else feedData.data,
@@ -293,7 +421,16 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onItemVisible(currentIndex: Int) {
+        val previousIndex = currentVisibleIndex
         currentVisibleIndex = currentIndex
+
+        val posts = _uiState.value.posts
+        when {
+            currentIndex < 0 -> viewedPostId = null
+            currentIndex != previousIndex -> viewedPostId = posts.getOrNull(currentIndex)?.id
+        }
+
+        tryMarkSeen()
 
         val state = _uiState.value
         val shouldLoad = shouldTriggerLoadMoreUseCase(
@@ -490,7 +627,7 @@ class HomeViewModel @Inject constructor(
                         state.copy(
                             posts = state.posts.map { if (it.id == tempPostId) it.copy(id = realPostId) else it },
                             uploadStatuses = state.uploadStatuses - tempPostId,
-                            snackbarMessage = UiText.DynamicString("Post uploaded successfully")
+                            // snackbarMessage = UiText.DynamicString("Post uploaded successfully")
                         )
                     }
                 }
@@ -533,6 +670,7 @@ class HomeViewModel @Inject constructor(
                             message = UiText.StringResource(R.string.delete_photo_message),
                             confirmText = UiText.StringResource(R.string.delete),
                             onConfirm = { deletePost(post.id) },
+                            confirmDestructive = true
                         )
                     })
 
@@ -606,7 +744,7 @@ class HomeViewModel @Inject constructor(
                         uploadStatuses = state.uploadStatuses - postId
                     )
                 }
-                _uiState.update { it.copy(snackbarMessage = UiText.StringResource(R.string.post_deleted)) }
+                // _uiState.update { it.copy(snackbarMessage = UiText.StringResource(R.string.post_deleted)) }
             }.onFailure { error ->
                 _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
             }
@@ -648,8 +786,7 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
 
         viewModelScope.launch {
-            val isFrontCamera =
-                state.cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
+            val isFrontCamera = state.cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
 
             val processedPath = withContext(Dispatchers.IO) {
                 FileUtils.flipAndCompressImage(

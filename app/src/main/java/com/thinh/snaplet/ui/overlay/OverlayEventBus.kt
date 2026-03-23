@@ -19,11 +19,13 @@ object OverlayEventBus {
         options: List<SheetOption>,
         title: UiText? = null,
         onDismiss: (() -> Unit)? = null,
+        isBlocking: Boolean = false,
     ) {
         _events.tryEmit(
             OverlayEvent.ShowBottomSheet(
                 content = BottomSheetContent.Options(title = title, options = options),
                 onDismiss = onDismiss,
+                isBlocking = isBlocking,
             )
         )
     }
@@ -31,11 +33,13 @@ object OverlayEventBus {
     fun showConfirmSheet(
         content: BottomSheetContent.Confirm,
         onDismiss: (() -> Unit)? = null,
+        isBlocking: Boolean = false,
     ) {
         _events.tryEmit(
             OverlayEvent.ShowBottomSheet(
                 content = content,
                 onDismiss = onDismiss,
+                isBlocking = isBlocking,
             )
         )
     }
@@ -46,6 +50,7 @@ object OverlayEventBus {
         confirmText: UiText,
         cancelText: UiText? = null,
         confirmDestructive: Boolean = false,
+        isBlocking: Boolean = false,
         onConfirm: () -> Unit,
         onDismiss: (() -> Unit)? = null,
     ) {
@@ -59,17 +64,25 @@ object OverlayEventBus {
                 onConfirm = onConfirm
             ),
             onDismiss = onDismiss,
+            isBlocking = isBlocking,
         )
     }
 
     fun showModal(
         content: ModalContent,
         onDismiss: (() -> Unit)? = null,
+        isBlocking: Boolean = false,
     ) {
-        _events.tryEmit(OverlayEvent.ShowModal(content = content, onDismiss = onDismiss))
+        _events.tryEmit(
+            OverlayEvent.ShowModal(
+                content = content,
+                onDismiss = onDismiss,
+                isBlocking = isBlocking,
+            )
+        )
     }
 
-    fun dismiss() {
-        _events.tryEmit(OverlayEvent.Dismiss)
+    fun dismiss(force: Boolean = false) {
+        _events.tryEmit(OverlayEvent.Dismiss(force = force))
     }
 }

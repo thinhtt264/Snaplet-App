@@ -1,5 +1,7 @@
 package com.thinh.snaplet.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraphBuilder
@@ -25,9 +27,9 @@ fun NavGraph(
         navController = navController,
         startDestination = startDestination,
         modifier = modifier,
-        enterTransition = NavTransitions.Default.enter,
-        exitTransition = NavTransitions.Default.exit,
-        popEnterTransition = NavTransitions.Default.popEnter,
+        enterTransition = NavTransitions.App.enter,
+        exitTransition = NavTransitions.App.exit,
+        popEnterTransition = { EnterTransition.None },
         popExitTransition = NavTransitions.Default.popExit
     ) {
         authGraph(navController = navController)
@@ -39,16 +41,14 @@ fun NavGraphBuilder.homeGraph(navController: NavHostController) {
     val actions = NavActions(navController)
     navigation<HomeGraph>(
         startDestination = Home,
-        enterTransition = NavTransitions.HomeGraph.enter,
-        exitTransition = NavTransitions.HomeGraph.exit
+//        enterTransition = NavTransitions.HomeGraph.enter,
+//        popExitTransition = NavTransitions.HomeGraph.exit
     ) {
         composable<Home> {
             Home(onProfileClick = actions::navigateToMyProfile)
         }
         composable<MyProfile>(
             enterTransition = NavTransitions.MyProfile.enter,
-            exitTransition = NavTransitions.MyProfile.exit,
-            popEnterTransition = NavTransitions.MyProfile.popEnter,
             popExitTransition = NavTransitions.MyProfile.popExit
         ) {
             MyProfile(

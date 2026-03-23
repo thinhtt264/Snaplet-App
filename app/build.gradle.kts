@@ -135,6 +135,9 @@ dependencies {
     // DataStore for local storage
     implementation(libs.androidx.datastore.preferences)
 
+    // Socket.io client
+    implementation(libs.socket.io.client)
+
     add("developmentImplementation", libs.chucker)
     add("productionImplementation", libs.chucker.no.op)
 

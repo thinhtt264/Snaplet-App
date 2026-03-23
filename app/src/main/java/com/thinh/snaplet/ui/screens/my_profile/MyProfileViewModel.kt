@@ -116,7 +116,9 @@ class MyProfileViewModel @Inject constructor(
 
     private fun handleLogout() {
         viewModelScope.launch {
-            authRepository.logout()
+            authRepository.logout().onFailure { error ->
+                Logger.e("❌ Logout failed: ${error.message}")
+            }
         }
     }
 
