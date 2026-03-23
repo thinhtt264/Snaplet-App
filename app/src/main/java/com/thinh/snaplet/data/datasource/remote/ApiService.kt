@@ -108,6 +108,9 @@ interface ApiService {
         @Body body: RefreshTokenRequest
     ): Response<BaseResponse<TokenResponse>>
 
+    @POST("auth/logout")
+    suspend fun logout(): Response<BaseResponse<Unit>>
+
     @POST("media/upload/request")
     suspend fun requestUpload(
         @Body body: RequestUploadRequest
