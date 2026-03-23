@@ -62,7 +62,6 @@ internal fun ForceLogoutModal(
                     BorderStroke(0.5.dp, colorScheme.outlineVariant),
                     RoundedCornerShape(cardRadius),
                 ),
-//                .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 24.dp),
             contentAlignment = Alignment.Center,
         ) {
             // Ambient glow (dialog::before)

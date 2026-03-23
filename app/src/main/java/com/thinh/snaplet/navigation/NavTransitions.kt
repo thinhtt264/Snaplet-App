@@ -1,5 +1,6 @@
 package com.thinh.snaplet.navigation
 
+import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -10,19 +11,30 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
 import com.thinh.snaplet.ui.theme.MotionTokens
 
 private const val FADE_DURATION_DIVISOR = 1
 private const val ENTER_OFFSET_PERCENT = 0.3f
 private const val EXIT_OFFSET_PERCENT = 0.15f
 
+@SuppressLint("RestrictedApi")
+private fun NavDestination.isNestedInAuthGraph(): Boolean {
+    var current: NavDestination? = this
+    while (current != null) {
+        if (current.hasRoute(AuthGraph::class)) return true
+        current = current.parent
+    }
+    return false
+}
+
 object NavTransitions {
 
     /** App-level transitions: handle special cases like app → AuthGraph. */
     object App {
         val enter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
-            val parentRoute = targetState.destination.parent?.route
-            if (parentRoute == AuthGraph::class.qualifiedName) {
+            if (targetState.destination.isNestedInAuthGraph()) {
                 fadeIn(
                     animationSpec = tween(
                         durationMillis = MotionTokens.Emphasized,
@@ -35,8 +47,7 @@ object NavTransitions {
         }
 
         val exit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
-            val parentRoute = targetState.destination.parent?.route
-            if (parentRoute == AuthGraph::class.qualifiedName) {
+            if (targetState.destination.isNestedInAuthGraph()) {
                 fadeOut(
                     animationSpec = tween(
                         durationMillis = MotionTokens.Emphasized,
