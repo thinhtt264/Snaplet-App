@@ -1,5 +1,7 @@
 package com.thinh.snaplet.ui.screens.home.components
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,10 +45,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
+import com.thinh.snaplet.data.model.user.AvatarUrls
 import com.thinh.snaplet.domain.model.RelationshipAction
 import com.thinh.snaplet.platform.share.ShareApp
 import com.thinh.snaplet.ui.components.AppIconButton
@@ -56,6 +60,7 @@ import com.thinh.snaplet.ui.components.BaseTextField
 import com.thinh.snaplet.ui.components.IconSpec
 import com.thinh.snaplet.ui.components.PrimaryButton
 import com.thinh.snaplet.ui.screens.home.FriendBottomSheetState
+import com.thinh.snaplet.ui.theme.MotionTokens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -74,6 +79,7 @@ fun FriendBottomSheet(
     onSearchQueryChange: (String) -> Unit = {},
     onFriendRemove: (RelationshipWithUser) -> Unit,
     onPendingAccept: (RelationshipWithUser) -> Unit,
+    onAddFriend: (String) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val isReady by remember(friendSheetState.shareApps, friendSheetState.friendList) {
@@ -156,90 +162,170 @@ fun FriendBottomSheet(
                         )
                     },
                     leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Crossfade(
+                            targetState = friendSheetState.isSearchingUsers,
+                            animationSpec = tween(durationMillis = MotionTokens.Fast)
+                        ) { isSearching ->
+                            if (isSearching) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.Search,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
                     })
             }
-            item(key = "share_section") {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    BaseText(
-                        text = stringResource(R.string.friend_sheet_find_from_apps),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        typography = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(vertical = 24.dp)
+
+            if (friendSheetState.searchResults.isNotEmpty()) {
+                item { Spacer(Modifier.size(24.dp)) }
+
+                items(
+                    items = friendSheetState.searchResults,
+                    key = { it.user.userId }
+                ) { item ->
+                    FriendSearchListItem(
+                        user = item.user,
+                        relationshipAction = item.action,
+                        onAcceptRequest = {
+                            val relationshipId = item.user.relationshipId
+                            if (relationshipId.isNullOrBlank()) return@FriendSearchListItem
+
+                            val relationshipStatus = item.user.relationshipStatus
+                                ?.let { RelationshipStatus.from(it) }
+                                ?: RelationshipStatus.PENDING
+
+                            onPendingAccept(
+                                RelationshipWithUser(
+                                    id = relationshipId,
+                                    userId = item.user.userId,
+                                    username = item.user.username,
+                                    firstName = item.user.firstName,
+                                    lastName = item.user.lastName,
+                                    avatarUrls = item.user.avatarUrls,
+                                    status = relationshipStatus,
+                                    createdAt = item.user.relationshipCreatedAt.orEmpty(),
+                                )
+                            )
+                        },
+                        onRemove = {
+                            val relationshipId = item.user.relationshipId
+                            if (relationshipId.isNullOrBlank()) return@FriendSearchListItem
+
+                            val relationshipStatus = item.user.relationshipStatus
+                                ?.let { RelationshipStatus.from(it) }
+                                ?: RelationshipStatus.PENDING
+
+                            onFriendRemove(
+                                RelationshipWithUser(
+                                    id = relationshipId,
+                                    userId = item.user.userId,
+                                    username = item.user.username,
+                                    firstName = item.user.firstName,
+                                    lastName = item.user.lastName,
+                                    avatarUrls = item.user.avatarUrls,
+                                    status = relationshipStatus,
+                                    createdAt = item.user.relationshipCreatedAt.orEmpty(),
+                                )
+                            )
+                        },
+                        onAddFriend = { onAddFriend(item.user.userId) },
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        friendSheetState.shareApps.forEach { app ->
-                            ShareAppIconItem(
-                                shareApp = app, onClick = { onShareToApp(app) })
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            AppIconButton(
-                                modifier = Modifier.size(ICON_BUTTON_SIZE),
-                                icon = IconSpec.Vector(
-                                    Icons.Outlined.Share,
-                                    tint = MaterialTheme.colorScheme.onBackground
-                                ),
-                                onClick = onShareOther,
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                iconSize = ICON_BUTTON_SIZE / 2
-                            )
-                            BaseText(
-                                text = stringResource(R.string.friend_sheet_other),
-                                color = MaterialTheme.colorScheme.onBackground,
-                                typography = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
+                }
+            } else {
+                item(key = "share_section") {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        BaseText(
+                            text = stringResource(R.string.friend_sheet_find_from_apps),
+                            color = MaterialTheme.colorScheme.onBackground,
+                            typography = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(vertical = 24.dp)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            friendSheetState.shareApps.forEach { app ->
+                                ShareAppIconItem(
+                                    shareApp = app, onClick = { onShareToApp(app) })
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                AppIconButton(
+                                    modifier = Modifier.size(ICON_BUTTON_SIZE),
+                                    icon = IconSpec.Vector(
+                                        Icons.Outlined.Share,
+                                        tint = MaterialTheme.colorScheme.onBackground
+                                    ),
+                                    onClick = onShareOther,
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    iconSize = ICON_BUTTON_SIZE / 2
+                                )
+                                BaseText(
+                                    text = stringResource(R.string.friend_sheet_other),
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    typography = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
                         }
                     }
                 }
+                if (friendSheetState.pendingList.isNotEmpty()) {
+                    item(key = "pending_section_title") {
+                        BaseText(
+                            text = stringResource(R.string.friend_request_section_title),
+                            color = MaterialTheme.colorScheme.onBackground,
+                            typography = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(vertical = 24.dp)
+                        )
+                    }
+                    items(
+                        items = friendSheetState.pendingList,
+                        key = { it.relationship.id }) { item ->
+                        val friend = item.relationship
+                        FriendListItem(
+                            relationshipAction = item.action,
+                            onAcceptRequest = { onPendingAccept(friend) },
+                            onRemove = { onFriendRemove(friend) },
+                            displayName = friend.displayName,
+                            firstName = friend.firstName,
+                            relationshipStatus = friend.status,
+                            avatarUrls = friend.avatarUrls,
+                        )
+                    }
+                }
+                if (friendSheetState.friendList.isNotEmpty()) {
+                    item(key = "friends_section_title") {
+                        BaseText(
+                            text = stringResource(R.string.friend_sheet_title),
+                            color = MaterialTheme.colorScheme.onBackground,
+                            typography = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(vertical = 24.dp)
+                        )
+                    }
+                    items(
+                        items = friendSheetState.friendList, key = { it.id }) { friend ->
+                        FriendListItem(
+                            relationshipAction = RelationshipAction.Accepted,
+                            onAcceptRequest = {},
+                            onRemove = { onFriendRemove(friend) },
+                            displayName = friend.displayName,
+                            firstName = friend.firstName,
+                            relationshipStatus = friend.status,
+                            avatarUrls = friend.avatarUrls,
+                        )
+                    }
+                }
             }
-            if (friendSheetState.pendingList.isNotEmpty()) {
-                item(key = "pending_section_title") {
-                    BaseText(
-                        text = stringResource(R.string.friend_request_section_title),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        typography = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(vertical = 24.dp)
-                    )
-                }
-                items(
-                    items = friendSheetState.pendingList, key = { it.relationship.id }) { item ->
-                    FriendListItem(
-                        friend = item.relationship,
-                        relationshipAction = item.action,
-                        onAcceptRequest = { onPendingAccept(item.relationship) },
-                        onRemove = { onFriendRemove(item.relationship) },
-                    )
-                }
-            }
-            if (friendSheetState.friendList.isNotEmpty()) {
-                item(key = "friends_section_title") {
-                    BaseText(
-                        text = stringResource(R.string.friend_sheet_title),
-                        color = MaterialTheme.colorScheme.onBackground,
-                        typography = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(vertical = 24.dp)
-                    )
-                }
-                items(
-                    items = friendSheetState.friendList, key = { it.id }) { friend ->
-                    FriendListItem(
-                        friend = friend,
-                        relationshipAction = RelationshipAction.Accepted,
-                        onAcceptRequest = {},
-                        onRemove = { onFriendRemove(friend) },
-                    )
-                }
-            }
+
             item(key = "bottom_padding") {
                 Box(modifier = Modifier.padding(bottom = 24.dp))
             }
@@ -248,8 +334,74 @@ fun FriendBottomSheet(
 }
 
 @Composable
+private fun FriendSearchListItem(
+    user: com.thinh.snaplet.data.model.user.UserSearchResult,
+    relationshipAction: RelationshipAction,
+    onAcceptRequest: () -> Unit,
+    onRemove: () -> Unit,
+    onAddFriend: () -> Unit,
+) {
+    val relationshipStatus = user.relationshipStatus
+        ?.let { RelationshipStatus.from(it) }
+        ?: RelationshipStatus.PENDING
+
+    val displayName = listOf(user.firstName, user.lastName)
+        .filter { it.isNotBlank() }
+        .joinToString(" ")
+        .ifBlank { user.username }
+
+    val canRemove = relationshipAction !is RelationshipAction.AddFriend &&
+            relationshipAction !is RelationshipAction.CurrentUser
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Avatar(
+            avatarUrl = user.avatarUrls.forThumbnail().ifBlank { null },
+            firstName = user.firstName,
+            isConnectedUser = relationshipStatus == RelationshipStatus.ACCEPTED,
+            borderWidth = 2.dp,
+            size = 40.dp
+        )
+        BaseText(
+            text = displayName,
+            color = MaterialTheme.colorScheme.onBackground,
+            typography = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        FriendListItemActionSlot(
+            relationshipAction = relationshipAction,
+            onAcceptRequest = onAcceptRequest,
+            onAddFriend = onAddFriend,
+        )
+        if (canRemove) {
+            Spacer(Modifier.size(8.dp))
+            AppIconButton(
+                modifier = Modifier.size(ICON_BUTTON_SIZE / 1.3f),
+                icon = IconSpec.Vector(
+                    Icons.Outlined.Close, tint = MaterialTheme.colorScheme.onBackground
+                ),
+                onClick = onRemove,
+                containerColor = MaterialTheme.colorScheme.surface,
+                iconSize = ICON_BUTTON_SIZE / 2
+            )
+        }
+    }
+}
+
+@Composable
 private fun FriendListItem(
-    friend: RelationshipWithUser,
+    displayName: String,
+    firstName: String,
+    relationshipStatus: RelationshipStatus,
+    avatarUrls: AvatarUrls,
     relationshipAction: RelationshipAction,
     onAcceptRequest: () -> Unit,
     onRemove: () -> Unit,
@@ -261,21 +413,21 @@ private fun FriendListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Avatar(
-            avatarUrl = friend.avatarUrls.forThumbnail().ifBlank { null },
-            firstName = friend.firstName,
-            isConnectedUser = friend.status == RelationshipStatus.ACCEPTED,
+            avatarUrl = avatarUrls.forThumbnail().ifBlank { null },
+            firstName = firstName,
+            isConnectedUser = relationshipStatus == RelationshipStatus.ACCEPTED,
             borderWidth = 2.dp,
             size = 40.dp
         )
         BaseText(
-            text = friend.displayName,
+            text = displayName,
             color = MaterialTheme.colorScheme.onBackground,
             typography = MaterialTheme.typography.bodyMedium,
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 12.dp),
             maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis
         )
         FriendListItemActionSlot(
             relationshipAction = relationshipAction,
@@ -294,14 +446,11 @@ private fun FriendListItem(
     }
 }
 
-/**
- * Trailing action for a friend list row, driven by [RelationshipAction].
- * Replace this implementation with your own UI (e.g. different buttons per action).
- */
 @Composable
 private fun FriendListItemActionSlot(
     relationshipAction: RelationshipAction,
     onAcceptRequest: () -> Unit,
+    onAddFriend: () -> Unit = {},
 ) {
     var isResending by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -343,7 +492,23 @@ private fun FriendListItemActionSlot(
             )
         }
 
-        RelationshipAction.Accepted, RelationshipAction.Blocked, RelationshipAction.AddFriend, RelationshipAction.CurrentUser -> Unit
+        is RelationshipAction.AddFriend -> {
+            PrimaryButton(
+                onClick = onAddFriend,
+                title = stringResource(R.string.add_friend),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                typography = MaterialTheme.typography.titleSmall,
+                titleColor = MaterialTheme.colorScheme.onPrimary,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+
+        RelationshipAction.Accepted,
+        RelationshipAction.Blocked,
+        RelationshipAction.CurrentUser -> Unit
     }
 }
 
@@ -365,7 +530,7 @@ private fun ShareAppIconItem(
             typography = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(top = 8.dp),
             maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

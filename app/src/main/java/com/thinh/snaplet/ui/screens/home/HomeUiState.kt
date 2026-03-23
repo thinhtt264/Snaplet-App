@@ -5,13 +5,14 @@ import androidx.camera.core.CameraSelector
 import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.model.user.UserSearchResult
+import com.thinh.snaplet.domain.model.FriendSearchActionItem
 import com.thinh.snaplet.domain.model.RelationshipAction
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.platform.share.ShareApp
 import com.thinh.snaplet.ui.common.UiText
 
-/** Pending row with [RelationshipAction] from use case (PendingByMe vs PendingByOther). */
-data class PendingListItemState(
+data class RelationshipActionItemState(
     val relationship: RelationshipWithUser,
     val action: RelationshipAction,
 )
@@ -33,10 +34,8 @@ data class HomeUiState(
     val uploadStatuses: Map<String, UploadStatus> = emptyMap(),
     val isDownloading: Boolean = false,
 
-    /** Number of unread posts for history badge. */
     val unreadPostsCount: Int = 0,
 
-    /** Banner message shown on top of feed. null = hidden. */
     val bannerMessage: UiText? = null,
 
     /** Snackbar message to show. UI shows then calls onSnackbarDismissed(). */
@@ -76,7 +75,9 @@ data class CameraState(
 data class FriendBottomSheetState(
     val relationshipCounts: RelationshipCounts? = null,
     val friendList: List<RelationshipWithUser> = emptyList(),
-    val pendingList: List<PendingListItemState> = emptyList(),
+    val pendingList: List<RelationshipActionItemState> = emptyList(),
     val isLoadingFriendList: Boolean = false,
+    val searchResults: List<FriendSearchActionItem> = emptyList(),
+    val isSearchingUsers: Boolean = false,
     val shareApps: List<ShareApp> = emptyList(),
 )

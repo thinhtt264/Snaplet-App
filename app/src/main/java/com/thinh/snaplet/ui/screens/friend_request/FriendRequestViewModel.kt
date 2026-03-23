@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.domain.model.RelationshipAction
-import com.thinh.snaplet.domain.user.GetRelationshipActionUseCase
+import com.thinh.snaplet.domain.relationship.GetRelationshipActionUseCase
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.onFailure

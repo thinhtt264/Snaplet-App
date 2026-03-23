@@ -26,6 +26,7 @@ import com.thinh.snaplet.data.model.user.AvatarUploadRequestResponse
 import com.thinh.snaplet.data.model.user.ConfirmAvatarUploadRequest
 import com.thinh.snaplet.data.model.user.UpdateDisplayNameRequest
 import com.thinh.snaplet.data.model.user.UserProfile
+import com.thinh.snaplet.data.model.user.UserSearchResult
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -63,6 +64,12 @@ interface ApiService {
     suspend fun getUserProfile(
         @Path("username") username: String
     ): Response<BaseResponse<UserProfile>>
+
+    @GET("users/search")
+    suspend fun searchUsersByUsernamePrefix(
+        @Query("q") usernamePrefix: String,
+        @Query("limit") limit: Int,
+    ): Response<BaseResponse<List<UserSearchResult>>>
 
     @POST("relationships")
     suspend fun sendFriendRequest(

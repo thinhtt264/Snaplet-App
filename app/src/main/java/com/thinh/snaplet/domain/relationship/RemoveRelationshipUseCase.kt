@@ -1,4 +1,4 @@
-package com.thinh.snaplet.domain.user
+package com.thinh.snaplet.domain.relationship
 
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.utils.network.ApiResult
@@ -12,3 +12,4 @@ class RemoveRelationshipUseCase @Inject constructor(
         return userRepository.removeFriend(relationshipId)
     }
 }
+

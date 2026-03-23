@@ -1,4 +1,4 @@
-package com.thinh.snaplet.domain.user
+package com.thinh.snaplet.domain.relationship
 
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
@@ -13,3 +13,4 @@ class GetRelationshipsByStatusesUseCase @Inject constructor(
         return userRepository.getRelationshipsByStatuses(statuses)
     }
 }
+

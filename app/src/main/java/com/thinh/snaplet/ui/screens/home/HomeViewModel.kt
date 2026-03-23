@@ -35,11 +35,12 @@ import com.thinh.snaplet.domain.post.GetAvailablePostActionsUseCase
 import com.thinh.snaplet.domain.post.UploadPostUseCase
 import com.thinh.snaplet.domain.post.ValidateRetryUploadUseCase
 import com.thinh.snaplet.domain.post.ValidateUploadPostUseCase
-import com.thinh.snaplet.domain.user.AcceptFriendRequestUseCase
-import com.thinh.snaplet.domain.user.GetRelationshipActionUseCase
-import com.thinh.snaplet.domain.user.GetRelationshipsByStatusesUseCase
-import com.thinh.snaplet.domain.user.RemoveFriendUseCase
-import com.thinh.snaplet.domain.user.RemoveRelationshipUseCase
+import com.thinh.snaplet.domain.relationship.AcceptFriendRequestUseCase
+import com.thinh.snaplet.domain.relationship.FormatFriendSearchResultsUseCase
+import com.thinh.snaplet.domain.relationship.GetRelationshipActionUseCase
+import com.thinh.snaplet.domain.relationship.GetRelationshipsByStatusesUseCase
+import com.thinh.snaplet.domain.relationship.RemoveFriendUseCase
+import com.thinh.snaplet.domain.relationship.RemoveRelationshipUseCase
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.platform.permission.PermissionManager
 import com.thinh.snaplet.platform.share.ShareApp
@@ -49,6 +50,7 @@ import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
 import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.FileUtils
+import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -57,6 +59,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -90,6 +93,7 @@ class HomeViewModel @Inject constructor(
     private val downloadPostImageUseCase: DownloadPostImageUseCase,
     private val getRelationshipsByStatusesUseCase: GetRelationshipsByStatusesUseCase,
     private val getRelationshipActionUseCase: GetRelationshipActionUseCase,
+    private val formatFriendSearchResultsUseCase: FormatFriendSearchResultsUseCase,
     private val acceptFriendRequestUseCase: AcceptFriendRequestUseCase,
     private val removeFriendUseCase: RemoveFriendUseCase,
     private val removeRelationshipUseCase: RemoveRelationshipUseCase,
@@ -103,6 +107,8 @@ class HomeViewModel @Inject constructor(
     private companion object {
         private const val DEBOUNCE_MS = 500L
     }
+
+    private var lastFriendSearchQuery: String = ""
 
     private val _uiState = MutableStateFlow(
         HomeUiState(
@@ -150,6 +156,8 @@ class HomeViewModel @Inject constructor(
     private var socketSeqNum: Int = -1
 
     private var newerJob: Job? = null
+
+    private var friendSearchJob: Job? = null
 
     init {
         loadNewsfeed()
@@ -254,6 +262,48 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(friendSheetState = transform(it.friendSheetState)) }
     }
 
+    fun onFriendSheetDismissed() {
+        friendSearchJob?.cancel()
+        friendSearchJob = null
+        lastFriendSearchQuery = ""
+
+        updateFriendSheetState {
+            it.copy(
+                isSearchingUsers = false,
+                searchResults = emptyList(),
+            )
+        }
+    }
+
+    private fun refreshFriendSearchResults() {
+        val query = lastFriendSearchQuery
+        if (query.isBlank()) return
+
+        friendSearchJob?.cancel()
+        friendSearchJob = null
+
+        viewModelScope.launch {
+            val wasLoading = _uiState.value.friendSheetState.isSearchingUsers
+            if (!wasLoading) {
+                updateFriendSheetState { it.copy(isSearchingUsers = true) }
+            }
+
+            val currentUserId = userRepository.getCurrentUserProfile()?.id
+            userRepository.searchUsersByUsernamePrefix(query)
+                .onSuccess { users ->
+                    updateFriendSheetState {
+                        it.copy(
+                            searchResults = formatFriendSearchResultsUseCase(users, currentUserId),
+                            isSearchingUsers = false,
+                        )
+                    }
+                }
+                .onFailure {
+                    updateFriendSheetState { it.copy(isSearchingUsers = false) }
+                }
+        }
+    }
+
     private fun loadRelationshipCounts() {
         viewModelScope.launch {
             userRepository.getRelationshipCounts().onSuccess { counts ->
@@ -288,8 +338,9 @@ class HomeViewModel @Inject constructor(
                 val pendingWithActions = coroutineScope {
                     pending.map { item ->
                         async {
-                            PendingListItemState(
-                                item, getRelationshipActionUseCase(item.userId)
+                            RelationshipActionItemState(
+                                relationship = item,
+                                action = getRelationshipActionUseCase(item.userId),
                             )
                         }
                     }.awaitAll()
@@ -307,6 +358,57 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun onFriendSearchQueryChanged(query: String) {
+        val trimmed = query.trim()
+        lastFriendSearchQuery = trimmed
+
+        friendSearchJob?.cancel()
+
+        if (trimmed.isBlank()) {
+            updateFriendSheetState {
+                it.copy(
+                    isSearchingUsers = false,
+                    searchResults = emptyList(),
+                )
+            }
+            return
+        }
+
+        // Show loading immediately while waiting for debounce.
+        updateFriendSheetState {
+            it.copy(
+                isSearchingUsers = true,
+                searchResults = emptyList(),
+            )
+        }
+
+        friendSearchJob = viewModelScope.launch {
+            delay(DEBOUNCE_MS)
+
+            userRepository.searchUsersByUsernamePrefix(trimmed)
+                .onSuccess { users ->
+                    val currentUserId = userRepository.getCurrentUserProfile()?.id
+
+                    val formatted = formatFriendSearchResultsUseCase(users, currentUserId)
+
+                    updateFriendSheetState {
+                        it.copy(
+                            searchResults = formatted,
+                            isSearchingUsers = false,
+                        )
+                    }
+                }
+                .onFailure { _ ->
+                    updateFriendSheetState {
+                        it.copy(
+                            isSearchingUsers = false,
+                            searchResults = emptyList(),
+                        )
+                    }
+                }
+        }
+    }
+
     fun acceptFriendRequest(pending: RelationshipWithUser) {
         viewModelScope.launch {
             acceptFriendRequestUseCase(pending.id).onSuccess {
@@ -321,6 +423,23 @@ class HomeViewModel @Inject constructor(
             }.onFailure { error ->
                 _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
             }
+        }
+    }
+
+    fun sendFriendRequest(targetUserId: String) {
+        if (targetUserId.isBlank()) return
+
+        viewModelScope.launch {
+            userRepository.sendFriendRequest(targetUserId)
+                .onSuccess {
+                    loadRelationshipCounts()
+                    loadMyFriendList()
+                    refreshFriendSearchResults()
+                }
+                .onFailure { error ->
+                    Logger.e("❌ Failed to send friend request: ${error.message}")
+                    // _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
+                }
         }
     }
 
@@ -345,6 +464,8 @@ class HomeViewModel @Inject constructor(
                     updateFriendSheetState { s ->
                         s.copy(pendingList = s.pendingList.filterNot { it.relationship.id == friend.id })
                     }
+                    loadRelationshipCounts()
+                    refreshFriendSearchResults()
                 }.onFailure { error ->
                     _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
                 }
@@ -355,6 +476,7 @@ class HomeViewModel @Inject constructor(
                         s.copy(friendList = s.friendList.filterNot { it.id == friend.id })
                     }
                     loadRelationshipCounts()
+                    refreshFriendSearchResults()
                 }.onFailure { error ->
                     _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
                 }

@@ -335,7 +335,11 @@ private fun HomeScreen(
 
         if (showFriendSheet) {
             FriendBottomSheet(
-                onDismiss = { showFriendSheet = false },
+                onDismiss = {
+                    showFriendSheet = false
+                    friendSearchQuery = ""
+                    viewModel.onFriendSheetDismissed()
+                },
                 friendSheetState = uiState.friendSheetState,
                 onShareToApp = viewModel::shareToApp,
                 onShareOther = viewModel::shareOther,
@@ -344,9 +348,13 @@ private fun HomeScreen(
                     viewModel.loadMyFriendList()
                 },
                 searchQuery = friendSearchQuery,
-                onSearchQueryChange = { friendSearchQuery = it },
+                onSearchQueryChange = {
+                    friendSearchQuery = it
+                    viewModel.onFriendSearchQueryChanged(it)
+                },
                 onFriendRemove = viewModel::requestRemoveFriend,
-                onPendingAccept = viewModel::acceptFriendRequest
+                onPendingAccept = viewModel::acceptFriendRequest,
+                onAddFriend = viewModel::sendFriendRequest
             )
         }
 

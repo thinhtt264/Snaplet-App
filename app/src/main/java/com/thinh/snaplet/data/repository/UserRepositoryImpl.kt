@@ -13,6 +13,7 @@ import com.thinh.snaplet.data.model.user.AvatarUploadRequest
 import com.thinh.snaplet.data.model.user.AvatarUploadRequestResponse
 import com.thinh.snaplet.data.model.user.ConfirmAvatarUploadRequest
 import com.thinh.snaplet.data.model.user.UpdateDisplayNameRequest
+import com.thinh.snaplet.data.model.user.UserSearchResult
 import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.di.BaseOkHttpClient
 import com.thinh.snaplet.utils.Logger
@@ -41,6 +42,17 @@ class UserRepositoryImpl @Inject constructor(
         return safeApiCall(
             apiCall = {
                 apiService.getUserProfile(userName)
+            }
+        )
+    }
+
+    override suspend fun searchUsersByUsernamePrefix(
+        usernamePrefix: String,
+        limit: Int,
+    ): ApiResult<List<UserSearchResult>> {
+        return safeApiCall(
+            apiCall = {
+                apiService.searchUsersByUsernamePrefix(usernamePrefix, limit)
             }
         )
     }
