@@ -27,4 +27,7 @@ data class UserSearchResult(
 
     @SerializedName("createdAt")
     val relationshipCreatedAt: String? = null,
+
+    @SerializedName("initiator")
+    val initiator: String? = null,
 )
