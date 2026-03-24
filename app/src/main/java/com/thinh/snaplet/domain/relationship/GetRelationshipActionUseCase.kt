@@ -1,4 +1,4 @@
-package com.thinh.snaplet.domain.user
+package com.thinh.snaplet.domain.relationship
 
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.repository.UserRepository
@@ -6,7 +6,8 @@ import com.thinh.snaplet.domain.model.RelationshipAction
 import javax.inject.Inject
 
 class GetRelationshipActionUseCase @Inject constructor(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val resolveRelationshipActionUseCase: ResolveRelationshipActionUseCase,
 ) {
     suspend operator fun invoke(targetUserId: String): RelationshipAction {
         val currentUser = userRepository.getCurrentUserProfile()
@@ -15,17 +16,15 @@ class GetRelationshipActionUseCase @Inject constructor(
 
         val relationship = userRepository.getRelationshipWithUser(targetUserId)
             .fold(onSuccess = { it }, onFailure = { null })
-        val status = RelationshipStatus.from(relationship?.status ?: "")
 
-        return when (status) {
-            RelationshipStatus.ACCEPTED -> RelationshipAction.Accepted
-            RelationshipStatus.BLOCKED -> RelationshipAction.Blocked
-            RelationshipStatus.PENDING -> if (relationship?.initiator == currentUser?.id) {
-                RelationshipAction.PendingByMe
-            } else {
-                RelationshipAction.PendingByOther(relationship?.id ?: "")
-            }
-            null -> RelationshipAction.AddFriend
-        }
+        val status = RelationshipStatus.from(relationship?.status.orEmpty())
+
+        return resolveRelationshipActionUseCase(
+            status = status,
+            relationship = relationship,
+            currentUserId = currentUser?.id,
+            targetUserId = targetUserId
+        )
     }
 }
+

@@ -5,6 +5,7 @@ import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.user.UserProfile
+import com.thinh.snaplet.data.model.user.UserSearchResult
 import com.thinh.snaplet.data.model.user.AvatarUploadRequestResponse
 import com.thinh.snaplet.utils.network.ApiResult
 import kotlinx.coroutines.flow.Flow
@@ -12,6 +13,11 @@ import kotlinx.coroutines.flow.Flow
 interface UserRepository {
 
     suspend fun getUserProfile(userName: String): ApiResult<UserProfile>
+
+    suspend fun searchUsersByUsernamePrefix(
+        usernamePrefix: String,
+        limit: Int = 5,
+    ): ApiResult<List<UserSearchResult>>
     
     suspend fun sendFriendRequest(userId: String): ApiResult<Relationship>
 
