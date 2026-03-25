@@ -220,3 +220,6 @@ val inverseSurface_light = Neutral20 // #34302A
 val inverseOnSurface_light = Neutral95 // #F8EFE7
 val outline_light = NeutralVariant50 // #807667
 val outlineVariant_light = NeutralVariant80 //
+
+val WidgetStatePanelBackground = Color(0xFF1A1A1A) // loading / error / empty
+val WidgetAvatarPlaceholder = Color(0x804A4A4A) // avatar chưa load

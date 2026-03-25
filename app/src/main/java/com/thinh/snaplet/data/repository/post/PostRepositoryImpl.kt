@@ -4,6 +4,7 @@ import com.thinh.snaplet.data.datasource.remote.ApiService
 import com.thinh.snaplet.data.model.post.MarkPostsSeenRequest
 import com.thinh.snaplet.data.model.post.NewPostUpdate
 import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.model.post.PostActivity
 import com.thinh.snaplet.data.model.post.PostsFeedData
 import com.thinh.snaplet.data.model.post.UnreadPostsCountData
 import com.thinh.snaplet.platform.socket.SocketEvent
@@ -53,6 +54,12 @@ class PostRepositoryImpl @Inject constructor(
     override suspend fun getNewerPost(since: String, limit: Int): ApiResult<List<Post>> {
         return safeApiCall(
             apiCall = { apiService.getNewerFeed(since = since, limit = limit) },
+        )
+    }
+
+    override suspend fun getPostsActivity(): ApiResult<PostActivity?> {
+        return safeApiCall(
+            apiCall = { apiService.getPostsActivity() },
         )
     }
 

@@ -7,10 +7,11 @@ import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.auth.AuthRepository
 import com.thinh.snaplet.data.repository.device.DeviceRepository
 import com.thinh.snaplet.navigation.AuthGraph
-import com.thinh.snaplet.platform.socket.SocketManager
 import com.thinh.snaplet.navigation.HomeGraph
 import com.thinh.snaplet.platform.deeplink.DeepLinkEvent
 import com.thinh.snaplet.platform.deeplink.DeepLinkManager
+import com.thinh.snaplet.platform.socket.SocketManager
+import com.thinh.snaplet.platform.widget.WidgetUpdateManager
 import com.thinh.snaplet.ui.overlay.ModalContent
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.screens.friend_request.FriendRequestUiState
@@ -35,7 +36,8 @@ class AppViewModel @Inject constructor(
     private val deviceRepository: DeviceRepository,
     private val deepLinkManager: DeepLinkManager,
     private val userRepository: UserRepository,
-    private val socketManager: SocketManager
+    private val socketManager: SocketManager,
+    private val widgetUpdateManager: WidgetUpdateManager,
 ) : ViewModel() {
 
     private val _uiState: MutableStateFlow<AppUiState> = MutableStateFlow(AppUiState())
@@ -57,6 +59,7 @@ class AppViewModel @Inject constructor(
         initializeApp()
         observeAuthState()
         observeSocketSync()
+        observerIsAuthenticated()
     }
 
     /**
@@ -68,11 +71,17 @@ class AppViewModel @Inject constructor(
         isForegrounded.value = isVisible
     }
 
+    private fun observerIsAuthenticated() {
+        isAuthenticated.onEach {
+                if (!isInitialized) return@onEach
+                if (!it) widgetUpdateManager.scheduleImmediateUpdate()
+            }.launchIn(viewModelScope)
+    }
+
     private fun observeSocketSync() {
         combine(isAuthenticated, isForegrounded) { authenticated, foregrounded ->
             authenticated && foregrounded
-        }
-            .onEach { shouldConnect ->
+        }.onEach { shouldConnect ->
                 if (shouldConnect) {
                     viewModelScope.launch {
                         socketManager.connect()
@@ -80,8 +89,7 @@ class AppViewModel @Inject constructor(
                 } else {
                     socketManager.disconnect()
                 }
-            }
-            .launchIn(viewModelScope)
+            }.launchIn(viewModelScope)
     }
 
     private fun initializeApp() {
@@ -110,27 +118,28 @@ class AppViewModel @Inject constructor(
 
     private fun observeAuthState() {
         authRepository.authState.onEach { authState ->
-                if (!isInitialized) return@onEach
-                when (authState) {
-                    is AuthState.Authenticated -> {
-                        isAuthenticated.value = true
-                        _uiEvent.emit(AppUiEvent.NavigateToHomeGraph)
-                        pendingFriendRequestUserName?.let { userName ->
-                            pendingFriendRequestUserName = null
-                            handleFriendRequestDeepLink(userName)
-                        }
-                    }
-
-                    is AuthState.Unauthenticated -> {
-                        isAuthenticated.value = false
-                        _uiEvent.emit(AppUiEvent.NavigateToAuthGraph)
+            if (!isInitialized) return@onEach
+            when (authState) {
+                is AuthState.Authenticated -> {
+                    isAuthenticated.value = true
+                    _uiEvent.emit(AppUiEvent.NavigateToHomeGraph)
+                    pendingFriendRequestUserName?.let { userName ->
+                        pendingFriendRequestUserName = null
+                        handleFriendRequestDeepLink(userName)
                     }
                 }
-            }.catch { e ->
-                if (isInitialized) {
+
+                is AuthState.Unauthenticated -> {
+                    isAuthenticated.value = false
                     _uiEvent.emit(AppUiEvent.NavigateToAuthGraph)
                 }
-            }.launchIn(viewModelScope)
+            }
+        }.catch { e ->
+            if (isInitialized) {
+                isAuthenticated.value = false
+                _uiEvent.emit(AppUiEvent.NavigateToAuthGraph)
+            }
+        }.launchIn(viewModelScope)
     }
 
     private fun observeDeepLinkEvents() {

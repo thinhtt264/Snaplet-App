@@ -2,12 +2,12 @@ package com.thinh.snaplet.data.datasource.remote
 
 import com.thinh.snaplet.data.model.BaseResponse
 import com.thinh.snaplet.data.model.EmailAvailabilityData
-import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.LoginRequest
 import com.thinh.snaplet.data.model.LoginResponse
 import com.thinh.snaplet.data.model.RefreshTokenRequest
 import com.thinh.snaplet.data.model.RegisterRequest
 import com.thinh.snaplet.data.model.Relationship
+import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipWithUserDto
 import com.thinh.snaplet.data.model.TokenResponse
 import com.thinh.snaplet.data.model.UpdateRelationshipRequest
@@ -19,6 +19,7 @@ import com.thinh.snaplet.data.model.media.UploadRequestData
 import com.thinh.snaplet.data.model.post.CreatePostRequest
 import com.thinh.snaplet.data.model.post.MarkPostsSeenRequest
 import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.model.post.PostActivity
 import com.thinh.snaplet.data.model.post.PostsFeedData
 import com.thinh.snaplet.data.model.post.UnreadPostsCountData
 import com.thinh.snaplet.data.model.user.AvatarUploadRequest
@@ -59,6 +60,9 @@ interface ApiService {
         @Query("since") since: String,
         @Query("limit") limit: Int,
     ): Response<BaseResponse<List<Post>>>
+
+    @GET("posts/activity")
+    suspend fun getPostsActivity(): Response<BaseResponse<PostActivity?>>
 
     @GET("users/profile/{username}")
     suspend fun getUserProfile(

@@ -45,6 +45,7 @@ import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.platform.permission.PermissionManager
 import com.thinh.snaplet.platform.share.ShareApp
 import com.thinh.snaplet.platform.share.ShareManager
+import com.thinh.snaplet.platform.widget.WidgetUpdateManager
 import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
@@ -64,7 +65,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -102,6 +105,7 @@ class HomeViewModel @Inject constructor(
     private val observeNewPostEvent: ObserveNewPostEventUseCase,
     private val postRepository: PostRepository,
     private val shouldMarkLatestPostAsSeenUseCase: ShouldMarkLatestPostAsSeenUseCase,
+    private val widgetUpdateManager: WidgetUpdateManager,
 ) : ViewModel() {
 
     private companion object {
@@ -119,9 +123,12 @@ class HomeViewModel @Inject constructor(
     )
 
     val uiState: StateFlow<HomeUiState> = combine(
-        _uiState, userRepository.observeMyUserProfile()
-    ) { state, profile ->
-        state.copy(profileAvatarUrl = profile?.avatarUrls?.forThumbnail().orEmpty())
+        _uiState,
+        userRepository.observeMyUserProfile()
+            .map { it?.avatarUrls?.forThumbnail().orEmpty() }
+            .distinctUntilChanged(),
+    ) { state, profileAvatarUrl ->
+        state.copy(profileAvatarUrl = profileAvatarUrl)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -314,7 +321,9 @@ class HomeViewModel @Inject constructor(
 
     private fun onFeedViewed(post: Post) {
         viewModelScope.launch {
-            postRepository.markPostsSeen(post.createdAt)
+            postRepository.markPostsSeen(post.createdAt).onSuccess {
+                widgetUpdateManager.scheduleImmediateUpdate()
+            }
         }
     }
 

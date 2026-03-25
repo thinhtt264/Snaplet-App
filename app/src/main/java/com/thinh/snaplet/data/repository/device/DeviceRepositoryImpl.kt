@@ -50,7 +50,9 @@ class DeviceRepositoryImpl @Inject constructor(
     }
 
     override fun getFingerprintSync(): String {
-        return currentFingerprint.get() ?: ""
+        return currentFingerprint.get() ?: generateFingerprint().also {
+            currentFingerprint.set(it)
+        }
     }
 
     private fun generateFingerprint(): String {

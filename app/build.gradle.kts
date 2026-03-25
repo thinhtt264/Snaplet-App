@@ -115,6 +115,10 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.exifinterface)
     ksp(libs.hilt.android.compiler)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+    implementation(libs.androidx.glance.appwidget)
 
     // CameraX
     implementation(libs.androidx.camera.camera2)
