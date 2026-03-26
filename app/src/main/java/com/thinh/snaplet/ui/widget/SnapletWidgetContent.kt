@@ -25,7 +25,6 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
@@ -37,7 +36,6 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.thinh.snaplet.MainActivity
 import com.thinh.snaplet.R
-import com.thinh.snaplet.ui.theme.WidgetAvatarPlaceholder
 import com.thinh.snaplet.ui.theme.WidgetStatePanelBackground
 import com.thinh.snaplet.ui.theme.onBackground_dark
 import com.thinh.snaplet.ui.theme.onPrimaryContainer_light
@@ -48,7 +46,6 @@ fun SnapletWidgetContent(
     data: WidgetDisplayData,
     modifier: GlanceModifier = GlanceModifier,
 ) {
-    val glanceAppFontFamily = FontFamily.Serif
 
     Box(
         modifier = modifier.fillMaxSize().background(glanceColor(Color.Transparent))
@@ -56,14 +53,13 @@ fun SnapletWidgetContent(
         contentAlignment = Alignment.Center,
     ) {
         when {
-            data.isError -> WidgetErrorState(fontFamily = glanceAppFontFamily)
+            data.isError -> WidgetErrorState()
             data.isLoading -> WidgetErrorState(
-                fontFamily = glanceAppFontFamily,
                 showCenterContent = true,
             )
+
             else -> WidgetPostState(
-                data = data,
-                fontFamily = glanceAppFontFamily
+                data = data
             )
         }
     }
@@ -71,7 +67,6 @@ fun SnapletWidgetContent(
 
 @Composable
 private fun WidgetErrorState(
-    fontFamily: FontFamily,
     showCenterContent: Boolean = true,
 ) {
     val context = androidx.glance.LocalContext.current
@@ -82,8 +77,7 @@ private fun WidgetErrorState(
 
     Box(
         modifier = GlanceModifier.size(squareEdge)
-            .background(glanceColor(WidgetStatePanelBackground))
-            .cornerRadius(16.dp),
+            .background(glanceColor(WidgetStatePanelBackground)).cornerRadius(16.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (showCenterContent) {
@@ -91,15 +85,12 @@ private fun WidgetErrorState(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(
-                    modifier = GlanceModifier
-                        .size(avatarSize + ringThickness * 3)
-                        .background(glanceColor(primary_dark))
-                        .cornerRadius(999.dp),
+                    modifier = GlanceModifier.size(avatarSize + ringThickness * 3)
+                        .background(glanceColor(primary_dark)).cornerRadius(999.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Box(
-                        modifier = GlanceModifier
-                            .size(avatarSize)
+                        modifier = GlanceModifier.size(avatarSize)
                             .background(glanceColor(WidgetStatePanelBackground))
                             .cornerRadius(999.dp),
                         contentAlignment = Alignment.Center,
@@ -108,8 +99,7 @@ private fun WidgetErrorState(
                             provider = ImageProvider(R.drawable.photo_placeholder),
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier = GlanceModifier
-                                .size(avatarSize / 1.9f)
+                            modifier = GlanceModifier.size(avatarSize / 1.9f)
                         )
                     }
                 }
@@ -119,7 +109,7 @@ private fun WidgetErrorState(
                     style = TextStyle(
                         color = glanceColor(onBackground_dark),
                         fontSize = 13.sp,
-                        fontFamily = fontFamily,
+                        fontFamily = FontFamily.Serif,
                     ),
                 )
             }
@@ -129,8 +119,7 @@ private fun WidgetErrorState(
 
 @Composable
 private fun WidgetPostState(
-    data: WidgetDisplayData,
-    fontFamily: FontFamily
+    data: WidgetDisplayData
 ) {
     val context = androidx.glance.LocalContext.current
     val widgetSize = LocalSize.current
@@ -159,7 +148,6 @@ private fun WidgetPostState(
         } else {
             // Placeholder to avoid transparent surface while bitmap is still loading.
             WidgetErrorState(
-                fontFamily = fontFamily,
                 showCenterContent = false,
             )
         }
@@ -177,10 +165,12 @@ private fun WidgetPostState(
                         modifier = GlanceModifier.size(36.dp).cornerRadius(18.dp),
                     )
                 } else {
-                    Box(
-                        modifier = GlanceModifier.size(18.dp).cornerRadius(18.dp)
-                            .background(glanceColor(WidgetAvatarPlaceholder)),
-                    ) {}
+                    Image(
+                        provider = ImageProvider(R.drawable.photo_placeholder),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = GlanceModifier.size(36.dp).cornerRadius(18.dp),
+                    )
                 }
             }
         }
@@ -188,21 +178,22 @@ private fun WidgetPostState(
         if (data.unreadCount > 0) {
             val badgeText = if (data.unreadCount > 9) "9+" else data.unreadCount.toString()
             Box(
-                modifier = GlanceModifier.fillMaxSize(),
+                modifier = GlanceModifier.fillMaxSize()
+                    .padding(vertical = 8.dp, horizontal = 10.dp),
                 contentAlignment = Alignment.TopEnd,
             ) {
                 Box(
                     modifier = GlanceModifier.background(glanceColor(primary_dark))
-                        .cornerRadius(999.dp).padding(vertical = 4.dp, horizontal = 8.dp),
+                        .cornerRadius(999.dp).size(24.dp).padding(all = 0.5.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = badgeText,
                         style = TextStyle(
                             color = glanceColor(onPrimaryContainer_light),
-                            fontSize = 12.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = fontFamily,
+                            fontFamily = FontFamily.Monospace,
                         ),
                     )
                 }
@@ -216,24 +207,21 @@ private fun WidgetPostState(
                 contentAlignment = Alignment.BottomCenter,
             ) {
                 Box(
-                    modifier = GlanceModifier.fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = GlanceModifier.padding(all = 10.dp),
                 ) {
                     Box(
-                        modifier = GlanceModifier.fillMaxWidth()
-                            .background(glanceColor(Color.Black.copy(alpha = 0.5f)))
-                            .cornerRadius(12.dp)
-                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                        modifier = GlanceModifier.background(glanceColor(Color.Black.copy(alpha = 0.5f)))
+                            .cornerRadius(12.dp).padding(horizontal = 10.dp, vertical = 4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = caption,
-                            maxLines = 2,
+                            maxLines = 1,
                             style = TextStyle(
                                 color = glanceColor(onBackground_dark),
-                                fontSize = 12.sp,
+                                fontSize = 13.sp,
                                 textAlign = TextAlign.Center,
-                                fontFamily = fontFamily,
+                                fontFamily = FontFamily.Serif,
                             ),
                         )
                     }

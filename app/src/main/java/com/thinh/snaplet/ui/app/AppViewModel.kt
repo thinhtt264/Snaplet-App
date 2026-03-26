@@ -73,23 +73,23 @@ class AppViewModel @Inject constructor(
 
     private fun observerIsAuthenticated() {
         isAuthenticated.onEach {
-                if (!isInitialized) return@onEach
-                if (!it) widgetUpdateManager.scheduleImmediateUpdate()
-            }.launchIn(viewModelScope)
+            if (!isInitialized) return@onEach
+            widgetUpdateManager.scheduleImmediateUpdate()
+        }.launchIn(viewModelScope)
     }
 
     private fun observeSocketSync() {
         combine(isAuthenticated, isForegrounded) { authenticated, foregrounded ->
             authenticated && foregrounded
         }.onEach { shouldConnect ->
-                if (shouldConnect) {
-                    viewModelScope.launch {
-                        socketManager.connect()
-                    }
-                } else {
-                    socketManager.disconnect()
+            if (shouldConnect) {
+                viewModelScope.launch {
+                    socketManager.connect()
                 }
-            }.launchIn(viewModelScope)
+            } else {
+                socketManager.disconnect()
+            }
+        }.launchIn(viewModelScope)
     }
 
     private fun initializeApp() {
