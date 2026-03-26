@@ -53,14 +53,11 @@ fun SnapletWidgetContent(
         contentAlignment = Alignment.Center,
     ) {
         when {
-            data.isError -> WidgetErrorState()
-            data.isLoading -> WidgetErrorState(
-                showCenterContent = true,
-            )
+            data.isLoading -> WidgetErrorState(showCenterContent = true)
+            data.postImageUrl != null ->
+                WidgetPostState(data = data)
 
-            else -> WidgetPostState(
-                data = data
-            )
+            else -> WidgetErrorState(showCenterContent = true)
         }
     }
 }

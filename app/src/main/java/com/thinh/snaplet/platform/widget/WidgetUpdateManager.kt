@@ -3,13 +3,19 @@ package com.thinh.snaplet.platform.widget
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.appwidget.updateAll
 import androidx.work.BackoffPolicy
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.thinh.snaplet.ui.widget.SnapletWidget
 import com.thinh.snaplet.ui.widget.SnapletWidgetReceiver
+import com.thinh.snaplet.ui.widget.SnapletWidgetStateKeys
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -58,6 +64,38 @@ class WidgetUpdateManager @Inject constructor(
             ExistingWorkPolicy.KEEP,
             request,
         )
+    }
+
+    suspend fun clearAllWidgetState() {
+        val glanceManager = GlanceAppWidgetManager(context)
+        val glanceIds = glanceManager.getGlanceIds(SnapletWidget::class.java)
+        if (glanceIds.isEmpty()) return
+
+        glanceIds.forEach { glanceId ->
+            updateAppWidgetState(
+                context = context,
+                glanceId = glanceId,
+            ) { prefs ->
+                clearWidgetPrefs(
+                    prefs = prefs,
+                )
+            }
+        }
+
+        SnapletWidget().updateAll(context)
+    }
+
+    private fun clearWidgetPrefs(
+        prefs: MutablePreferences,
+    ) {
+        prefs.remove(SnapletWidgetStateKeys.POST_IMAGE_URL)
+        prefs.remove(SnapletWidgetStateKeys.POST_CAPTION)
+        prefs.remove(SnapletWidgetStateKeys.SENDER_AVATAR_URL)
+
+        prefs[SnapletWidgetStateKeys.UNREAD_COUNT] = 0
+        prefs.remove(SnapletWidgetStateKeys.LAST_UPDATED_AT)
+        prefs[SnapletWidgetStateKeys.IS_LOADING] = false
+        prefs[SnapletWidgetStateKeys.IS_ERROR] = false
     }
 
     companion object {

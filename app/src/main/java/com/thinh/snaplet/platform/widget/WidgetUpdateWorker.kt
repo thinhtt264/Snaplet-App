@@ -33,7 +33,6 @@ class WidgetUpdateWorker @AssistedInject constructor(
             val latestPost = when (val payloadResult = postRepository.getPostsActivity()) {
                 is ApiResult.Success -> payloadResult.data
                 is ApiResult.Failure -> {
-                    updateWidgetToErrorState(glanceIds)
                     return Result.success()
                 }
             }
@@ -91,8 +90,6 @@ class WidgetUpdateWorker @AssistedInject constructor(
             if (hasAnyChange) SnapletWidget().updateAll(applicationContext)
             Result.success()
         } catch (_: Exception) {
-            updateWidgetToErrorState(glanceIds)
-            // Don't retry widget background updates; failing should fall back to error state.
             Result.success()
         }
     }

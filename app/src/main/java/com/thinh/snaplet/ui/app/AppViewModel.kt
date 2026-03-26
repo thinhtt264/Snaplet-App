@@ -72,9 +72,10 @@ class AppViewModel @Inject constructor(
     }
 
     private fun observerIsAuthenticated() {
-        isAuthenticated.onEach {
+        isAuthenticated.onEach { authenticated ->
             if (!isInitialized) return@onEach
-            widgetUpdateManager.scheduleImmediateUpdate()
+            if (authenticated) widgetUpdateManager.scheduleImmediateUpdate()
+            else widgetUpdateManager.clearAllWidgetState()
         }.launchIn(viewModelScope)
     }
 
