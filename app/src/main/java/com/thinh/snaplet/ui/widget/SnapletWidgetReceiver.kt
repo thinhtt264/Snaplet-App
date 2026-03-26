@@ -11,10 +11,6 @@ import dagger.hilt.android.EntryPointAccessors
 class SnapletWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = SnapletWidget()
 
-    override fun onEnabled(context: Context) {
-        super.onEnabled(context)
-    }
-
     override fun onDisabled(context: Context) {
         widgetUpdateManager(context).cancelWidgetBackgroundWork()
         super.onDisabled(context)

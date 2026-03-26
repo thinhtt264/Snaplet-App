@@ -8,22 +8,9 @@ data class WidgetDisplayData(
     val senderAvatarUrl: String?,
     val unreadCount: Int,
     val lastUpdatedAt: Long?,
-    val isLoading: Boolean,
     val isError: Boolean,
 ) {
     companion object {
-        fun loading(): WidgetDisplayData {
-            return WidgetDisplayData(
-                postImageUrl = null,
-                postCaption = null,
-                senderAvatarUrl = null,
-                unreadCount = 0,
-                lastUpdatedAt = null,
-                isLoading = true,
-                isError = false,
-            )
-        }
-
         fun fromPreferences(prefs: Preferences): WidgetDisplayData {
             return WidgetDisplayData(
                 postImageUrl = prefs[SnapletWidgetStateKeys.POST_IMAGE_URL],
@@ -31,7 +18,6 @@ data class WidgetDisplayData(
                 senderAvatarUrl = prefs[SnapletWidgetStateKeys.SENDER_AVATAR_URL],
                 unreadCount = prefs[SnapletWidgetStateKeys.UNREAD_COUNT] ?: 0,
                 lastUpdatedAt = prefs[SnapletWidgetStateKeys.LAST_UPDATED_AT],
-                isLoading = prefs[SnapletWidgetStateKeys.IS_LOADING] ?: false,
                 isError = prefs[SnapletWidgetStateKeys.IS_ERROR] ?: false,
             )
         }

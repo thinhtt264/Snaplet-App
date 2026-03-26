@@ -94,7 +94,6 @@ class WidgetUpdateManager @Inject constructor(
 
         prefs[SnapletWidgetStateKeys.UNREAD_COUNT] = 0
         prefs.remove(SnapletWidgetStateKeys.LAST_UPDATED_AT)
-        prefs[SnapletWidgetStateKeys.IS_LOADING] = false
         prefs[SnapletWidgetStateKeys.IS_ERROR] = false
     }
 

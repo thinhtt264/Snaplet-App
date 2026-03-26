@@ -11,6 +11,5 @@ object SnapletWidgetStateKeys {
     val SENDER_AVATAR_URL = stringPreferencesKey("sender_avatar_url")
     val UNREAD_COUNT = intPreferencesKey("unread_count")
     val LAST_UPDATED_AT = longPreferencesKey("last_updated_at")
-    val IS_LOADING = booleanPreferencesKey("is_loading")
     val IS_ERROR = booleanPreferencesKey("is_error")
 }

@@ -67,9 +67,6 @@ class WidgetUpdateWorker @AssistedInject constructor(
                     val oldUnreadCount = prefs[SnapletWidgetStateKeys.UNREAD_COUNT] ?: 0
                     val unreadChanged = oldUnreadCount != unreadCount
                     if (unreadChanged) prefs[SnapletWidgetStateKeys.UNREAD_COUNT] = unreadCount
-
-                    val loadingChanged = prefs[SnapletWidgetStateKeys.IS_LOADING] != false
-                    if (loadingChanged) prefs[SnapletWidgetStateKeys.IS_LOADING] = false
                     val errorWasSet = prefs[SnapletWidgetStateKeys.IS_ERROR] != false
                     if (errorWasSet) prefs[SnapletWidgetStateKeys.IS_ERROR] = false
 
@@ -79,7 +76,7 @@ class WidgetUpdateWorker @AssistedInject constructor(
                         avatarChanged,
                     ).any { it }
                     val hasChanged =
-                        hasContentChanged || unreadChanged || loadingChanged || errorWasSet
+                        hasContentChanged || unreadChanged || errorWasSet
                     if (hasChanged) {
                         prefs[SnapletWidgetStateKeys.LAST_UPDATED_AT] = System.currentTimeMillis()
                     }
@@ -118,9 +115,6 @@ class WidgetUpdateWorker @AssistedInject constructor(
 
                 if ((prefs[SnapletWidgetStateKeys.UNREAD_COUNT] ?: 0) != 0) {
                     prefs[SnapletWidgetStateKeys.UNREAD_COUNT] = 0
-                }
-                if (prefs[SnapletWidgetStateKeys.IS_LOADING] != false) {
-                    prefs[SnapletWidgetStateKeys.IS_LOADING] = false
                 }
 
                 if (errorChanged) prefs[SnapletWidgetStateKeys.LAST_UPDATED_AT] =
