@@ -77,6 +77,8 @@
     <string name="empty_media_subtitle">Your photos will appear on your friends\' home screens</string>
     <string name="empty_media_add_friend">+ Add new friend</string>
 
+    <string name="no_pics_yet">No pics yet</string>
+
     <string name="post_deleted">Post deleted</string>
     <string name="upload_failed_tap_to_retry">Upload failed. Tap to retry</string>
     <string name="uploading">Uploading…</string>

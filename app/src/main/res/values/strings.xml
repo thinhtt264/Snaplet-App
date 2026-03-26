@@ -87,6 +87,7 @@
     <string name="empty_media_title">Gửi Locket đầu tiên của bạn</string>
     <string name="empty_media_subtitle">Ảnh của bạn sẽ xuất hiện trên màn hình chính của bạn bè</string>
     <string name="empty_media_add_friend">+ Thêm bạn mới</string>
+    <string name="no_pics_yet">Chưa có ảnh</string>
 
     <string name="post_deleted">Đã xóa bài viết</string>
     <string name="upload_failed_tap_to_retry">Tải lên thất bại. Chạm để thử lại</string>
