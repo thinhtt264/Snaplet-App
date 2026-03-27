@@ -123,6 +123,11 @@
     <string name="delete_avatar">Xóa ảnh hồ sơ</string>
     <string name="profile_edit_name_title">Sửa tên của bạn</string>
     <string name="profile_edit_name_save">Lưu</string>
+    <string name="widget_guide_title">Thêm tiện ích vào màn hình chính của bạn</string>
+    <string name="widget_guide_step_1">Nhấn và giữ một khoảng trống trên Màn hình chính của bạn</string>
+    <string name="widget_guide_step_2">Chạm vào nút &quot;Tiện ích&quot; để thêm một tiện ích mới</string>
+    <string name="widget_guide_step_3">Tìm Snaplet và thêm tiện ích</string>
+    <string name="widget_guide_step_4">Giữ và kéo để sắp xếp và thay đổi kích cỡ.</string>
 
     <!-- Force logout (session expired) -->
     <string name="force_logout_title">Phiên đăng nhập đã hết hạn</string>
