@@ -44,11 +44,15 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -58,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thinh.snaplet.R
 import com.thinh.snaplet.navigation.CollectNavResult
 import com.thinh.snaplet.navigation.NavResultKeys
+import com.thinh.snaplet.platform.widget.launchSnapletWidgetPicker
 import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.theme.Error50
@@ -128,7 +133,9 @@ fun MyProfile(
     onNavigateToImageCrop: (Uri) -> Unit,
     viewModel: MyProfileViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showWidgetGuideSheet by rememberSaveable { mutableStateOf(false) }
 
     val pickMediaLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -186,6 +193,8 @@ fun MyProfile(
         onWidgetChainToggle = viewModel::onWidgetChainToggle,
         onLogoutClick = viewModel::onLogout,
         onEditNameClick = viewModel::onEditNameClick,
+        onAddWidgetClick = { context.launchSnapletWidgetPicker() },
+        onHowToAddWidgetClick = { showWidgetGuideSheet = true },
         displayName = uiState.displayName,
         email = uiState.email,
         strings = strings,
@@ -211,6 +220,12 @@ fun MyProfile(
             onLastNameChange = viewModel::onEditLastNameChange,
             onDismiss = viewModel::onEditNameDismiss,
             onSaveClick = viewModel::onSaveDisplayName,
+        )
+    }
+
+    if (showWidgetGuideSheet) {
+        WidgetGuideBottomSheet(
+            onDismiss = { showWidgetGuideSheet = false }
         )
     }
 }
@@ -463,6 +478,8 @@ private fun buildProfileSections(
     onWidgetChainToggle: () -> Unit,
     onLogoutClick: () -> Unit,
     onEditNameClick: () -> Unit,
+    onAddWidgetClick: () -> Unit,
+    onHowToAddWidgetClick: () -> Unit,
     displayName: String,
     email: String,
     strings: ProfileStrings,
@@ -472,10 +489,12 @@ private fun buildProfileSections(
             ProfileMenuItem.Standard(
                 icon = Icons.Filled.AddBox,
                 label = strings.addWidget,
+                onClick = onAddWidgetClick,
             ),
             ProfileMenuItem.Standard(
                 icon = Icons.AutoMirrored.Filled.HelpOutline,
                 label = strings.howToAddWidget,
+                onClick = onHowToAddWidgetClick,
             ),
             ProfileMenuItem.Toggle(
                 icon = Icons.Filled.LocalFireDepartment,

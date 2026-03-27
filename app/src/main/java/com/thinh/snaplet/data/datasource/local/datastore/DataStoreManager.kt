@@ -6,7 +6,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.google.gson.Gson
 import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.GsonHolder.gson
@@ -14,6 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,9 +43,11 @@ class DataStoreManager @Inject constructor(
         }
         Logger.d("💾 Access token saved")
     }
-    
+
     fun getAccessToken(): String? {
-        return currentAccessToken.get()
+        return currentAccessToken.get() ?: runBlocking {
+            loadAccessToken()
+        }
     }
 
     fun getRefreshToken(): String? {

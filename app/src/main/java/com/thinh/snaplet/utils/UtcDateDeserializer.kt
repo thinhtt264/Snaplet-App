@@ -40,11 +40,11 @@ class UtcDateDeserializer : JsonDeserializer<Date> {
     ): Date {
         val raw = try {
             json.asString
-        } catch (e: UnsupportedOperationException) {
+        } catch (_: UnsupportedOperationException) {
             return Date(0)
-        } catch (e: ClassCastException) {
+        } catch (_: ClassCastException) {
             return Date(0)
-        } catch (e: IllegalStateException) {
+        } catch (_: IllegalStateException) {
             return Date(0)
         }
 
@@ -52,15 +52,15 @@ class UtcDateDeserializer : JsonDeserializer<Date> {
 
         for (format in formats) {
             try {
-                return format.parse(raw)
+                val date = format.parse(raw)
+                if (date != null) return date
             } catch (_: ParseException) {
                 // try next format
             }
         }
 
-        // As a last resort, let Gson try its default parsing once.
         return try {
-            context.deserialize<Date>(json, Date::class.java)
+            context.deserialize(json, Date::class.java)
         } catch (_: JsonParseException) {
             Date(0)
         } catch (_: Exception) {

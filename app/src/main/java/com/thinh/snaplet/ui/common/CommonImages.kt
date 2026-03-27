@@ -6,4 +6,8 @@ object CommonImages {
     val PhotoPlaceholder = R.drawable.photo_placeholder
     val ProfilePlaceholder = R.drawable.profile_placeholder
     val ChatIcon = R.drawable.chat_icon
+    val WidgetGuide1 = R.drawable.widget_guide_1
+    val WidgetGuide2 = R.drawable.widget_guide_2
+    val WidgetGuide3 = R.drawable.widget_guide_3
+    val WidgetGuide4 = R.drawable.widget_guide_4
 }

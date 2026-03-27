@@ -15,6 +15,7 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.runBlocking
 
 @Singleton
 class DeviceRepositoryImpl @Inject constructor(
@@ -50,7 +51,18 @@ class DeviceRepositoryImpl @Inject constructor(
     }
 
     override fun getFingerprintSync(): String {
-        return currentFingerprint.get() ?: ""
+        currentFingerprint.get()?.let { return it }
+
+        runBlocking {
+            dataStoreManager.loadFingerprint()
+        }?.let { storedFingerprint ->
+            currentFingerprint.set(storedFingerprint)
+            return storedFingerprint
+        }
+
+        return generateFingerprint().also { generatedFingerprint ->
+            currentFingerprint.set(generatedFingerprint)
+        }
     }
 
     private fun generateFingerprint(): String {
