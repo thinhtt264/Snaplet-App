@@ -40,6 +40,10 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/snaplet_widget_info" />
         </receiver>
+        
+        <receiver
+            android:name=".platform.widget.WidgetPinnedReceiver"
+            android:exported="false" />
 
         <provider
             android:name="androidx.startup.InitializationProvider"

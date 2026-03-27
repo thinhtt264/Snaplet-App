@@ -55,12 +55,14 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
 import com.thinh.snaplet.R
 import com.thinh.snaplet.navigation.CollectNavResult
 import com.thinh.snaplet.navigation.NavResultKeys
 import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.theme.Error50
+import com.thinh.snaplet.platform.widget.launchSnapletWidgetPicker
 import pressScaleClickable
 
 private sealed interface ProfileMenuItem {
@@ -128,6 +130,7 @@ fun MyProfile(
     onNavigateToImageCrop: (Uri) -> Unit,
     viewModel: MyProfileViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val pickMediaLauncher = rememberLauncherForActivityResult(
@@ -186,6 +189,7 @@ fun MyProfile(
         onWidgetChainToggle = viewModel::onWidgetChainToggle,
         onLogoutClick = viewModel::onLogout,
         onEditNameClick = viewModel::onEditNameClick,
+        onAddWidgetClick = { context.launchSnapletWidgetPicker() },
         displayName = uiState.displayName,
         email = uiState.email,
         strings = strings,
@@ -463,6 +467,7 @@ private fun buildProfileSections(
     onWidgetChainToggle: () -> Unit,
     onLogoutClick: () -> Unit,
     onEditNameClick: () -> Unit,
+    onAddWidgetClick: () -> Unit,
     displayName: String,
     email: String,
     strings: ProfileStrings,
@@ -472,6 +477,7 @@ private fun buildProfileSections(
             ProfileMenuItem.Standard(
                 icon = Icons.Filled.AddBox,
                 label = strings.addWidget,
+                onClick = onAddWidgetClick,
             ),
             ProfileMenuItem.Standard(
                 icon = Icons.AutoMirrored.Filled.HelpOutline,

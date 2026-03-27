@@ -61,7 +61,7 @@ class WidgetUpdateManager @Inject constructor(
         ).build()
         workManager.enqueueUniqueWork(
             UNIQUE_WIDGET_SYNC_NAME,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.REPLACE,
             request,
         )
     }
