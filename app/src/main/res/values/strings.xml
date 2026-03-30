@@ -129,6 +129,9 @@
     <string name="widget_guide_step_3">Tìm Snaplet và thêm tiện ích</string>
     <string name="widget_guide_step_4">Giữ và kéo để sắp xếp và thay đổi kích cỡ.</string>
 
+    <!-- Quick Chat Bar -->
+    <string name="quick_chat_placeholder">Gửi tin nhắn…</string>
+
     <!-- Force logout (session expired) -->
     <string name="force_logout_title">Phiên đăng nhập đã hết hạn</string>
     <string name="force_logout_message">Tài khoản của bạn vừa đăng nhập trên một thiết bị khác. Phiên này đã bị kết thúc.</string>

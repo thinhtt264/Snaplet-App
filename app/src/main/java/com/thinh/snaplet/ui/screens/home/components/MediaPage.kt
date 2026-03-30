@@ -56,11 +56,9 @@ private const val TOP_SPACE_RATIO = 0.16f
 fun MediaPage(
     post: Post,
     uploadStatus: UploadStatus?,
-    showBottomAction: Boolean = false,
-    showMoreButtonLoading: Boolean = false,
-    onGridClick: () -> Unit = {},
-    onCaptureClick: () -> Unit = {},
-    onMoreClick: () -> Unit = {},
+    showBottomContent: Boolean = false,
+    quickChatBar: QuickChatBarModel,
+    bottomAction: BottomActionModel,
     onRetryClick: () -> Unit = {},
     onDeleteClick: () -> Unit = {},
 ) {
@@ -94,17 +92,11 @@ fun MediaPage(
             )
         }
 
-        if (showBottomAction) {
-            BottomAction(
-                onGridClick = onGridClick,
-                onCaptureClick = onCaptureClick,
-                onMoreClick = onMoreClick,
-                showMoreButtonLoading = showMoreButtonLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(horizontal = 32.dp, vertical = 24.dp)
+        if (showBottomContent) {
+            HomeBottomContent(
+                quickChatBar = quickChatBar,
+                bottomAction = bottomAction,
+                modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
     }

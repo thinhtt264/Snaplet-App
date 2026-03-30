@@ -120,6 +120,9 @@
     <string name="widget_guide_step_3">Search Snaplet and add the widget</string>
     <string name="widget_guide_step_4">Press and drag to arrange and resize it.</string>
 
+    <!-- Quick Chat Bar -->
+    <string name="quick_chat_placeholder">Send a message…</string>
+
     <!-- Force logout (session expired) -->
     <string name="force_logout_title">Your login session has expired</string>
     <string name="force_logout_message">Your account was just signed in on another device. This session has ended.</string>

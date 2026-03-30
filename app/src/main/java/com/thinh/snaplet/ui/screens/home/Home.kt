@@ -6,7 +6,6 @@ import androidx.camera.core.ImageCapture
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
@@ -36,10 +35,12 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.ui.components.PermissionHandler
-import com.thinh.snaplet.ui.screens.home.components.BottomAction
 import com.thinh.snaplet.ui.screens.home.components.CameraPage
 import com.thinh.snaplet.ui.screens.home.components.EmptyMediaPage
 import com.thinh.snaplet.ui.screens.home.components.FriendBottomSheet
+import com.thinh.snaplet.ui.screens.home.components.BottomActionModel
+import com.thinh.snaplet.ui.screens.home.components.HomeBottomContent
+import com.thinh.snaplet.ui.screens.home.components.QuickChatBarModel
 import com.thinh.snaplet.ui.screens.home.components.MediaPage
 import com.thinh.snaplet.ui.screens.home.components.NewPostsBanner
 import com.thinh.snaplet.ui.screens.home.components.TopAction
@@ -248,8 +249,9 @@ private fun HomeScreen(
 ) {
     var showFriendSheet by remember { mutableStateOf(false) }
     var friendSearchQuery by remember { mutableStateOf("") }
+    var chatMessage by remember { mutableStateOf("") }
 
-    val showGlobalBottomAction by remember {
+    val showGlobalBottomContent by remember {
         derivedStateOf {
             val absolutePosition = pagerState.currentPage + pagerState.currentPageOffsetFraction
             absolutePosition > 1.0f
@@ -258,6 +260,27 @@ private fun HomeScreen(
 
     val userScrollEnabled = !uiState.cameraState.isEditMode
     val isDownloading = uiState.isDownloading
+
+    val quickChatBar = remember(chatMessage) {
+        QuickChatBarModel(
+            messageText = chatMessage,
+            onMessageChange = { chatMessage = it },
+            onSendMessage = {
+                /* TODO: send chat message */
+                chatMessage = ""
+            },
+            onEmojiSelected = { /* TODO: send emoji reaction */ },
+        )
+    }
+
+    val bottomAction = remember(onNavigateToCameraPage, onMoreClick, isDownloading) {
+        BottomActionModel(
+            onGridClick = { /* TODO */ },
+            onCaptureClick = onNavigateToCameraPage,
+            onMoreClick = onMoreClick,
+            showMoreButtonLoading = isDownloading,
+        )
+    }
 
     LaunchedEffect(pagerState.currentPage) {
         val currentPage = pagerState.currentPage
@@ -298,11 +321,9 @@ private fun HomeScreen(
                         MediaPage(
                             post = post,
                             uploadStatus = uiState.uploadStatuses[post.id],
-                            showBottomAction = !showGlobalBottomAction,
-                            showMoreButtonLoading = isDownloading,
-                            onGridClick = { /* TODO */ },
-                            onCaptureClick = onNavigateToCameraPage,
-                            onMoreClick = onMoreClick,
+                            showBottomContent = !showGlobalBottomContent,
+                            quickChatBar = quickChatBar,
+                            bottomAction = bottomAction,
                             onRetryClick = { viewModel.retryUpload(post.id) },
                             onDeleteClick = { viewModel.deleteFailedPost(post.id) })
                     }
@@ -312,8 +333,7 @@ private fun HomeScreen(
 
         NewPostsBanner(
             bannerMessage = uiState.bannerMessage,
-            isEligiblePage = pagerState.currentPage > CAMERA_PAGE_INDEX &&
-                    uiState.unreadPostsCount > 0,
+            isEligiblePage = pagerState.currentPage > CAMERA_PAGE_INDEX && uiState.unreadPostsCount > 0,
             onClick = viewModel::onNewPostsBannerTapped,
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -358,17 +378,11 @@ private fun HomeScreen(
             )
         }
 
-        if (showGlobalBottomAction) {
-            BottomAction(
-                onGridClick = { /* TODO */ },
-                onCaptureClick = onNavigateToCameraPage,
-                onMoreClick = onMoreClick,
-                showMoreButtonLoading = isDownloading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(horizontal = 32.dp, vertical = 24.dp)
+        if (showGlobalBottomContent) {
+            HomeBottomContent(
+                quickChatBar = quickChatBar,
+                bottomAction = bottomAction,
+                modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
     }
