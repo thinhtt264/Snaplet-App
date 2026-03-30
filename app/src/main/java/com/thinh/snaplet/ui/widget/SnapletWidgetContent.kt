@@ -53,7 +53,7 @@ fun SnapletWidgetContent(
         contentAlignment = Alignment.Center,
     ) {
         when {
-            data.postImageUrl != null ->
+            !data.postImageUrl.isNullOrBlank() ->
                 WidgetPostState(data = data)
 
             else -> WidgetErrorState(showCenterContent = true)
@@ -118,112 +118,128 @@ private fun WidgetPostState(
     data: WidgetDisplayData
 ) {
     val context = androidx.glance.LocalContext.current
-    val widgetSize = LocalSize.current
-    val squareEdge = min(widgetSize.width, widgetSize.height)
     var postBitmap by remember(data.postImageUrl) { mutableStateOf<Bitmap?>(null) }
+    var postImageLoadFinished by remember(data.postImageUrl) { mutableStateOf(false) }
     var avatarBitmap by remember(data.senderAvatarUrl) { mutableStateOf<Bitmap?>(null) }
 
     LaunchedEffect(data.postImageUrl) {
-        postBitmap = data.postImageUrl?.let {
-            loadWidgetBitmap(context, it, maxEdgePx = WidgetImageLoadDefaults.POST_MAX_EDGE_PX)
+        postImageLoadFinished = false
+        postBitmap = null
+        val url = data.postImageUrl
+        if (url.isNullOrBlank()) {
+            postImageLoadFinished = true
+            return@LaunchedEffect
         }
+        postBitmap = loadWidgetBitmap(
+            context,
+            url,
+            maxEdgePx = WidgetImageLoadDefaults.POST_MAX_EDGE_PX,
+        )
+        postImageLoadFinished = true
     }
     LaunchedEffect(data.senderAvatarUrl) {
         avatarBitmap = data.senderAvatarUrl?.let { loadWidgetBitmap(context, it) }
     }
 
+    when {
+        postBitmap != null -> {
+            val squareEdge = min(LocalSize.current.width, LocalSize.current.height)
+            Box(modifier = GlanceModifier.size(squareEdge)) {
+                Image(
+                    provider = ImageProvider(postBitmap!!),
+                    contentDescription = "Post image",
+                    contentScale = ContentScale.Crop,
+                    modifier = GlanceModifier.fillMaxSize().cornerRadius(16.dp),
+                )
 
-    Box(modifier = GlanceModifier.size(squareEdge)) {
-        if (postBitmap != null) {
-            Image(
-                provider = ImageProvider(postBitmap!!),
-                contentDescription = "Post image",
-                contentScale = ContentScale.Crop,
-                modifier = GlanceModifier.fillMaxSize().cornerRadius(16.dp),
-            )
-        } else {
-            // Placeholder to avoid transparent surface while bitmap is still loading.
-            WidgetErrorState(
-                showCenterContent = false,
-            )
-        }
-
-        Box(
-            modifier = GlanceModifier.fillMaxSize(),
-            contentAlignment = Alignment.TopStart,
-        ) {
-            Box(modifier = GlanceModifier.padding(10.dp)) {
-                if (avatarBitmap != null) {
-                    Image(
-                        provider = ImageProvider(avatarBitmap!!),
-                        contentDescription = "Sender avatar",
-                        contentScale = ContentScale.Crop,
-                        modifier = GlanceModifier.size(36.dp).cornerRadius(18.dp),
-                    )
-                } else {
-                    Image(
-                        provider = ImageProvider(R.drawable.photo_placeholder),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = GlanceModifier.size(36.dp).cornerRadius(18.dp),
-                    )
-                }
-            }
-        }
-
-        if (data.unreadCount > 0) {
-            val badgeText = if (data.unreadCount > 9) "9+" else data.unreadCount.toString()
-            Box(
-                modifier = GlanceModifier.fillMaxSize()
-                    .padding(vertical = 8.dp, horizontal = 10.dp),
-                contentAlignment = Alignment.TopEnd,
-            ) {
                 Box(
-                    modifier = GlanceModifier.background(glanceColor(primary_dark))
-                        .cornerRadius(999.dp).size(24.dp).padding(all = 0.5.dp),
-                    contentAlignment = Alignment.Center,
+                    modifier = GlanceModifier.fillMaxSize(),
+                    contentAlignment = Alignment.TopStart,
                 ) {
-                    Text(
-                        text = badgeText,
-                        style = TextStyle(
-                            color = glanceColor(onPrimaryContainer_light),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                        ),
-                    )
+                    Box(modifier = GlanceModifier.padding(10.dp)) {
+                        if (avatarBitmap != null) {
+                            Image(
+                                provider = ImageProvider(avatarBitmap!!),
+                                contentDescription = "Sender avatar",
+                                contentScale = ContentScale.Crop,
+                                modifier = GlanceModifier.size(36.dp).cornerRadius(18.dp),
+                            )
+                        } else {
+                            Image(
+                                provider = ImageProvider(R.drawable.profile_placeholder),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = GlanceModifier.size(36.dp).cornerRadius(18.dp),
+                            )
+                        }
+                    }
                 }
-            }
-        }
 
-        val caption = data.postCaption.orEmpty()
-        if (caption.isNotBlank()) {
-            Box(
-                modifier = GlanceModifier.fillMaxSize(),
-                contentAlignment = Alignment.BottomCenter,
-            ) {
-                Box(
-                    modifier = GlanceModifier.padding(all = 10.dp),
-                ) {
+                if (data.unreadCount > 0) {
+                    val badgeText =
+                        if (data.unreadCount > 9) "9+" else data.unreadCount.toString()
                     Box(
-                        modifier = GlanceModifier.background(glanceColor(Color.Black.copy(alpha = 0.5f)))
-                            .cornerRadius(12.dp).padding(horizontal = 10.dp, vertical = 4.dp),
-                        contentAlignment = Alignment.Center,
+                        modifier = GlanceModifier.fillMaxSize()
+                            .padding(vertical = 8.dp, horizontal = 10.dp),
+                        contentAlignment = Alignment.TopEnd,
                     ) {
-                        Text(
-                            text = caption,
-                            maxLines = 1,
-                            style = TextStyle(
-                                color = glanceColor(onBackground_dark),
-                                fontSize = 13.sp,
-                                textAlign = TextAlign.Center,
-                                fontFamily = FontFamily.Serif,
-                            ),
-                        )
+                        Box(
+                            modifier = GlanceModifier.background(glanceColor(primary_dark))
+                                .cornerRadius(999.dp).size(24.dp).padding(all = 0.5.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = badgeText,
+                                style = TextStyle(
+                                    color = glanceColor(onPrimaryContainer_light),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = FontFamily.Monospace,
+                                ),
+                            )
+                        }
+                    }
+                }
+
+                val caption = data.postCaption.orEmpty()
+                if (caption.isNotBlank()) {
+                    Box(
+                        modifier = GlanceModifier.fillMaxSize(),
+                        contentAlignment = Alignment.BottomCenter,
+                    ) {
+                        Box(
+                            modifier = GlanceModifier.padding(all = 10.dp),
+                        ) {
+                            Box(
+                                modifier = GlanceModifier
+                                    .background(glanceColor(Color.Black.copy(alpha = 0.5f)))
+                                    .cornerRadius(12.dp)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = caption,
+                                    maxLines = 1,
+                                    style = TextStyle(
+                                        color = glanceColor(onBackground_dark),
+                                        fontSize = 13.sp,
+                                        textAlign = TextAlign.Center,
+                                        fontFamily = FontFamily.Serif,
+                                    ),
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
+
+        postImageLoadFinished ->
+            WidgetErrorState(showCenterContent = true)
+
+        else ->
+            // Placeholder while bitmap is still loading.
+            WidgetErrorState(showCenterContent = false)
     }
 }
 

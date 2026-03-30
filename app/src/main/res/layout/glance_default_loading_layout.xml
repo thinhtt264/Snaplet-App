@@ -6,11 +6,11 @@
     android:minHeight="120dp"
     android:background="#1A1A1A">
 
-    <!-- Keep a strict 1:1 (120dp) placeholder without ConstraintLayout dependency. -->
+    <!-- Same visual weight as WidgetErrorState: size(avatarSize / 1.9f), avatarSize = squareEdge * 0.5f. -->
     <ImageView
         android:id="@+id/widget_loading_placeholder"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
+        android:layout_width="@dimen/glance_loading_photo_placeholder_size"
+        android:layout_height="@dimen/glance_loading_photo_placeholder_size"
         android:layout_gravity="center"
         android:contentDescription="photo_placeholder"
         android:scaleType="centerCrop"
