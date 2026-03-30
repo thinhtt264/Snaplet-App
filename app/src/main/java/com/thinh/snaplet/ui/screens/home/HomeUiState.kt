@@ -5,7 +5,7 @@ import androidx.camera.core.CameraSelector
 import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.post.Post
-import com.thinh.snaplet.data.model.user.UserSearchResult
+import com.thinh.snaplet.data.model.post.PostReactionUser
 import com.thinh.snaplet.domain.model.FriendSearchActionItem
 import com.thinh.snaplet.domain.model.RelationshipAction
 import com.thinh.snaplet.platform.permission.Permission
@@ -38,20 +38,23 @@ data class HomeUiState(
 
     val bannerMessage: UiText? = null,
 
-    /** Snackbar message to show. UI shows then calls onSnackbarDismissed(). */
     val snackbarMessage: UiText? = null,
 
-    /** Permission to request. UI requests then calls onPermissionRequestHandled(). */
     val pendingPermission: Permission? = null,
 
-    /** When true, UI scrolls to first post then calls onScrollToFirstPostHandled(). */
     val shouldScrollToFirstPost: Boolean = false,
 
-    /** Current user avatar URL for TopAction profile button. */
-    val profileAvatarUrl: String? = null
+    val profileAvatarUrl: String? = null,
+
+    val postReactionsState: PostReactionsUiState = PostReactionsUiState.Loading,
 ) {
     /** Returns true if more data can be loaded (nextCursor is not null and not currently loading) */
     val canLoadMore: Boolean get() = nextCursor != null && !isLoadingMore && !isLoadingPosts
+}
+
+sealed class PostReactionsUiState {
+    object Loading : PostReactionsUiState()
+    data class Result(val reactions: List<PostReactionUser> = emptyList()) : PostReactionsUiState()
 }
 
 sealed class UploadStatus {

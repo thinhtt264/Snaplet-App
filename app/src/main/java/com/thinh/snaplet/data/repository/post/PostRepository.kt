@@ -3,6 +3,7 @@ package com.thinh.snaplet.data.repository.post
 import com.thinh.snaplet.data.model.post.NewPostUpdate
 import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.data.model.post.PostActivity
+import com.thinh.snaplet.data.model.post.PostReactionUser
 import com.thinh.snaplet.data.model.post.PostsFeedData
 import com.thinh.snaplet.utils.network.ApiResult
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +19,10 @@ interface PostRepository {
     suspend fun getNewerPost(since: String, limit: Int): ApiResult<List<Post>>
 
     suspend fun getPostsActivity(): ApiResult<PostActivity?>
+
+    suspend fun getPostReactions(
+        postId: String,
+    ): ApiResult<List<PostReactionUser>>
 
     suspend fun markPostsSeen(
         lastSeenPostCreatedAt: Date,

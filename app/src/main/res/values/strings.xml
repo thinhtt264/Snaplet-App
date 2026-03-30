@@ -93,6 +93,9 @@
     <string name="upload_failed_tap_to_retry">Tải lên thất bại. Chạm để thử lại</string>
     <string name="uploading">Đang tải lên…</string>
 
+    <string name="post_activity_bar_loading">Hoạt động</string>
+    <string name="post_activity_bar_empty">Chưa có hoạt động nào!</string>
+
     <!-- My Profile -->
     <string name="profile_back">Quay lại</string>
     <string name="profile_edit_photo">Chỉnh ảnh</string>

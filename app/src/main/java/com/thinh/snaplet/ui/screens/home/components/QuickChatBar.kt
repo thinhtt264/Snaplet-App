@@ -55,7 +55,6 @@ import com.thinh.snaplet.ui.components.BaseText
 import pressScaleClickable
 
 private val QUICK_EMOJIS = listOf("💛", "🔥", "😍")
-private val BAR_SHAPE = RoundedCornerShape(24.dp)
 private const val EMOJI_GRID_COLUMNS = 8
 private val EMOJI_GRID_HEIGHT = 300.dp
 
@@ -74,8 +73,8 @@ fun QuickChatBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(BAR_SHAPE)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .clip(RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                 .padding(horizontal = 6.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)

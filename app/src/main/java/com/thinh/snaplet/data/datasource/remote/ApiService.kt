@@ -20,6 +20,7 @@ import com.thinh.snaplet.data.model.post.CreatePostRequest
 import com.thinh.snaplet.data.model.post.MarkPostsSeenRequest
 import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.data.model.post.PostActivity
+import com.thinh.snaplet.data.model.post.PostReactionUser
 import com.thinh.snaplet.data.model.post.PostsFeedData
 import com.thinh.snaplet.data.model.post.UnreadPostsCountData
 import com.thinh.snaplet.data.model.user.AvatarUploadRequest
@@ -169,4 +170,9 @@ interface ApiService {
     suspend fun markPostsSeen(
         @Body body: MarkPostsSeenRequest
     ): Response<BaseResponse<Unit>>
+
+    @GET("posts/{postId}/reactions")
+    suspend fun getPostReactions(
+        @Path("postId") postId: String
+    ): Response<BaseResponse<List<PostReactionUser>>>
 }

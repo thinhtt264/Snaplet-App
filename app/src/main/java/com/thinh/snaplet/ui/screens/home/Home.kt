@@ -35,14 +35,15 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.ui.components.PermissionHandler
+import com.thinh.snaplet.ui.screens.home.components.BottomActionModel
 import com.thinh.snaplet.ui.screens.home.components.CameraPage
 import com.thinh.snaplet.ui.screens.home.components.EmptyMediaPage
 import com.thinh.snaplet.ui.screens.home.components.FriendBottomSheet
-import com.thinh.snaplet.ui.screens.home.components.BottomActionModel
 import com.thinh.snaplet.ui.screens.home.components.HomeBottomContent
-import com.thinh.snaplet.ui.screens.home.components.QuickChatBarModel
 import com.thinh.snaplet.ui.screens.home.components.MediaPage
 import com.thinh.snaplet.ui.screens.home.components.NewPostsBanner
+import com.thinh.snaplet.ui.screens.home.components.PostActivityBarModel
+import com.thinh.snaplet.ui.screens.home.components.QuickChatBarModel
 import com.thinh.snaplet.ui.screens.home.components.TopAction
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
@@ -282,6 +283,13 @@ private fun HomeScreen(
         )
     }
 
+    val postActivityBar = remember(uiState.postReactionsState) {
+        PostActivityBarModel(
+            state = uiState.postReactionsState,
+            onClick = { viewModel.onPostActivityClick() },
+        )
+    }
+
     LaunchedEffect(pagerState.currentPage) {
         val currentPage = pagerState.currentPage
         val postIndex = currentPage - 1
@@ -324,6 +332,7 @@ private fun HomeScreen(
                             showBottomContent = !showGlobalBottomContent,
                             quickChatBar = quickChatBar,
                             bottomAction = bottomAction,
+                            postActivityBar = postActivityBar,
                             onRetryClick = { viewModel.retryUpload(post.id) },
                             onDeleteClick = { viewModel.deleteFailedPost(post.id) })
                     }
@@ -379,10 +388,12 @@ private fun HomeScreen(
         }
 
         if (showGlobalBottomContent) {
+            val currentPost = uiState.posts[pagerState.currentPage - 1]
             HomeBottomContent(
                 quickChatBar = quickChatBar,
                 bottomAction = bottomAction,
                 modifier = Modifier.align(Alignment.BottomCenter),
+                isShowActivityBar = currentPost.isOwnPost,
             )
         }
     }

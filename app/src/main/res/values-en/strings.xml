@@ -84,6 +84,9 @@
     <string name="uploading">Uploading…</string>
     <string name="history_label">History</string>
 
+    <string name="post_activity_bar_loading">Activity</string>
+    <string name="post_activity_bar_empty">No activity yet</string>
+
     <!-- My Profile -->
     <string name="profile_back">Back</string>
     <string name="profile_edit_photo">Edit photo</string>

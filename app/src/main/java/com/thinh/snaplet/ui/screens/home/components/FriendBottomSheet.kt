@@ -164,7 +164,7 @@ fun FriendBottomSheet(
                     leadingIcon = {
                         Crossfade(
                             targetState = friendSheetState.isSearchingUsers,
-                            animationSpec = tween(durationMillis = MotionTokens.Fast)
+                            animationSpec = tween(durationMillis = MotionTokens.Emphasized)
                         ) { isSearching ->
                             if (isSearching) {
                                 CircularProgressIndicator(

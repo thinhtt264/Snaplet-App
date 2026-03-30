@@ -124,8 +124,7 @@ class HomeViewModel @Inject constructor(
 
     val uiState: StateFlow<HomeUiState> = combine(
         _uiState,
-        userRepository.observeMyUserProfile()
-            .map { it?.avatarUrls?.forThumbnail().orEmpty() }
+        userRepository.observeMyUserProfile().map { it?.avatarUrls?.forThumbnail().orEmpty() }
             .distinctUntilChanged(),
     ) { state, profileAvatarUrl ->
         state.copy(profileAvatarUrl = profileAvatarUrl)
@@ -205,12 +204,10 @@ class HomeViewModel @Inject constructor(
     private suspend fun runNewerFetch() {
         val currentState = _uiState.value
         val unread = currentState.unreadPostsCount
-        when (
-            val result = fetchNewerFeedUseCase(
-                unreadCount = unread,
-                currentPosts = currentState.posts,
-            )
-        ) {
+        when (val result = fetchNewerFeedUseCase(
+            unreadCount = unread,
+            currentPosts = currentState.posts,
+        )) {
             is NewerFeedResult.NewPosts -> {
                 val merged = result.mergedHead + result.tail
                 val showBanner = currentVisibleIndex >= 0 && unread > 0
@@ -254,8 +251,7 @@ class HomeViewModel @Inject constructor(
 
         val state = _uiState.value
         val viewedPost = viewedPostId?.let { id -> state.posts.firstOrNull { it.id == id } }
-            ?: state.posts.getOrNull(currentVisibleIndex)
-            ?: return
+            ?: state.posts.getOrNull(currentVisibleIndex) ?: return
         val postToMark = shouldMarkLatestPostAsSeenUseCase(
             posts = state.posts,
             lastSeenPostCreatedAt = lastMarkedPostCreatedAt,
@@ -296,18 +292,16 @@ class HomeViewModel @Inject constructor(
             }
 
             val currentUserId = userRepository.getCurrentUserProfile()?.id
-            userRepository.searchUsersByUsernamePrefix(query)
-                .onSuccess { users ->
-                    updateFriendSheetState {
-                        it.copy(
-                            searchResults = formatFriendSearchResultsUseCase(users, currentUserId),
-                            isSearchingUsers = false,
-                        )
-                    }
+            userRepository.searchUsersByUsernamePrefix(query).onSuccess { users ->
+                updateFriendSheetState {
+                    it.copy(
+                        searchResults = formatFriendSearchResultsUseCase(users, currentUserId),
+                        isSearchingUsers = false,
+                    )
                 }
-                .onFailure {
-                    updateFriendSheetState { it.copy(isSearchingUsers = false) }
-                }
+            }.onFailure {
+                updateFriendSheetState { it.copy(isSearchingUsers = false) }
+            }
         }
     }
 
@@ -394,27 +388,25 @@ class HomeViewModel @Inject constructor(
         friendSearchJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
 
-            userRepository.searchUsersByUsernamePrefix(trimmed)
-                .onSuccess { users ->
-                    val currentUserId = userRepository.getCurrentUserProfile()?.id
+            userRepository.searchUsersByUsernamePrefix(trimmed).onSuccess { users ->
+                val currentUserId = userRepository.getCurrentUserProfile()?.id
 
-                    val formatted = formatFriendSearchResultsUseCase(users, currentUserId)
+                val formatted = formatFriendSearchResultsUseCase(users, currentUserId)
 
-                    updateFriendSheetState {
-                        it.copy(
-                            searchResults = formatted,
-                            isSearchingUsers = false,
-                        )
-                    }
+                updateFriendSheetState {
+                    it.copy(
+                        searchResults = formatted,
+                        isSearchingUsers = false,
+                    )
                 }
-                .onFailure { _ ->
-                    updateFriendSheetState {
-                        it.copy(
-                            isSearchingUsers = false,
-                            searchResults = emptyList(),
-                        )
-                    }
+            }.onFailure { _ ->
+                updateFriendSheetState {
+                    it.copy(
+                        isSearchingUsers = false,
+                        searchResults = emptyList(),
+                    )
                 }
+            }
         }
     }
 
@@ -439,16 +431,14 @@ class HomeViewModel @Inject constructor(
         if (targetUserId.isBlank()) return
 
         viewModelScope.launch {
-            userRepository.sendFriendRequest(targetUserId)
-                .onSuccess {
-                    loadRelationshipCounts()
-                    loadMyFriendList()
-                    refreshFriendSearchResults()
-                }
-                .onFailure { error ->
-                    Logger.e("❌ Failed to send friend request: ${error.message}")
-                    // _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
-                }
+            userRepository.sendFriendRequest(targetUserId).onSuccess {
+                loadRelationshipCounts()
+                loadMyFriendList()
+                refreshFriendSearchResults()
+            }.onFailure { error ->
+                Logger.e("❌ Failed to send friend request: ${error.message}")
+                // _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
+            }
         }
     }
 
@@ -568,6 +558,41 @@ class HomeViewModel @Inject constructor(
             canLoadMore = state.canLoadMore
         )
         if (shouldLoad) loadNewsfeed(isLoadMore = true)
+
+        val visiblePost = state.posts.getOrNull(currentIndex)
+        if (visiblePost != null && visiblePost.isOwnPost) {
+            loadPostReactions(visiblePost.id)
+        }
+    }
+
+    fun onPostActivityClick() {
+        // TODO: handle post activity bar click
+    }
+
+    private var postReactionsJob: Job? = null
+
+    private fun loadPostReactions(postId: String) {
+        postReactionsJob?.cancel()
+        _uiState.update { it.copy(postReactionsState = PostReactionsUiState.Loading) }
+        postReactionsJob = viewModelScope.launch {
+            postRepository.getPostReactions(postId).onSuccess { reactions ->
+                _uiState.update {
+                    it.copy(
+                        postReactionsState = PostReactionsUiState.Result(
+                            reactions
+                        )
+                    )
+                }
+            }.onFailure {
+                _uiState.update {
+                    it.copy(
+                        postReactionsState = PostReactionsUiState.Result(
+                            emptyList()
+                        )
+                    )
+                }
+            }
+        }
     }
 
     fun onSwitchCamera() {

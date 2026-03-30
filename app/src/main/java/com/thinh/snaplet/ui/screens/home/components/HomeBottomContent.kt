@@ -10,6 +10,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
 
 @Stable
 data class QuickChatBarModel(
@@ -27,11 +28,19 @@ data class BottomActionModel(
     val showMoreButtonLoading: Boolean,
 )
 
+@Stable
+data class PostActivityBarModel(
+    val state: PostReactionsUiState = PostReactionsUiState.Loading,
+    val onClick: () -> Unit = {},
+)
+
 @Composable
 fun HomeBottomContent(
+    modifier: Modifier = Modifier,
     quickChatBar: QuickChatBarModel,
     bottomAction: BottomActionModel,
-    modifier: Modifier = Modifier,
+    isShowActivityBar: Boolean,
+    postActivityBar: PostActivityBarModel = PostActivityBarModel(),
 ) {
     Column(
         modifier = Modifier
@@ -40,14 +49,18 @@ fun HomeBottomContent(
             .padding(horizontal = 32.dp, vertical = 24.dp)
             .then(modifier),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+        verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
-        QuickChatBar(
-            messageText = quickChatBar.messageText,
-            onMessageChange = quickChatBar.onMessageChange,
-            onSendMessage = quickChatBar.onSendMessage,
-            onEmojiSelected = quickChatBar.onEmojiSelected,
-        )
+        if (isShowActivityBar) {
+            PostActivityBar(model = postActivityBar)
+        } else {
+            QuickChatBar(
+                messageText = quickChatBar.messageText,
+                onMessageChange = quickChatBar.onMessageChange,
+                onSendMessage = quickChatBar.onSendMessage,
+                onEmojiSelected = quickChatBar.onEmojiSelected,
+            )
+        }
 
         BottomAction(
             onGridClick = bottomAction.onGridClick,
