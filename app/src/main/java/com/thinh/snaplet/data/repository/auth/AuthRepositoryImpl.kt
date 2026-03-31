@@ -62,12 +62,12 @@ class AuthRepositoryImpl @Inject constructor(
         }, transform = { response -> response.user })
     }
 
-    override suspend fun logout(): ApiResult<Unit> {
+    override suspend fun logout() {
         _authState.value = AuthState.Unauthenticated
         dataStoreManager.clearSession()
 
-        val result = safeApiCall(apiCall = { apiService.logout() })
-        return result
+//        val result = safeApiCall(apiCall = { apiService.logout() })
+//        return result
     }
 
     override suspend fun forceLogout() {
