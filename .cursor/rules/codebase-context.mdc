@@ -1,24 +1,25 @@
 ---
-description: Codebase map for SnapletApp – use to target relevant paths from the prompt instead of reading the whole codebase.
+description: Updated codebase map for SnapletApp to target relevant paths quickly without scanning the entire project.
 alwaysApply: false
 globs: app/src/main/java/**/*.kt
 ---
 # Codebase context (SnapletApp)
-Android app: Kotlin, Jetpack Compose, Hilt. Clean Architecture. Data flow: ApiService → RepositoryImpl (safeApiCall) → ViewModel (StateFlow) → Composable.
-**Rule:** From the user prompt, infer which area(s) apply, then read only those paths (and their direct dependencies). Do not read the entire codebase.
+Android app with Kotlin + Jetpack Compose + Hilt. Main flow: `ApiService` -> `RepositoryImpl` (`safeApiCall`) -> `UseCase`/`ViewModel` (`StateFlow`) -> Composable.
+**Rule:** Infer impacted area(s) from the prompt and read only those folders plus direct dependencies. Do not read the whole codebase.
+
 ## Package map (path under `app/src/main/java/com/thinh/snaplet/`)
 | Path | Role | Read when prompt is about… |
 |------|------|-----------------------------|
 | **Root** | | |
 | `MainActivity.kt`, `HiltApplication.kt` | App entry | app start, Application |
-| **ui/app** | App-level state, auth flow | app startup, auth state, splash |
-| **ui/screens/MainScreen.kt** | Main host, bottom nav | main layout, tabs |
-| **ui/screens/home/** | Home screen, ViewModel, state | home, feed |
-| **ui/screens/home/components/** | CameraPage, MediaPage, TopAction, BottomAction, FriendBottomSheet, CameraActions, CameraPermissionDenied, EmptyMediaPage, MediaItemDimensions | camera, chụp ảnh, media, bạn bè, quyền camera |
+| **ui/app/** | App-level state and auth bootstrap | app startup, auth state, splash |
+| **ui/screens/MainScreen.kt** | Main host and bottom navigation | main layout, tabs |
+| **ui/screens/home/** | Home screen + state + events | home, feed, reactions, unread posts |
+| **ui/screens/home/components/** | Home UI parts (`FriendBottomSheet`, `ReactionsBottomSheet`, `QuickChatBar`, `MediaPage`, etc.) | camera/media/friend UI, bottom sheets |
 | **ui/screens/login/** | Login screen + ViewModel | login, đăng nhập |
 | **ui/screens/login/components/** | LoginEmailPage, LoginPasswordPage, LoginPageContent | login UI |
 | **ui/screens/register/** | Register screen + ViewModel | register, đăng ký |
-| **ui/screens/register/components/** | RegisterEmailPage, UsernamePage, PasswordPage, RegisterPageContent | register UI |
+| **ui/screens/register/components/** | RegisterEmailPage, RegisterUsernamePage, RegisterPasswordPage, RegisterPageContent | register UI |
 | **ui/screens/my_profile/** | MyProfile, EditDisplayNameBottomSheet | profile, tên hiển thị, avatar |
 | **ui/screens/image_crop/** | ImageCrop screen | crop, cắt ảnh |
 | **ui/screens/onboarding/** | Onboarding | onboarding |
@@ -26,32 +27,43 @@ Android app: Kotlin, Jetpack Compose, Hilt. Clean Architecture. Data flow: ApiSe
 | **ui/screens/friend_request/components/** | UserProfileCard, ActionButtons | friend request UI |
 | **ui/components/** | BaseText, BaseTextField, Avatar, PrimaryButton, FormTextField, CameraPreview, PermissionHandler, AppIconButton, StepAnimatedContent | UI components, form, camera preview, permission UI |
 | **ui/components/image/** | AsyncImage, AsyncImageConfig | load ảnh, Coil |
-| **ui/theme/** | Theme, Color, Typo, MotionTokens | theme, màu, typography |
+| **ui/theme/** | Theme, Color, Typo, MotionTokens | theme, màu, typography, animation duration tokens |
 | **ui/overlay/** | OverlayHost, OverlayViewModel, OverlayState, OverlayEvent, OverlayEventBus | overlay, dialog, bottom sheet |
-| **ui/overlay/modal/** | GlobalModal, ConfirmDialog, FriendRequestModal | modal, dialog |
+| **ui/overlay/modal/** | GlobalModal, ConfirmDialog, ForceLogoutModal | modal, dialog |
 | **ui/overlay/bottom_sheet/** | GlobalBottomSheet, OptionsSheet | bottom sheet |
 | **ui/common/** | UiText, CommonImages, ComposableExt | UI common, string resources, images |
+| **ui/widget/** | App Widget UI and state mapping | widget render/state/UI |
 | **navigation/** | NavGraph, NavScreen, NavParam, NavActions, NavTransitions | navigation, route, deep link |
-| **di/** | Hilt modules (Network, Repository, Overlay, Permission, ImageLoading, PhotoPicker, Share) | DI, inject, module |
+| **di/** | Hilt modules (Network, Repository, Overlay, Permission, ImageLoading, PhotoPicker, Share, WorkManager) | DI, inject, module |
 | **data/datasource/remote/** | ApiService | API, endpoint, Retrofit |
 | **data/datasource/local/datastore/** | DataStoreManager, DataStoreKeys | DataStore, local storage |
-| **data/repository/** | MediaRepository(Impl), UserRepository(Impl), PostRepository(Impl) | repository, data layer |
-| **data/repository/auth/** | AuthRepository, AuthRepositoryImpl, AuthState | auth, login state |
-| **data/repository/device/** | DeviceRepository, DeviceRepositoryImpl, DeviceInfo | device, fingerprint |
-| **data/repository/post/** | PostRepository, PostRepositoryImpl | posts, feed, unread/new post events |
-| **data/model/** | AuthModel, Relationship, BaseModel, Post, PostsFeedData, UnreadPostsCountData, MarkPostsSeenRequest | DTO, API model |
-| **data/model/user/** | UserProfile, AvatarUrls, DisplayName, AvatarUpload | user model |
-| **data/model/media/** | MediaUpload, ImageTransform | media model |
-| **data/model/post/** | NewPostUpdate | realtime new post event payload |
+| **data/repository/** | MediaRepository(Impl), UserRepository(Impl) | media/user remote repositories |
+| **data/repository/auth/** | AuthRepository, AuthRepositoryImpl | auth, login state, token refresh |
+| **data/repository/device/** | DeviceRepository, DeviceRepositoryImpl | device identifiers/fingerprint |
+| **data/repository/post/** | PostRepository, PostRepositoryImpl | posts, feed, unread/new post events, reactions |
+| **data/model/** | `BaseResponse`, auth/request DTOs, `Relationship` | API contracts, shared DTOs |
+| **data/model/user/** | `UserProfile`, `UserSearchResult`, avatar/display name models | user profile/search payloads |
+| **data/model/media/** | Media upload/transform models | media payloads |
+| **data/model/post/** | post/feed/reaction/update payloads | newsfeed, post activity, reactions, unread counts |
+| **data/model/emoji/** | emoji list models/loader | emoji-related features |
 | **domain/post/** | UploadPost, ValidateUploadPost, DeletePost, CreateTempPost, GetAvailablePostActions, ValidateRetryUpload | post, upload, delete post |
-| **domain/user/** | RemoveFriend, UploadAvatar, GetRelationshipsByStatuses, GetDisplayableFriendsCount, GetRelationshipAction, RemoveRelationship | user, friend, avatar, relationship |
-| **domain/media/** | ValidateCaptureReadiness, DownloadPostImageUseCase | capture, download media |
+| **domain/relationship/** | RemoveFriend, RemoveRelationship, GetRelationshipsByStatuses, AcceptFriendRequest, ResolveRelationshipAction, FormatFriendSearchResults | friend graph, search result actions, relationship flows |
+| **domain/media/** | media-centric use cases (capture/download if present) | capture/media domain logic |
 | **domain/feed/** | ShouldTriggerLoadMoreUseCase, GetNewsfeedUseCase, FetchNewerFeedUseCase, ObserveNewPostEventUseCase, ShouldMarkLatestPostAsSeenUseCase | feed, load more, unread/new post notification |
-| **domain/model/** | CaptureReadiness, UploadPostResult, PostAction, RelationshipAction, UploadAvatarResult, NewerFeedResult | domain models |
+| **domain/model/** | UI/domain mappers like `PostAction`, `RelationshipAction`, `NewerFeedResult`, `FriendSearchActionItem` | feature-agnostic domain model |
 | **platform/photo_picker/** | PhotoPickerManager | photo picker, chọn ảnh |
 | **platform/permission/** | PermissionManager, PermissionState | permission |
 | **platform/share/** | ShareManager | share |
 | **platform/deeplink/** | DeepLinkManager, DeepLinkEvent | deep link |
-| **network/** | TokenAuthenticator, TokenRefreshCoordinator, FingerprintInterceptor | token, auth header, refresh |
+| **platform/socket/** | SocketManager, SocketEvent, message/state models | realtime socket events |
+| **platform/widget/** | widget scheduling/update helpers | widget workers, pinned widgets |
+| **network/** | TokenAuthenticator, TokenRefreshCoordinator, SessionController, FingerprintInterceptor | token/auth header/refresh/session lifecycle |
 | **utils/** | Logger, FileUtils, CommonExtensions, ValidationConstants, InviteConstants | utils, validation, logging |
-| **utils/network/** | ApiResult, ApiError, ApiErrorCode, NetworkExtensions, JsonHolder | ApiResult, safeApiCall, API error |
+| **utils/network/** | ApiResult, ApiError, ApiErrorCode, NetworkExtensions, GsonHolder | ApiResult, safeApiCall, API error mapping |
+
+## Practical routing hints
+
+- Prompt mentions **friend search/result action/accept/remove friend** -> start at `domain/relationship/`, then `data/repository/UserRepository(Impl)` and `ui/screens/home/components/FriendBottomSheet.kt`.
+- Prompt mentions **reactions/unread/new posts** -> start at `data/repository/post/`, `domain/feed/`, `ui/screens/home/` and related components.
+- Prompt mentions **token/session/logout** -> inspect `data/repository/auth/`, `network/`, `data/datasource/local/datastore/`.
+- Prompt mentions **widget** -> inspect both `ui/widget/` and `platform/widget/`, plus `di/WorkManagerModule.kt`.
