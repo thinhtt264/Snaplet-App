@@ -409,6 +409,7 @@ private fun HomeScreen(
                 bottomAction = bottomAction,
                 modifier = Modifier.align(Alignment.BottomCenter),
                 isShowActivityBar = currentPost.isOwnPost,
+                postActivityBar = postActivityBar,
             )
         }
 

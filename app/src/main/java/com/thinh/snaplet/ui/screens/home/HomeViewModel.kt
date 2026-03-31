@@ -606,20 +606,27 @@ class HomeViewModel @Inject constructor(
         postReactionsJob?.cancel()
         _uiState.update { it.copy(postReactionsState = PostReactionsUiState.Loading) }
         postReactionsJob = viewModelScope.launch {
-            postRepository.getPostReactions(postId).onSuccess { reactions ->
-                val mapped = mapPostReactionUsersUseCase(reactions)
-                _uiState.update {
-                    it.copy(
-                        postReactionsState = PostReactionsUiState.Result(mapped)
-                    )
+            postRepository.getPostReactions(postId).fold(
+                onSuccess = { reactions ->
+                val mapped = runCatching { mapPostReactionUsersUseCase(reactions) }
+                        .onFailure { error ->
+                            Logger.e("Failed to map post reactions for postId=$postId: ${error.message}")
+                        }
+                        .getOrDefault(emptyList())
+                    _uiState.update {
+                        it.copy(
+                            postReactionsState = PostReactionsUiState.Result(mapped)
+                        )
+                    }
+                },
+                onFailure = {
+                    _uiState.update {
+                        it.copy(
+                            postReactionsState = PostReactionsUiState.Result(emptyList())
+                        )
+                    }
                 }
-            }.onFailure {
-                _uiState.update {
-                    it.copy(
-                        postReactionsState = PostReactionsUiState.Result(emptyList())
-                    )
-                }
-            }
+            )
         }
     }
 
