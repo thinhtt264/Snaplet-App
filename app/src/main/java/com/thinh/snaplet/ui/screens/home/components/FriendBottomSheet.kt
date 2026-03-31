@@ -150,8 +150,8 @@ fun FriendBottomSheet(
                     onValueChange = onSearchQueryChange,
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         unfocusedIndicatorColor = Color.Transparent
                     ),
                     placeholder = {
