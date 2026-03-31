@@ -34,6 +34,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thinh.snaplet.platform.permission.Permission
+import com.thinh.snaplet.ui.components.EmojiFloatCanvas
+import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.components.PermissionHandler
 import com.thinh.snaplet.ui.screens.home.components.BottomActionModel
 import com.thinh.snaplet.ui.screens.home.components.CameraPage
@@ -124,6 +126,7 @@ fun Home(
             uiState = uiState,
             viewModel = viewModel,
             cameraActions = cameraActions,
+            emojiFloatController = viewModel.emojiFloatController,
             onNavigateToCameraPage = {
                 scope.launch { pagerState.animateScrollToPage(CAMERA_PAGE_INDEX) }
             },
@@ -132,7 +135,8 @@ fun Home(
             },
             onItemVisible = viewModel::onItemVisible,
             onMoreClick = viewModel::onShowMoreOptions,
-            onProfileClick = onProfileClick
+            onProfileClick = onProfileClick,
+            onEmojiReaction = viewModel::onEmojiReaction,
         )
 
         SnackbarHost(hostState = snackBarHostState)
@@ -242,11 +246,13 @@ private fun HomeScreen(
     uiState: HomeUiState,
     viewModel: HomeViewModel,
     cameraActions: CameraActions,
+    emojiFloatController: EmojiFloatController,
     onNavigateToCameraPage: () -> Unit,
     onScrollToFirstPost: () -> Unit,
     onItemVisible: (currentIndex: Int) -> Unit,
     onMoreClick: () -> Unit,
     onProfileClick: () -> Unit = {},
+    onEmojiReaction: (String) -> Unit = {},
 ) {
     var showFriendSheet by remember { mutableStateOf(false) }
     var friendSearchQuery by remember { mutableStateOf("") }
@@ -262,7 +268,7 @@ private fun HomeScreen(
     val userScrollEnabled = !uiState.cameraState.isEditMode
     val isDownloading = uiState.isDownloading
 
-    val quickChatBar = remember(chatMessage) {
+    val quickChatBar = remember(chatMessage, onEmojiReaction) {
         QuickChatBarModel(
             messageText = chatMessage,
             onMessageChange = { chatMessage = it },
@@ -270,7 +276,7 @@ private fun HomeScreen(
                 /* TODO: send chat message */
                 chatMessage = ""
             },
-            onEmojiSelected = { /* TODO: send emoji reaction */ },
+            onEmojiSelected = { emoji -> onEmojiReaction(emoji) },
         )
     }
 
@@ -396,5 +402,10 @@ private fun HomeScreen(
                 isShowActivityBar = currentPost.isOwnPost,
             )
         }
+
+        EmojiFloatCanvas(
+            controller = emojiFloatController,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }

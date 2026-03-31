@@ -25,7 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -54,7 +54,7 @@ import com.thinh.snaplet.data.model.emoji.EmojiTab
 import com.thinh.snaplet.ui.components.BaseText
 import pressScaleClickable
 
-private val QUICK_EMOJIS = listOf("💛", "🔥", "😍")
+private val QUICK_EMOJIS = listOf("❤️", "🔥", "😍")
 private const val EMOJI_GRID_COLUMNS = 8
 private val EMOJI_GRID_HEIGHT = 300.dp
 
@@ -163,7 +163,7 @@ private fun EmojiButton(
             .pressScaleClickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        BaseText(text = emoji, fontSize = 22.sp)
+        BaseText(text = emoji, fontSize = 24.sp)
     }
 }
 
@@ -296,7 +296,7 @@ private fun EmojiTabRow(
     selectedIndex: Int,
     onTabSelected: (Int) -> Unit,
 ) {
-    ScrollableTabRow(
+    PrimaryScrollableTabRow(
         selectedTabIndex = selectedIndex,
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,

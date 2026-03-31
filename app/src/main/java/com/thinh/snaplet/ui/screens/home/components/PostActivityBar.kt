@@ -22,6 +22,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.R
+import com.thinh.snaplet.ui.common.CommonImages
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
 import com.thinh.snaplet.ui.theme.MotionTokens
@@ -60,7 +61,7 @@ fun PostActivityBar(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Icon(
-                painter = painterResource(R.drawable.sparkle_icon),
+                painter = painterResource(CommonImages.SparkleIcon),
                 contentDescription = null,
                 modifier = Modifier
                     .size(24.dp)

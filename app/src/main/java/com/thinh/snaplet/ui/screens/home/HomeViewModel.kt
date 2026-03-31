@@ -47,6 +47,7 @@ import com.thinh.snaplet.platform.share.ShareApp
 import com.thinh.snaplet.platform.share.ShareManager
 import com.thinh.snaplet.platform.widget.WidgetUpdateManager
 import com.thinh.snaplet.ui.common.UiText
+import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
 import com.thinh.snaplet.ui.theme.Error50
@@ -111,6 +112,8 @@ class HomeViewModel @Inject constructor(
     private companion object {
         private const val DEBOUNCE_MS = 500L
     }
+
+    val emojiFloatController by lazy { EmojiFloatController() }
 
     private var lastFriendSearchQuery: String = ""
 
@@ -567,6 +570,10 @@ class HomeViewModel @Inject constructor(
 
     fun onPostActivityClick() {
         // TODO: handle post activity bar click
+    }
+
+    fun onEmojiReaction(emoji: String) {
+        emojiFloatController.emit(emoji)
     }
 
     private var postReactionsJob: Job? = null
