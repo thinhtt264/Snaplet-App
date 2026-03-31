@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -51,6 +52,7 @@ import com.thinh.snaplet.R
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.user.AvatarUrls
+import com.thinh.snaplet.data.model.user.UserSearchResult
 import com.thinh.snaplet.domain.model.RelationshipAction
 import com.thinh.snaplet.platform.share.ShareApp
 import com.thinh.snaplet.ui.components.AppIconButton
@@ -188,9 +190,7 @@ fun FriendBottomSheet(
                 item { Spacer(Modifier.size(24.dp)) }
 
                 items(
-                    items = friendSheetState.searchResults,
-                    key = { it.user.userId }
-                ) { item ->
+                    items = friendSheetState.searchResults, key = { it.user.userId }) { item ->
                     FriendSearchListItem(
                         user = item.user,
                         relationshipAction = item.action,
@@ -198,9 +198,9 @@ fun FriendBottomSheet(
                             val relationshipId = item.user.relationshipId
                             if (relationshipId.isNullOrBlank()) return@FriendSearchListItem
 
-                            val relationshipStatus = item.user.relationshipStatus
-                                ?.let { RelationshipStatus.from(it) }
-                                ?: RelationshipStatus.PENDING
+                            val relationshipStatus =
+                                item.user.relationshipStatus?.let { RelationshipStatus.from(it) }
+                                    ?: RelationshipStatus.PENDING
 
                             onPendingAccept(
                                 RelationshipWithUser(
@@ -219,9 +219,9 @@ fun FriendBottomSheet(
                             val relationshipId = item.user.relationshipId
                             if (relationshipId.isNullOrBlank()) return@FriendSearchListItem
 
-                            val relationshipStatus = item.user.relationshipStatus
-                                ?.let { RelationshipStatus.from(it) }
-                                ?: RelationshipStatus.PENDING
+                            val relationshipStatus =
+                                item.user.relationshipStatus?.let { RelationshipStatus.from(it) }
+                                    ?: RelationshipStatus.PENDING
 
                             onFriendRemove(
                                 RelationshipWithUser(
@@ -335,23 +335,21 @@ fun FriendBottomSheet(
 
 @Composable
 private fun FriendSearchListItem(
-    user: com.thinh.snaplet.data.model.user.UserSearchResult,
+    user: UserSearchResult,
     relationshipAction: RelationshipAction,
     onAcceptRequest: () -> Unit,
     onRemove: () -> Unit,
     onAddFriend: () -> Unit,
 ) {
-    val relationshipStatus = user.relationshipStatus
-        ?.let { RelationshipStatus.from(it) }
-        ?: RelationshipStatus.PENDING
+    val relationshipStatus =
+        user.relationshipStatus?.let { RelationshipStatus.from(it) } ?: RelationshipStatus.PENDING
 
-    val displayName = listOf(user.firstName, user.lastName)
-        .filter { it.isNotBlank() }
-        .joinToString(" ")
-        .ifBlank { user.username }
+    val displayName =
+        listOf(user.firstName, user.lastName).filter { it.isNotBlank() }.joinToString(" ")
+            .ifBlank { user.username }
 
-    val canRemove = relationshipAction !is RelationshipAction.AddFriend &&
-            relationshipAction !is RelationshipAction.CurrentUser
+    val canRemove =
+        relationshipAction !is RelationshipAction.AddFriend && relationshipAction !is RelationshipAction.CurrentUser
 
     Row(
         modifier = Modifier
@@ -366,16 +364,28 @@ private fun FriendSearchListItem(
             borderWidth = 2.dp,
             size = 40.dp
         )
-        BaseText(
-            text = displayName,
-            color = MaterialTheme.colorScheme.onBackground,
-            typography = MaterialTheme.typography.bodyMedium,
+        Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 12.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+            verticalArrangement = Arrangement.Center
+        ) {
+            BaseText(
+                text = displayName,
+                color = MaterialTheme.colorScheme.onBackground,
+                typography = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(2.dp))
+            BaseText(
+                text = user.username,
+                color = MaterialTheme.colorScheme.onSurface,
+                typography = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
         FriendListItemActionSlot(
             relationshipAction = relationshipAction,
             onAcceptRequest = onAcceptRequest,
@@ -506,9 +516,7 @@ private fun FriendListItemActionSlot(
             )
         }
 
-        RelationshipAction.Accepted,
-        RelationshipAction.Blocked,
-        RelationshipAction.CurrentUser -> Unit
+        RelationshipAction.Accepted, RelationshipAction.Blocked, RelationshipAction.CurrentUser -> Unit
     }
 }
 
