@@ -17,11 +17,13 @@ import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
 import com.thinh.snaplet.data.model.media.RequestUploadRequest
 import com.thinh.snaplet.data.model.media.UploadRequestData
 import com.thinh.snaplet.data.model.post.CreatePostRequest
+import com.thinh.snaplet.data.model.post.ReactToPostRequest
 import com.thinh.snaplet.data.model.post.MarkPostsSeenRequest
 import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.data.model.post.PostActivity
 import com.thinh.snaplet.data.model.post.PostReactionUser
 import com.thinh.snaplet.data.model.post.PostsFeedData
+import com.thinh.snaplet.data.model.post.ReactToPostResponse
 import com.thinh.snaplet.data.model.post.UnreadPostsCountData
 import com.thinh.snaplet.data.model.user.AvatarUploadRequest
 import com.thinh.snaplet.data.model.user.AvatarUploadRequestResponse
@@ -175,4 +177,10 @@ interface ApiService {
     suspend fun getPostReactions(
         @Path("postId") postId: String
     ): Response<BaseResponse<List<PostReactionUser>>>
+
+    @PATCH("posts/{postId}/reactions")
+    suspend fun reactToPost(
+        @Path("postId") postId: String,
+        @Body body: ReactToPostRequest,
+    ): Response<BaseResponse<ReactToPostResponse>>
 }

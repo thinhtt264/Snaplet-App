@@ -56,7 +56,7 @@ fun PostActivityBar(
                 )
                 .padding(horizontal = 12.dp, vertical = 12.dp)
                 .animateContentSize()
-                .pressScaleClickable(enabled = isClickable, onClick = {}),
+                .pressScaleClickable(enabled = isClickable, onClick = model.onClick),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {

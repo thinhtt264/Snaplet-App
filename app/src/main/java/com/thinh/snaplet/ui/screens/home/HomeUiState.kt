@@ -5,8 +5,8 @@ import androidx.camera.core.CameraSelector
 import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.post.Post
-import com.thinh.snaplet.data.model.post.PostReactionUser
 import com.thinh.snaplet.domain.model.FriendSearchActionItem
+import com.thinh.snaplet.domain.model.ReactionUserUi
 import com.thinh.snaplet.domain.model.RelationshipAction
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.platform.share.ShareApp
@@ -47,6 +47,7 @@ data class HomeUiState(
     val profileAvatarUrl: String? = null,
 
     val postReactionsState: PostReactionsUiState = PostReactionsUiState.Loading,
+    val showReactionsSheet: Boolean = false,
 ) {
     /** Returns true if more data can be loaded (nextCursor is not null and not currently loading) */
     val canLoadMore: Boolean get() = nextCursor != null && !isLoadingMore && !isLoadingPosts
@@ -54,7 +55,7 @@ data class HomeUiState(
 
 sealed class PostReactionsUiState {
     object Loading : PostReactionsUiState()
-    data class Result(val reactions: List<PostReactionUser> = emptyList()) : PostReactionsUiState()
+    data class Result(val reactions: List<ReactionUserUi> = emptyList()) : PostReactionsUiState()
 }
 
 sealed class UploadStatus {

@@ -32,6 +32,7 @@ import com.thinh.snaplet.domain.model.UploadPostResult
 import com.thinh.snaplet.domain.post.CreateTempPostUseCase
 import com.thinh.snaplet.domain.post.DeletePostUseCase
 import com.thinh.snaplet.domain.post.GetAvailablePostActionsUseCase
+import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
 import com.thinh.snaplet.domain.post.UploadPostUseCase
 import com.thinh.snaplet.domain.post.ValidateRetryUploadUseCase
 import com.thinh.snaplet.domain.post.ValidateUploadPostUseCase
@@ -106,6 +107,7 @@ class HomeViewModel @Inject constructor(
     private val observeNewPostEvent: ObserveNewPostEventUseCase,
     private val postRepository: PostRepository,
     private val shouldMarkLatestPostAsSeenUseCase: ShouldMarkLatestPostAsSeenUseCase,
+    private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
     private val widgetUpdateManager: WidgetUpdateManager,
 ) : ViewModel() {
 
@@ -569,11 +571,33 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onPostActivityClick() {
-        // TODO: handle post activity bar click
+        val state = _uiState.value.postReactionsState
+        if (state is PostReactionsUiState.Result && state.reactions.isNotEmpty()) {
+            _uiState.update { it.copy(showReactionsSheet = true) }
+        }
     }
+
+    fun onReactionsSheetDismissed() {
+        _uiState.update { it.copy(showReactionsSheet = false) }
+    }
+
+    private var reactToPostJob: Job? = null
 
     fun onEmojiReaction(emoji: String) {
         emojiFloatController.emit(emoji)
+
+        val postIdToReact = viewedPostId ?: return
+
+        reactToPostJob?.cancel()
+        reactToPostJob = viewModelScope.launch {
+            delay(DEBOUNCE_MS)
+
+            postRepository
+                .reactToPost(postId = postIdToReact, reactionIcon = emoji)
+                .onFailure { error ->
+                    Logger.e("Failed to react to post: ${error.message}")
+                }
+        }
     }
 
     private var postReactionsJob: Job? = null
@@ -583,19 +607,16 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(postReactionsState = PostReactionsUiState.Loading) }
         postReactionsJob = viewModelScope.launch {
             postRepository.getPostReactions(postId).onSuccess { reactions ->
+                val mapped = mapPostReactionUsersUseCase(reactions)
                 _uiState.update {
                     it.copy(
-                        postReactionsState = PostReactionsUiState.Result(
-                            reactions
-                        )
+                        postReactionsState = PostReactionsUiState.Result(mapped)
                     )
                 }
             }.onFailure {
                 _uiState.update {
                     it.copy(
-                        postReactionsState = PostReactionsUiState.Result(
-                            emptyList()
-                        )
+                        postReactionsState = PostReactionsUiState.Result(emptyList())
                     )
                 }
             }

@@ -86,6 +86,7 @@
 
     <string name="post_activity_bar_loading">Activity</string>
     <string name="post_activity_bar_empty">No activity yet</string>
+    <string name="reactions_sheet_title">Reactions</string>
 
     <!-- My Profile -->
     <string name="profile_back">Back</string>

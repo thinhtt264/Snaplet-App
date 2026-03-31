@@ -44,6 +44,7 @@ import com.thinh.snaplet.ui.screens.home.components.FriendBottomSheet
 import com.thinh.snaplet.ui.screens.home.components.HomeBottomContent
 import com.thinh.snaplet.ui.screens.home.components.MediaPage
 import com.thinh.snaplet.ui.screens.home.components.NewPostsBanner
+import com.thinh.snaplet.ui.screens.home.components.ReactionsBottomSheet
 import com.thinh.snaplet.ui.screens.home.components.PostActivityBarModel
 import com.thinh.snaplet.ui.screens.home.components.QuickChatBarModel
 import com.thinh.snaplet.ui.screens.home.components.TopAction
@@ -390,6 +391,14 @@ private fun HomeScreen(
                 onFriendRemove = viewModel::requestRemoveFriend,
                 onPendingAccept = viewModel::acceptFriendRequest,
                 onAddFriend = viewModel::sendFriendRequest
+            )
+        }
+
+        val reactionsState = uiState.postReactionsState
+        if (uiState.showReactionsSheet && reactionsState is PostReactionsUiState.Result) {
+            ReactionsBottomSheet(
+                reactions = reactionsState.reactions,
+                onDismiss = viewModel::onReactionsSheetDismissed,
             )
         }
 

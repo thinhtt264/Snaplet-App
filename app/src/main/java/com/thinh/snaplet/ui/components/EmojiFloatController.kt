@@ -14,7 +14,7 @@ class EmojiFloatController(
 ) {
 
     private companion object {
-        const val MAX_ACTIVE_BATCHES = 4
+        const val MAX_ACTIVE_BATCHES = 3
     }
 
     private val _particles = MutableStateFlow<List<EmojiParticle>>(emptyList())

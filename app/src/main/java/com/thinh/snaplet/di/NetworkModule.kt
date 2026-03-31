@@ -146,7 +146,7 @@ object NetworkModule {
             .maxContentLength(250000L) // 250KB
             .redactHeaders("Authorization", "Cookie")
             .alwaysReadResponseBody(true) // Read response body even if it's large
-            .createShortcut(false).build()
+            .createShortcut(true).build()
     }
 
     /**
