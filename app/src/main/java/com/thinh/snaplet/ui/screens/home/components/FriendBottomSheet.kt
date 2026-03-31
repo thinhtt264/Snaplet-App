@@ -150,8 +150,8 @@ fun FriendBottomSheet(
                     onValueChange = onSearchQueryChange,
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         unfocusedIndicatorColor = Color.Transparent
                     ),
                     placeholder = {
@@ -164,7 +164,7 @@ fun FriendBottomSheet(
                     leadingIcon = {
                         Crossfade(
                             targetState = friendSheetState.isSearchingUsers,
-                            animationSpec = tween(durationMillis = MotionTokens.Fast)
+                            animationSpec = tween(durationMillis = MotionTokens.Emphasized)
                         ) { isSearching ->
                             if (isSearching) {
                                 CircularProgressIndicator(

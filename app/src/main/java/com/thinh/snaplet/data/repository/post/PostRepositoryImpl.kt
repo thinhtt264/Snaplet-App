@@ -6,6 +6,9 @@ import com.thinh.snaplet.data.model.post.NewPostUpdate
 import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.data.model.post.PostActivity
 import com.thinh.snaplet.data.model.post.PostsFeedData
+import com.thinh.snaplet.data.model.post.PostReactionUser
+import com.thinh.snaplet.data.model.post.ReactToPostRequest
+import com.thinh.snaplet.data.model.post.ReactToPostResponse
 import com.thinh.snaplet.data.model.post.UnreadPostsCountData
 import com.thinh.snaplet.platform.socket.SocketEvent
 import com.thinh.snaplet.platform.socket.SocketManager
@@ -60,6 +63,27 @@ class PostRepositoryImpl @Inject constructor(
     override suspend fun getPostsActivity(): ApiResult<PostActivity?> {
         return safeApiCall(
             apiCall = { apiService.getPostsActivity() },
+        )
+    }
+
+    override suspend fun getPostReactions(
+        postId: String,
+    ): ApiResult<List<PostReactionUser>> {
+        return safeApiCall(
+            apiCall = { apiService.getPostReactions(postId = postId) },
+        )
+    }
+
+    override suspend fun reactToPost(
+        postId: String,
+        reactionIcon: String,
+    ): ApiResult<ReactToPostResponse> {
+        val body = ReactToPostRequest(
+            reactionIcon = reactionIcon,
+        )
+
+        return safeApiCall(
+            apiCall = { apiService.reactToPost(postId = postId, body = body) },
         )
     }
 

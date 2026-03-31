@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -56,11 +55,10 @@ private const val TOP_SPACE_RATIO = 0.16f
 fun MediaPage(
     post: Post,
     uploadStatus: UploadStatus?,
-    showBottomAction: Boolean = false,
-    showMoreButtonLoading: Boolean = false,
-    onGridClick: () -> Unit = {},
-    onCaptureClick: () -> Unit = {},
-    onMoreClick: () -> Unit = {},
+    showBottomContent: Boolean = false,
+    quickChatBar: QuickChatBarModel,
+    bottomAction: BottomActionModel,
+    postActivityBar: PostActivityBarModel = PostActivityBarModel(),
     onRetryClick: () -> Unit = {},
     onDeleteClick: () -> Unit = {},
 ) {
@@ -94,17 +92,13 @@ fun MediaPage(
             )
         }
 
-        if (showBottomAction) {
-            BottomAction(
-                onGridClick = onGridClick,
-                onCaptureClick = onCaptureClick,
-                onMoreClick = onMoreClick,
-                showMoreButtonLoading = showMoreButtonLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(horizontal = 32.dp, vertical = 24.dp)
+        if (showBottomContent) {
+            HomeBottomContent(
+                quickChatBar = quickChatBar,
+                bottomAction = bottomAction,
+                isShowActivityBar = post.isOwnPost,
+                postActivityBar = postActivityBar,
+                modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
     }

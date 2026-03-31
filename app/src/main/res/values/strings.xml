@@ -93,6 +93,10 @@
     <string name="upload_failed_tap_to_retry">Tải lên thất bại. Chạm để thử lại</string>
     <string name="uploading">Đang tải lên…</string>
 
+    <string name="post_activity_bar_loading">Hoạt động</string>
+    <string name="post_activity_bar_empty">Chưa có hoạt động nào!</string>
+    <string name="reactions_sheet_title">Cảm xúc</string>
+
     <!-- My Profile -->
     <string name="profile_back">Quay lại</string>
     <string name="profile_edit_photo">Chỉnh ảnh</string>
@@ -128,6 +132,9 @@
     <string name="widget_guide_step_2">Chạm vào nút &quot;Tiện ích&quot; để thêm một tiện ích mới</string>
     <string name="widget_guide_step_3">Tìm Snaplet và thêm tiện ích</string>
     <string name="widget_guide_step_4">Giữ và kéo để sắp xếp và thay đổi kích cỡ.</string>
+
+    <!-- Quick Chat Bar -->
+    <string name="quick_chat_placeholder">Gửi tin nhắn…</string>
 
     <!-- Force logout (session expired) -->
     <string name="force_logout_title">Phiên đăng nhập đã hết hạn</string>

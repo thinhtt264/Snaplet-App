@@ -84,6 +84,10 @@
     <string name="uploading">Uploading…</string>
     <string name="history_label">History</string>
 
+    <string name="post_activity_bar_loading">Activity</string>
+    <string name="post_activity_bar_empty">No activity yet</string>
+    <string name="reactions_sheet_title">Reactions</string>
+
     <!-- My Profile -->
     <string name="profile_back">Back</string>
     <string name="profile_edit_photo">Edit photo</string>
@@ -119,6 +123,9 @@
     <string name="widget_guide_step_2">Tap the &quot;Widgets&quot; button to add a new widget</string>
     <string name="widget_guide_step_3">Search Snaplet and add the widget</string>
     <string name="widget_guide_step_4">Press and drag to arrange and resize it.</string>
+
+    <!-- Quick Chat Bar -->
+    <string name="quick_chat_placeholder">Send a message…</string>
 
     <!-- Force logout (session expired) -->
     <string name="force_logout_title">Your login session has expired</string>

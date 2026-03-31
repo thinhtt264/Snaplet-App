@@ -11,7 +11,6 @@ import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.network.SessionController
 import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.ApiResult
-import com.thinh.snaplet.utils.network.onSuccess
 import com.thinh.snaplet.utils.network.safeApiCall
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -63,13 +62,12 @@ class AuthRepositoryImpl @Inject constructor(
         }, transform = { response -> response.user })
     }
 
-    override suspend fun logout(): ApiResult<Unit> {
-        val result = safeApiCall(apiCall = { apiService.logout() })
-        result.onSuccess {
-            _authState.value = AuthState.Unauthenticated
-            dataStoreManager.clearSession()
-        }
-        return result
+    override suspend fun logout() {
+        _authState.value = AuthState.Unauthenticated
+        dataStoreManager.clearSession()
+
+//        val result = safeApiCall(apiCall = { apiService.logout() })
+//        return result
     }
 
     override suspend fun forceLogout() {

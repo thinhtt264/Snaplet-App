@@ -19,7 +19,7 @@ interface AuthRepository {
         password: String
     ): ApiResult<UserProfile>
 
-    suspend fun logout(): ApiResult<Unit>
+    suspend fun logout()
 
     suspend fun forceLogout()
 
