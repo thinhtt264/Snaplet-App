@@ -126,6 +126,7 @@ class DataStoreManager @Inject constructor(
         clearSession()
         clearUserProfile()
         clearFingerprint()
+        clearQuickChatRecentEmojis()
         Logger.d("🗑️ All data cleared")
     }
 
@@ -176,17 +177,22 @@ class DataStoreManager @Inject constructor(
         }
     }
 
+    suspend fun clearQuickChatRecentEmojis() {
+        dataStore.edit { preferences ->
+            preferences.remove(quickChatRecentEmojisKey)
+        }
+    }
+
     suspend fun getQuickChatRecentEmojis(): List<String> {
         val preferences = dataStore.data.first()
         return parseQuickChatRecentEmojis(preferences[quickChatRecentEmojisKey])
     }
 
     suspend fun recordQuickChatEmojiUsage(emoji: String) {
-        val preferences = dataStore.data.first()
-        val current = parseQuickChatRecentEmojis(preferences[quickChatRecentEmojisKey])
-        val updated = listOf(emoji) + current.filter { it != emoji }
-        val trimmed = updated.take(QUICK_CHAT_RECENT_LIMIT)
         dataStore.edit { prefs ->
+            val current = parseQuickChatRecentEmojis(prefs[quickChatRecentEmojisKey])
+            val updated = listOf(emoji) + current.filter { it != emoji }
+            val trimmed = updated.take(QUICK_CHAT_RECENT_LIMIT)
             prefs[quickChatRecentEmojisKey] = gson.toJson(trimmed)
         }
     }
