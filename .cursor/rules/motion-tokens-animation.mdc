@@ -1,12 +1,12 @@
 ---
-description: Animation duration must use MotionTokens; add a new token when a different value is needed
+description: Enforce MotionTokens for all Compose animation durations and transitions.
 globs: "**/ui/**/*.kt"
 alwaysApply: true
 ---
 
 # Animation Duration — MotionTokens
 
-Any animation config that has `durationMillis` (or equivalent) **must** use constants from `com.thinh.snaplet.ui.theme.MotionTokens`. Do not hardcode millis values.
+Any animation config using duration (`durationMillis`, tween/spring duration, fade/slide/scale transition duration) **must** use constants from `com.thinh.snaplet.ui.theme.MotionTokens`. Do not hardcode numeric millis.
 
 ## Available tokens (`MotionTokens.kt`)
 
@@ -19,8 +19,11 @@ Any animation config that has `durationMillis` (or equivalent) **must** use cons
 
 ## Rules
 
-1. **Always use a token**: `durationMillis = MotionTokens.Normal` (or the appropriate token), never `durationMillis = 180`.
-2. **Need a different value**: Add a new constant to `MotionTokens.kt` (with a descriptive comment), then use that token in code.
+1. **Always use a token**: `durationMillis = MotionTokens.Normal` (or matching token), never `durationMillis = 180`.
+2. **Import explicitly**: `import com.thinh.snaplet.ui.theme.MotionTokens`.
+3. **Apply consistently across specs**: enter + exit transitions should use tokenized durations unless a deliberate difference is required.
+4. **Need a different value**: add a new constant to `MotionTokens.kt` (with a short descriptive comment), then use that token.
+5. **Review step**: when touching animation code, quickly scan nearby transitions to replace existing hardcoded durations in the same block.
 
 ## Examples
 
