@@ -371,11 +371,17 @@ class HomeViewModel @Inject constructor(
                     it.copy(
                         friendList = accepted,
                         pendingList = pendingWithActions,
+                        loading = it.loading.copy(initialFriendList = false),
                         isLoadingFriendList = false
                     )
                 }
             }.onFailure {
-                updateFriendSheetState { it.copy(isLoadingFriendList = false) }
+                updateFriendSheetState {
+                    it.copy(
+                        loading = it.loading.copy(initialFriendList = false),
+                        isLoadingFriendList = false
+                    )
+                }
             }
         }
     }
@@ -450,6 +456,9 @@ class HomeViewModel @Inject constructor(
         if (targetUserId.isBlank()) return
 
         viewModelScope.launch {
+            updateFriendSheetState { state ->
+                state.copy(loading = state.loading.copy(addingUserIds = state.loading.addingUserIds + targetUserId))
+            }
             userRepository.sendFriendRequest(targetUserId).onSuccess {
                 loadRelationshipCounts()
                 loadMyFriendList()
@@ -457,6 +466,14 @@ class HomeViewModel @Inject constructor(
             }.onFailure { error ->
                 Logger.e("❌ Failed to send friend request: ${error.message}")
                 // _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
+            }.also {
+                updateFriendSheetState { state ->
+                    state.copy(
+                        loading = state.loading.copy(
+                            addingUserIds = state.loading.addingUserIds - targetUserId
+                        )
+                    )
+                }
             }
         }
     }
@@ -476,6 +493,13 @@ class HomeViewModel @Inject constructor(
 
     private fun removeFriend(friend: RelationshipWithUser) {
         viewModelScope.launch {
+            updateFriendSheetState { state ->
+                state.copy(
+                    loading = state.loading.copy(
+                        removingRelationshipIds = state.loading.removingRelationshipIds + friend.id
+                    )
+                )
+            }
             val state = _uiState.value.friendSheetState
             if (friend.status == RelationshipStatus.PENDING) {
                 removeRelationshipUseCase(friend.id).onSuccess {
@@ -498,6 +522,13 @@ class HomeViewModel @Inject constructor(
                 }.onFailure { error ->
                     _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
                 }
+            }
+            updateFriendSheetState { current ->
+                current.copy(
+                    loading = current.loading.copy(
+                        removingRelationshipIds = current.loading.removingRelationshipIds - friend.id
+                    )
+                )
             }
         }
     }

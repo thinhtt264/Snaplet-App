@@ -83,7 +83,14 @@ data class FriendBottomSheetState(
     val friendList: List<RelationshipWithUser> = emptyList(),
     val pendingList: List<RelationshipActionItemState> = emptyList(),
     val isLoadingFriendList: Boolean = false,
+    val loading: FriendBottomSheetLoadingState = FriendBottomSheetLoadingState(),
     val searchResults: List<FriendSearchActionItem> = emptyList(),
     val isSearchingUsers: Boolean = false,
     val shareApps: List<ShareApp> = emptyList(),
+)
+
+data class FriendBottomSheetLoadingState(
+    val initialFriendList: Boolean = true,
+    val addingUserIds: Set<String> = emptySet(),
+    val removingRelationshipIds: Set<String> = emptySet(),
 )

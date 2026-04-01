@@ -84,9 +84,9 @@ fun FriendBottomSheet(
     onAddFriend: (String) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val isReady by remember(friendSheetState.shareApps, friendSheetState.isLoadingFriendList) {
+    val isReady by remember(friendSheetState.shareApps, friendSheetState.loading.initialFriendList) {
         derivedStateOf {
-            friendSheetState.shareApps.isNotEmpty() && !friendSheetState.isLoadingFriendList
+            friendSheetState.shareApps.isNotEmpty() && !friendSheetState.loading.initialFriendList
         }
     }
 
@@ -237,6 +237,10 @@ fun FriendBottomSheet(
                             )
                         },
                         onAddFriend = { onAddFriend(item.user.userId) },
+                        isAddingFriend = friendSheetState.loading.addingUserIds.contains(item.user.userId),
+                        isRemovingFriend = item.user.relationshipId?.let {
+                            friendSheetState.loading.removingRelationshipIds.contains(it)
+                        } ?: false,
                     )
                 }
             } else {
@@ -299,6 +303,7 @@ fun FriendBottomSheet(
                             firstName = friend.firstName,
                             relationshipStatus = friend.status,
                             avatarUrls = friend.avatarUrls,
+                            isRemovingFriend = friendSheetState.loading.removingRelationshipIds.contains(friend.id),
                         )
                     }
                 }
@@ -321,6 +326,7 @@ fun FriendBottomSheet(
                             firstName = friend.firstName,
                             relationshipStatus = friend.status,
                             avatarUrls = friend.avatarUrls,
+                            isRemovingFriend = friendSheetState.loading.removingRelationshipIds.contains(friend.id),
                         )
                     }
                 }
@@ -340,6 +346,8 @@ private fun FriendSearchListItem(
     onAcceptRequest: () -> Unit,
     onRemove: () -> Unit,
     onAddFriend: () -> Unit,
+    isAddingFriend: Boolean = false,
+    isRemovingFriend: Boolean = false,
 ) {
     val relationshipStatus =
         user.relationshipStatus?.let { RelationshipStatus.from(it) } ?: RelationshipStatus.PENDING
@@ -390,6 +398,7 @@ private fun FriendSearchListItem(
             relationshipAction = relationshipAction,
             onAcceptRequest = onAcceptRequest,
             onAddFriend = onAddFriend,
+            isAddingFriend = isAddingFriend,
         )
         if (canRemove) {
             Spacer(Modifier.size(8.dp))
@@ -399,6 +408,7 @@ private fun FriendSearchListItem(
                     Icons.Outlined.Close, tint = MaterialTheme.colorScheme.onBackground
                 ),
                 onClick = onRemove,
+                loading = isRemovingFriend,
                 containerColor = MaterialTheme.colorScheme.surface,
                 iconSize = ICON_BUTTON_SIZE / 2
             )
@@ -415,6 +425,7 @@ private fun FriendListItem(
     relationshipAction: RelationshipAction,
     onAcceptRequest: () -> Unit,
     onRemove: () -> Unit,
+    isRemovingFriend: Boolean = false,
 ) {
     Row(
         modifier = Modifier
@@ -450,6 +461,7 @@ private fun FriendListItem(
                 Icons.Outlined.Close, tint = MaterialTheme.colorScheme.onBackground
             ),
             onClick = onRemove,
+            loading = isRemovingFriend,
             containerColor = MaterialTheme.colorScheme.surface,
             iconSize = ICON_BUTTON_SIZE / 2
         )
@@ -461,6 +473,7 @@ private fun FriendListItemActionSlot(
     relationshipAction: RelationshipAction,
     onAcceptRequest: () -> Unit,
     onAddFriend: () -> Unit = {},
+    isAddingFriend: Boolean = false,
 ) {
     var isResending by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -505,6 +518,7 @@ private fun FriendListItemActionSlot(
         is RelationshipAction.AddFriend -> {
             PrimaryButton(
                 onClick = onAddFriend,
+                isLoading = isAddingFriend,
                 title = stringResource(R.string.add_friend),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 typography = MaterialTheme.typography.titleSmall,
