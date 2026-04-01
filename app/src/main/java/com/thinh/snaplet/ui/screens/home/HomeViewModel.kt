@@ -550,10 +550,12 @@ class HomeViewModel @Inject constructor(
             }, onFailure = { apiError ->
                 _uiState.update {
                     it.copy(
-                        isLoadingPosts = false, isLoadingMore = false, error = apiError.message
+                        isLoadingPosts = false,
+                        isLoadingMore = false,
+                        error = apiError.message,
+                        snackbarMessage = UiText.DynamicString(apiError.message)
                     )
                 }
-                _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(apiError.message)) }
             })
         }
     }
@@ -605,10 +607,9 @@ class HomeViewModel @Inject constructor(
         reactToPostJob?.cancel()
         reactToPostJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
-            
+
             postRepository.recordQuickChatEmojiUsage(emoji)
-            postRepository
-                .reactToPost(postId = postIdToReact, reactionIcon = emoji)
+            postRepository.reactToPost(postId = postIdToReact, reactionIcon = emoji)
                 .onFailure { error ->
                     Logger.e("Failed to react to post: ${error.message}")
                 }
@@ -621,27 +622,23 @@ class HomeViewModel @Inject constructor(
         postReactionsJob?.cancel()
         _uiState.update { it.copy(postReactionsState = PostReactionsUiState.Loading) }
         postReactionsJob = viewModelScope.launch {
-            postRepository.getPostReactions(postId).fold(
-                onSuccess = { reactions ->
-                val mapped = runCatching { mapPostReactionUsersUseCase(reactions) }
-                        .onFailure { error ->
+            postRepository.getPostReactions(postId).fold(onSuccess = { reactions ->
+                val mapped =
+                    runCatching { mapPostReactionUsersUseCase(reactions) }.onFailure { error ->
                             Logger.e("Failed to map post reactions for postId=$postId: ${error.message}")
-                        }
-                        .getOrDefault(emptyList())
-                    _uiState.update {
-                        it.copy(
-                            postReactionsState = PostReactionsUiState.Result(mapped)
-                        )
-                    }
-                },
-                onFailure = {
-                    _uiState.update {
-                        it.copy(
-                            postReactionsState = PostReactionsUiState.Result(emptyList())
-                        )
-                    }
+                        }.getOrDefault(emptyList())
+                _uiState.update {
+                    it.copy(
+                        postReactionsState = PostReactionsUiState.Result(mapped)
+                    )
                 }
-            )
+            }, onFailure = {
+                _uiState.update {
+                    it.copy(
+                        postReactionsState = PostReactionsUiState.Result(emptyList())
+                    )
+                }
+            })
         }
     }
 

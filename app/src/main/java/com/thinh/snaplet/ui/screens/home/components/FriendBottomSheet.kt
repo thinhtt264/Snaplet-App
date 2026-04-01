@@ -84,9 +84,9 @@ fun FriendBottomSheet(
     onAddFriend: (String) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val isReady by remember(friendSheetState.shareApps, friendSheetState.friendList) {
+    val isReady by remember(friendSheetState.shareApps, friendSheetState.isLoadingFriendList) {
         derivedStateOf {
-            friendSheetState.shareApps.isNotEmpty() && friendSheetState.friendList.isNotEmpty()
+            friendSheetState.shareApps.isNotEmpty() && !friendSheetState.isLoadingFriendList
         }
     }
 
