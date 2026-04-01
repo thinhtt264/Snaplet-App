@@ -34,7 +34,7 @@ interface PostRepository {
         lastSeenPostCreatedAt: Date,
     ): ApiResult<Unit>
 
-    fun observeQuickChatRecentEmojis(): Flow<List<String>>
+    suspend fun getQuickChatRecentEmojis(): List<String>
 
     suspend fun recordQuickChatEmojiUsage(emoji: String)
 }

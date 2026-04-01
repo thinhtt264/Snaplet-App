@@ -8,17 +8,19 @@ import kotlin.random.Random
 object EmojiParticleEngine {
 
     private const val ACCELERATION = 1.03f
-    private const val PARTICLES_PER_BATCH = 16
+    private const val PARTICLES_PER_BATCH = 18
     private const val BATCH_VARIANCE = 2
-    private const val SIZE_MIN = 84f
+    private const val SIZE_MIN = 92f
     private const val SIZE_MAX = 160f
     private const val FADE_OUT_HEIGHT_FRAC_MIN = 0.7f
     private const val FADE_OUT_HEIGHT_FRAC_MAX = 0.97f
     private const val FADE_ZONE_HEIGHT_FRAC_MIN = 0.05f
     private const val FADE_ZONE_HEIGHT_FRAC_MAX = 0.08f
-    private const val BASE_SPEED_MIN = 4f
-    private const val BASE_SPEED_MAX = 10f
+    private const val BASE_SPEED_MIN = 2f
+    private const val BASE_SPEED_MAX = 6f
     private const val LARGE_GLYPH_SIZE_THRESHOLD_PX = SIZE_MAX + 1f
+
+    private const val SPAWN_DEPTH_STAGGER_FRAC_MAX = 0.10f
 
     private fun fadeOutYForFraction(
         canvasHeight: Float,
@@ -36,22 +38,8 @@ object EmojiParticleEngine {
             else canvasHeight * fadeOutHeightFraction
     }
 
-    private const val EMIT_STAGGER_FRAMES_MAX = 45
-    private const val EMIT_STAGGER_JITTER_FRAMES = 2
-
     private var nextId = 0L
     private var nextBatchId = 0L
-
-    private fun staggeredEmitDelays(count: Int): List<Int> {
-        if (count <= 0) return emptyList()
-        val span = (count - 1).coerceAtLeast(1)
-        val step = EMIT_STAGGER_FRAMES_MAX.toFloat() / span
-        return List(count) { i ->
-            val base = (i * step).toInt()
-            val jitter = Random.nextInt(-EMIT_STAGGER_JITTER_FRAMES, EMIT_STAGGER_JITTER_FRAMES + 1)
-            (base + jitter).coerceIn(0, EMIT_STAGGER_FRAMES_MAX)
-        }.shuffled()
-    }
 
     /** Evenly spaced 0…1 anchors (fixed order: balanced across drawable width per particle size). */
     private fun spreadHorizontalAnchors(count: Int): List<Float> {
@@ -70,7 +58,6 @@ object EmojiParticleEngine {
     ): List<EmojiParticle> {
         val count = PARTICLES_PER_BATCH + Random.nextInt(-BATCH_VARIANCE, BATCH_VARIANCE + 1)
         val batchId = nextBatchId++
-        val emitDelays = staggeredEmitDelays(count)
         val horizontalAnchors = spreadHorizontalAnchors(count)
 
         return List(count) {
@@ -79,9 +66,10 @@ object EmojiParticleEngine {
             val maxX = (canvasWidth - horizontalPaddingPx - size).coerceAtLeast(minX)
             val spanX = maxX - minX
             val x = minX + horizontalAnchors[it] * spanX
+            val depthStagger = Random.nextFloat() * SPAWN_DEPTH_STAGGER_FRAC_MAX * canvasHeight
             val startY = when (direction) {
-                FloatDirection.UP -> canvasHeight + size
-                FloatDirection.DOWN -> -size
+                FloatDirection.UP -> canvasHeight + size + depthStagger
+                FloatDirection.DOWN -> -size - depthStagger
             }
             EmojiParticle(
                 id = nextId++,
@@ -93,7 +81,7 @@ object EmojiParticleEngine {
                 speed = Random.nextFloat() * (BASE_SPEED_MAX - BASE_SPEED_MIN) + BASE_SPEED_MIN,
                 alpha = 0f,
                 direction = direction,
-                emitDelayFramesRemaining = emitDelays[it],
+                spawnY = startY,
                 fadeOutHeightFraction = Random.nextFloat() *
                         (FADE_OUT_HEIGHT_FRAC_MAX - FADE_OUT_HEIGHT_FRAC_MIN) + FADE_OUT_HEIGHT_FRAC_MIN,
                 fadeZoneHeightFraction = Random.nextFloat() *
@@ -107,15 +95,8 @@ object EmojiParticleEngine {
         canvasHeight: Float,
     ): List<EmojiParticle> {
         return particles.mapNotNull { p ->
-            if (p.emitDelayFramesRemaining > 0) {
-                return@mapNotNull p.copy(
-                    emitDelayFramesRemaining = p.emitDelayFramesRemaining - 1,
-                    alpha = 0f,
-                )
-            }
-
             val frame = p.frameCount + 1
-            val currentSpeed = p.speed * ACCELERATION.pow(frame)
+            val currentSpeed = p.speed * ACCELERATION.pow(p.frameCount.toFloat())
 
             val newY = when (p.direction) {
                 FloatDirection.UP -> p.y - currentSpeed
@@ -137,6 +118,7 @@ object EmojiParticleEngine {
                 canvasHeight,
                 p.direction,
                 p.size,
+                p.spawnY,
                 fadeOutY,
                 fadeZonePx,
             )
@@ -155,19 +137,20 @@ object EmojiParticleEngine {
         canvasHeight: Float,
         direction: FloatDirection,
         size: Float,
+        spawnY: Float,
         fadeOutY: Float,
         fadeZonePx: Float,
     ): Float {
         val fadeInAlpha = when (direction) {
             FloatDirection.UP -> {
-                val spawnEdge = canvasHeight + size
+                val spawnEdge = spawnY
                 val fadeInEnd = spawnEdge - fadeZonePx
                 if (y >= fadeInEnd) ((spawnEdge - y) / fadeZonePx).coerceIn(0f, 1f)
                 else 1f
             }
 
             FloatDirection.DOWN -> {
-                val spawnEdge = -size
+                val spawnEdge = spawnY
                 val fadeInEnd = spawnEdge + fadeZonePx
                 if (y <= fadeInEnd) ((y - spawnEdge) / fadeZonePx).coerceIn(0f, 1f)
                 else 1f

@@ -131,12 +131,8 @@ class HomeViewModel @Inject constructor(
         _uiState,
         userRepository.observeMyUserProfile().map { it?.avatarUrls?.forThumbnail().orEmpty() }
             .distinctUntilChanged(),
-        postRepository.observeQuickChatRecentEmojis(),
-    ) { state, profileAvatarUrl, recentEmojis ->
-        state.copy(
-            profileAvatarUrl = profileAvatarUrl,
-            quickChatEmojiSlots = QuickChatEmojiSlots.mergeForDisplay(recentEmojis),
-        )
+    ) { state, profileAvatarUrl ->
+        state.copy(profileAvatarUrl = profileAvatarUrl)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -179,6 +175,20 @@ class HomeViewModel @Inject constructor(
         loadRelationshipCounts()
         loadUnreadPostsCount()
         observeUnreadPostsUpdates()
+        loadQuickChatEmojiSlots()
+    }
+
+    private fun loadQuickChatEmojiSlots() {
+        viewModelScope.launch {
+            refreshQuickChatEmojiSlots()
+        }
+    }
+
+    private suspend fun refreshQuickChatEmojiSlots() {
+        val recent = postRepository.getQuickChatRecentEmojis()
+        _uiState.update {
+            it.copy(quickChatEmojiSlots = QuickChatEmojiSlots.mergeForDisplay(recent))
+        }
     }
 
     private fun loadUnreadPostsCount() {
@@ -589,16 +599,14 @@ class HomeViewModel @Inject constructor(
 
     fun onEmojiReaction(emoji: String) {
         emojiFloatController.emit(emoji)
-        viewModelScope.launch {
-            postRepository.recordQuickChatEmojiUsage(emoji)
-        }
 
         val postIdToReact = viewedPostId ?: return
 
         reactToPostJob?.cancel()
         reactToPostJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
-
+            
+            postRepository.recordQuickChatEmojiUsage(emoji)
             postRepository
                 .reactToPost(postId = postIdToReact, reactionIcon = emoji)
                 .onFailure { error ->

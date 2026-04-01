@@ -176,10 +176,9 @@ class DataStoreManager @Inject constructor(
         }
     }
 
-    fun quickChatRecentEmojisFlow(): Flow<List<String>> {
-        return dataStore.data.map { preferences ->
-            parseQuickChatRecentEmojis(preferences[quickChatRecentEmojisKey])
-        }
+    suspend fun getQuickChatRecentEmojis(): List<String> {
+        val preferences = dataStore.data.first()
+        return parseQuickChatRecentEmojis(preferences[quickChatRecentEmojisKey])
     }
 
     suspend fun recordQuickChatEmojiUsage(emoji: String) {

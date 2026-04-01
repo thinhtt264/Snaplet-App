@@ -100,8 +100,8 @@ class PostRepositoryImpl @Inject constructor(
         )
     }
 
-    override fun observeQuickChatRecentEmojis(): Flow<List<String>> {
-        return dataStoreManager.quickChatRecentEmojisFlow()
+    override suspend fun getQuickChatRecentEmojis(): List<String> {
+        return dataStoreManager.getQuickChatRecentEmojis()
     }
 
     override suspend fun recordQuickChatEmojiUsage(emoji: String) {
