@@ -71,6 +71,11 @@
     <string name="friend_sheet_find_from_apps">Tìm bạn bè từ các ứng dụng khác</string>
     <string name="friend_sheet_other">Khác</string>
     <string name="friend_request_section_title">Yêu cầu kết bạn</string>
+    <string name="friend_sheet_empty_title">Kết nối của bạn bắt đầu từ đây</string>
+    <string name="friend_sheet_empty_message">Thêm bạn bè để chia sẻ khoảnh khắc. Chỉ bạn bè mới xem được snap của bạn.</string>
+    <string name="friend_sheet_share_profile_title">Chia sẻ liên kết hồ sơ của bạn</string>
+    <string name="friend_sheet_share_profile_link">snaplet.app/@yourname</string>
+    <string name="friend_sheet_copy_cta">Sao chép</string>
     <string name="accept">Chấp nhận</string>
     <string name="remove_friend_confirm_title">Xóa %1$s khỏi Snaplet của bạn?</string>
     <string name="remove_friend_confirm_message">Các bạn sẽ không còn có thể gửi ảnh cho nhau trên Snaplet. Lịch sử của bạn sẽ có thể được phục hồi nếu các bạn thêm lại nhau.</string>

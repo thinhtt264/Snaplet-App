@@ -639,7 +639,10 @@ class HomeViewModel @Inject constructor(
         reactToPostJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
 
-            postRepository.recordQuickChatEmojiUsage(emoji)
+            runCatching { postRepository.recordQuickChatEmojiUsage(emoji) }
+                .onFailure { error ->
+                    Logger.e("Failed to persist quick chat emoji usage: ${error.message}")
+                }
             postRepository.reactToPost(postId = postIdToReact, reactionIcon = emoji)
                 .onFailure { error ->
                     Logger.e("Failed to react to post: ${error.message}")

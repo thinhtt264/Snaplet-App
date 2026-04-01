@@ -2,6 +2,7 @@ package com.thinh.snaplet.ui.screens.home.components
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,9 +19,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.PersonAddAlt1
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.ButtonDefaults
@@ -41,10 +46,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -84,7 +91,10 @@ fun FriendBottomSheet(
     onAddFriend: (String) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val isReady by remember(friendSheetState.shareApps, friendSheetState.loading.initialFriendList) {
+    val isReady by remember(
+        friendSheetState.shareApps,
+        friendSheetState.loading.initialFriendList
+    ) {
         derivedStateOf {
             friendSheetState.shareApps.isNotEmpty() && !friendSheetState.loading.initialFriendList
         }
@@ -114,6 +124,8 @@ fun FriendBottomSheet(
 
         val focusManager = LocalFocusManager.current
         val current = friendSheetState.relationshipCounts?.acceptedFriendCount ?: 0
+        val isEmptyFriendAndPending =
+            friendSheetState.friendList.isEmpty() && friendSheetState.pendingList.isEmpty()
 
         LazyColumn(
             modifier = Modifier
@@ -146,44 +158,14 @@ fun FriendBottomSheet(
                     )
                 }
             }
-            item(key = "search") {
-                BaseTextField(
-                    value = searchQuery,
-                    onValueChange = onSearchQueryChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        unfocusedIndicatorColor = Color.Transparent
-                    ),
-                    placeholder = {
-                        BaseText(
-                            text = stringResource(R.string.friend_sheet_add_placeholder),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            typography = MaterialTheme.typography.bodyMedium
-                        )
-                    },
-                    leadingIcon = {
-                        Crossfade(
-                            targetState = friendSheetState.isSearchingUsers,
-                            animationSpec = tween(durationMillis = MotionTokens.Emphasized)
-                        ) { isSearching ->
-                            if (isSearching) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Filled.Search,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onBackground,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                    })
+            if (!isEmptyFriendAndPending || friendSheetState.searchResults.isNotEmpty()) {
+                item(key = "search") {
+                    FriendSearchField(
+                        query = searchQuery,
+                        onQueryChange = onSearchQueryChange,
+                        isSearching = friendSheetState.isSearchingUsers
+                    )
+                }
             }
 
             if (friendSheetState.searchResults.isNotEmpty()) {
@@ -282,6 +264,28 @@ fun FriendBottomSheet(
                         }
                     }
                 }
+                if (isEmptyFriendAndPending) {
+                    item(key = "empty_state_card") {
+                        EmptyFriendStateCard(
+                            searchQuery = searchQuery,
+                            onSearchQueryChange = onSearchQueryChange,
+                            isSearchingUsers = friendSheetState.isSearchingUsers,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 20.dp)
+                        )
+                    }
+                }
+                if (isEmptyFriendAndPending) {
+                    item(key = "share_link_card") {
+                        ShareProfileLinkCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp),
+                            onCopyClick = onShareOther
+                        )
+                    }
+                }
                 if (friendSheetState.pendingList.isNotEmpty()) {
                     item(key = "pending_section_title") {
                         BaseText(
@@ -303,7 +307,9 @@ fun FriendBottomSheet(
                             firstName = friend.firstName,
                             relationshipStatus = friend.status,
                             avatarUrls = friend.avatarUrls,
-                            isRemovingFriend = friendSheetState.loading.removingRelationshipIds.contains(friend.id),
+                            isRemovingFriend = friendSheetState.loading.removingRelationshipIds.contains(
+                                friend.id
+                            ),
                         )
                     }
                 }
@@ -326,7 +332,9 @@ fun FriendBottomSheet(
                             firstName = friend.firstName,
                             relationshipStatus = friend.status,
                             avatarUrls = friend.avatarUrls,
-                            isRemovingFriend = friendSheetState.loading.removingRelationshipIds.contains(friend.id),
+                            isRemovingFriend = friendSheetState.loading.removingRelationshipIds.contains(
+                                friend.id
+                            ),
                         )
                     }
                 }
@@ -336,6 +344,156 @@ fun FriendBottomSheet(
                 Box(modifier = Modifier.padding(bottom = 24.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun EmptyFriendStateCard(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    isSearchingUsers: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(20.dp)
+            )
+            .padding(horizontal = 20.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.PersonAddAlt1,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(28.dp)
+        )
+        BaseText(
+            text = stringResource(R.string.friend_sheet_empty_title),
+            color = MaterialTheme.colorScheme.onBackground,
+            typography = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(top = 12.dp),
+            textAlign = TextAlign.Center
+        )
+        BaseText(
+            text = stringResource(R.string.friend_sheet_empty_message),
+            color = MaterialTheme.colorScheme.onSurface,
+            typography = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 8.dp),
+            textAlign = TextAlign.Center
+        )
+        FriendSearchField(
+            query = searchQuery,
+            onQueryChange = onSearchQueryChange,
+            isSearching = isSearchingUsers,
+            modifier = Modifier
+                .padding(top = 16.dp)
+                .clip(CircleShape)
+        )
+    }
+}
+
+@Composable
+private fun FriendSearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    isSearching: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    BaseTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = modifier.fillMaxWidth(),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedIndicatorColor = Color.Transparent
+        ),
+        placeholder = {
+            BaseText(
+                text = stringResource(R.string.friend_sheet_add_placeholder),
+                color = MaterialTheme.colorScheme.onSurface,
+                typography = MaterialTheme.typography.bodyMedium
+            )
+        },
+        leadingIcon = {
+            Crossfade(
+                targetState = isSearching,
+                animationSpec = tween(durationMillis = MotionTokens.Emphasized)
+            ) { searching ->
+                if (searching) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun ShareProfileLinkCard(
+    onCopyClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AppIconButton(
+            modifier = Modifier.size(36.dp),
+            icon = IconSpec.Vector(
+                Icons.Outlined.Link,
+                tint = MaterialTheme.colorScheme.primary
+            ),
+            onClick = onCopyClick,
+            containerColor = MaterialTheme.colorScheme.surface,
+            iconSize = 20.dp
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, end = 8.dp)
+        ) {
+            BaseText(
+                text = stringResource(R.string.friend_sheet_share_profile_title),
+                color = MaterialTheme.colorScheme.onBackground,
+                typography = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            BaseText(
+                text = stringResource(R.string.friend_sheet_share_profile_link),
+                color = MaterialTheme.colorScheme.onSurface,
+                typography = MaterialTheme.typography.bodySmall,
+            )
+        }
+        PrimaryButton(
+            onClick = onCopyClick,
+            title = stringResource(R.string.friend_sheet_copy_cta),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            typography = MaterialTheme.typography.titleSmall,
+            titleColor = Color.Black,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = Color.Black
+            )
+        )
     }
 }
 
