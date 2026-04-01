@@ -269,9 +269,10 @@ private fun HomeScreen(
     val userScrollEnabled = !uiState.cameraState.isEditMode
     val isDownloading = uiState.isDownloading
 
-    val quickChatBar = remember(chatMessage, onEmojiReaction) {
+    val quickChatBar = remember(chatMessage, uiState.quickChatEmojiSlots, onEmojiReaction) {
         QuickChatBarModel(
             messageText = chatMessage,
+            quickEmojiSlots = uiState.quickChatEmojiSlots,
             onMessageChange = { chatMessage = it },
             onSendMessage = {
                 /* TODO: send chat message */

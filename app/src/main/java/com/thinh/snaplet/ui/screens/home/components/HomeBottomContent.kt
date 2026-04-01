@@ -15,6 +15,7 @@ import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
 @Stable
 data class QuickChatBarModel(
     val messageText: String,
+    val quickEmojiSlots: List<String>,
     val onMessageChange: (String) -> Unit,
     val onSendMessage: () -> Unit,
     val onEmojiSelected: (String) -> Unit,
@@ -56,6 +57,7 @@ fun HomeBottomContent(
         } else {
             QuickChatBar(
                 messageText = quickChatBar.messageText,
+                quickEmojiSlots = quickChatBar.quickEmojiSlots,
                 onMessageChange = quickChatBar.onMessageChange,
                 onSendMessage = quickChatBar.onSendMessage,
                 onEmojiSelected = quickChatBar.onEmojiSelected,

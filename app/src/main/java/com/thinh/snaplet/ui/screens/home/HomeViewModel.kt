@@ -131,8 +131,12 @@ class HomeViewModel @Inject constructor(
         _uiState,
         userRepository.observeMyUserProfile().map { it?.avatarUrls?.forThumbnail().orEmpty() }
             .distinctUntilChanged(),
-    ) { state, profileAvatarUrl ->
-        state.copy(profileAvatarUrl = profileAvatarUrl)
+        postRepository.observeQuickChatRecentEmojis(),
+    ) { state, profileAvatarUrl, recentEmojis ->
+        state.copy(
+            profileAvatarUrl = profileAvatarUrl,
+            quickChatEmojiSlots = QuickChatEmojiSlots.mergeForDisplay(recentEmojis),
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -585,6 +589,9 @@ class HomeViewModel @Inject constructor(
 
     fun onEmojiReaction(emoji: String) {
         emojiFloatController.emit(emoji)
+        viewModelScope.launch {
+            postRepository.recordQuickChatEmojiUsage(emoji)
+        }
 
         val postIdToReact = viewedPostId ?: return
 

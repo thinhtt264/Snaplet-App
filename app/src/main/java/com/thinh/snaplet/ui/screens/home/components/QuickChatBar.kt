@@ -52,9 +52,9 @@ import com.thinh.snaplet.data.model.emoji.EmojiEntry
 import com.thinh.snaplet.data.model.emoji.EmojiLoader
 import com.thinh.snaplet.data.model.emoji.EmojiTab
 import com.thinh.snaplet.ui.components.BaseText
+import com.thinh.snaplet.ui.screens.home.QuickChatEmojiSlots
 import pressScaleClickable
 
-private val QUICK_EMOJIS = listOf("❤️", "🔥", "😍")
 private const val EMOJI_GRID_COLUMNS = 8
 private val EMOJI_GRID_HEIGHT = 300.dp
 
@@ -62,6 +62,7 @@ private val EMOJI_GRID_HEIGHT = 300.dp
 fun QuickChatBar(
     modifier: Modifier = Modifier,
     messageText: String,
+    quickEmojiSlots: List<String> = QuickChatEmojiSlots.mergeForDisplay(emptyList()),
     onMessageChange: (String) -> Unit,
     onSendMessage: () -> Unit,
     onEmojiSelected: (String) -> Unit,
@@ -91,7 +92,7 @@ fun QuickChatBar(
                 modifier = Modifier.weight(1f)
             )
 
-            QUICK_EMOJIS.forEach { emoji ->
+            quickEmojiSlots.forEach { emoji ->
                 EmojiButton(
                     emoji = emoji,
                     onClick = { onEmojiSelected(emoji) }
@@ -255,6 +256,7 @@ private fun SearchBar(
 
     BasicTextField(
         value = query,
+        enabled = false,
         onValueChange = onQueryChange,
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))

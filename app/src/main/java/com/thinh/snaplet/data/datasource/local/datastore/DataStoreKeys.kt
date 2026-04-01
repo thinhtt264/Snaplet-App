@@ -14,5 +14,9 @@ object DataStoreKeys {
     object DeviceKeys {
         const val FINGERPRINT = "device_fingerprint"
     }
+
+    object QuickChatKeys {
+        const val RECENT_EMOJIS = "quick_chat_recent_emojis"
+    }
 }
 

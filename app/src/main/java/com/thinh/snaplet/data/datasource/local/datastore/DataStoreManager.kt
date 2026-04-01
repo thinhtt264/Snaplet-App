@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.google.gson.reflect.TypeToken
 import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.GsonHolder.gson
@@ -20,12 +21,18 @@ import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "snaplet_preferences")
 
+private const val QUICK_CHAT_RECENT_LIMIT = 3
+
 @Singleton
 class DataStoreManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
 
     private val dataStore = context.dataStore
+
+    private val stringListType = object : TypeToken<List<String>>() {}.type
+    private val quickChatRecentEmojisKey =
+        stringPreferencesKey(DataStoreKeys.QuickChatKeys.RECENT_EMOJIS)
 
     private val accessTokenKey = stringPreferencesKey(DataStoreKeys.SessionKeys.ACCESS_TOKEN)
     private val refreshTokenKey = stringPreferencesKey(DataStoreKeys.SessionKeys.REFRESH_TOKEN)
@@ -167,6 +174,29 @@ class DataStoreManager @Inject constructor(
         dataStore.edit { preferences ->
             preferences.remove(fingerprintKey)
         }
+    }
+
+    fun quickChatRecentEmojisFlow(): Flow<List<String>> {
+        return dataStore.data.map { preferences ->
+            parseQuickChatRecentEmojis(preferences[quickChatRecentEmojisKey])
+        }
+    }
+
+    suspend fun recordQuickChatEmojiUsage(emoji: String) {
+        val preferences = dataStore.data.first()
+        val current = parseQuickChatRecentEmojis(preferences[quickChatRecentEmojisKey])
+        val updated = listOf(emoji) + current.filter { it != emoji }
+        val trimmed = updated.take(QUICK_CHAT_RECENT_LIMIT)
+        dataStore.edit { prefs ->
+            prefs[quickChatRecentEmojisKey] = gson.toJson(trimmed)
+        }
+    }
+
+    private fun parseQuickChatRecentEmojis(json: String?): List<String> {
+        if (json.isNullOrBlank()) return emptyList()
+        return runCatching {
+            gson.fromJson<List<String>>(json, stringListType) ?: emptyList()
+        }.getOrElse { emptyList() }.take(QUICK_CHAT_RECENT_LIMIT)
     }
 }
 

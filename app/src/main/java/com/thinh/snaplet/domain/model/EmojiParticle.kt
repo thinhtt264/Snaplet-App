@@ -11,6 +11,9 @@ data class EmojiParticle(
     val alpha: Float,
     val direction: FloatDirection,
     val frameCount: Int = 0,
+    val emitDelayFramesRemaining: Int = 0,
+    val fadeOutHeightFraction: Float,
+    val fadeZoneHeightFraction: Float,
 )
 
 enum class FloatDirection { UP, DOWN }

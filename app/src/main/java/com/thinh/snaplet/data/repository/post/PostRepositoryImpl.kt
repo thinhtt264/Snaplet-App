@@ -1,5 +1,6 @@
 package com.thinh.snaplet.data.repository.post
 
+import com.thinh.snaplet.data.datasource.local.datastore.DataStoreManager
 import com.thinh.snaplet.data.datasource.remote.ApiService
 import com.thinh.snaplet.data.model.post.MarkPostsSeenRequest
 import com.thinh.snaplet.data.model.post.NewPostUpdate
@@ -27,6 +28,7 @@ import javax.inject.Singleton
 class PostRepositoryImpl @Inject constructor(
     private val socketManager: SocketManager,
     private val apiService: ApiService,
+    private val dataStoreManager: DataStoreManager,
 ) : PostRepository {
 
     override val newPostMessages: Flow<NewPostUpdate> =
@@ -96,5 +98,13 @@ class PostRepositoryImpl @Inject constructor(
         return safeApiCall(
             apiCall = { apiService.markPostsSeen(body) }
         )
+    }
+
+    override fun observeQuickChatRecentEmojis(): Flow<List<String>> {
+        return dataStoreManager.quickChatRecentEmojisFlow()
+    }
+
+    override suspend fun recordQuickChatEmojiUsage(emoji: String) {
+        dataStoreManager.recordQuickChatEmojiUsage(emoji)
     }
 }
