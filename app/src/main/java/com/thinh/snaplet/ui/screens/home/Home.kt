@@ -363,7 +363,7 @@ private fun HomeScreen(
             onFriendsClick = { showFriendSheet = true },
             onChatClick = { /* TODO */ },
             relationshipCounts = uiState.friendSheetState.relationshipCounts,
-            avatarUrl = uiState.profileAvatarUrl.orEmpty(),
+            avatarUrl = uiState.userProfile?.avatarUrls?.forThumbnail().orEmpty(),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
@@ -391,7 +391,8 @@ private fun HomeScreen(
                 },
                 onFriendRemove = viewModel::requestRemoveFriend,
                 onPendingAccept = viewModel::acceptFriendRequest,
-                onAddFriend = viewModel::sendFriendRequest
+                onAddFriend = viewModel::sendFriendRequest,
+                username = uiState.userProfile?.userName.orEmpty()
             )
         }
 

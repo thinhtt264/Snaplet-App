@@ -129,10 +129,12 @@ class HomeViewModel @Inject constructor(
 
     val uiState: StateFlow<HomeUiState> = combine(
         _uiState,
-        userRepository.observeMyUserProfile().map { it?.avatarUrls?.forThumbnail().orEmpty() }
+        userRepository.observeMyUserProfile()
             .distinctUntilChanged(),
-    ) { state, profileAvatarUrl ->
-        state.copy(profileAvatarUrl = profileAvatarUrl)
+    ) { state, profileUi ->
+        state.copy(
+            userProfile = profileUi
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),

@@ -94,6 +94,7 @@ fun FriendBottomSheet(
     onFriendRemove: (RelationshipWithUser) -> Unit,
     onPendingAccept: (RelationshipWithUser) -> Unit,
     onAddFriend: (String) -> Unit,
+    username: String = "",
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val isReady by remember(
@@ -329,7 +330,8 @@ fun FriendBottomSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 16.dp),
-                            onCopyClick = onShareOther
+                            onCopyClick = onShareOther,
+                            username = username
                         )
                     }
                 }
@@ -519,6 +521,7 @@ private fun FriendSearchField(
 @Composable
 private fun ShareProfileLinkCard(
     onCopyClick: () -> Unit,
+    username: String,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -548,11 +551,11 @@ private fun ShareProfileLinkCard(
             BaseText(
                 text = stringResource(R.string.friend_sheet_share_profile_title),
                 color = MaterialTheme.colorScheme.onBackground,
-                typography = MaterialTheme.typography.bodyLarge,
+                typography = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             BaseText(
-                text = stringResource(R.string.friend_sheet_share_profile_link),
+                text = "snaplet.cam/$username",
                 color = MaterialTheme.colorScheme.onSurface,
                 typography = MaterialTheme.typography.bodySmall,
             )

@@ -73,8 +73,7 @@
     <string name="friend_request_section_title">Yêu cầu kết bạn</string>
     <string name="friend_sheet_empty_title">Kết nối của bạn bắt đầu từ đây</string>
     <string name="friend_sheet_empty_message">Thêm bạn bè để chia sẻ khoảnh khắc. Chỉ bạn bè mới xem được snap của bạn.</string>
-    <string name="friend_sheet_share_profile_title">Chia sẻ liên kết hồ sơ của bạn</string>
-    <string name="friend_sheet_share_profile_link">snaplet.app/@yourname</string>
+    <string name="friend_sheet_share_profile_title">Chia sẻ hồ sơ của bạn</string>
     <string name="friend_sheet_copy_cta">Sao chép</string>
     <string name="accept">Chấp nhận</string>
     <string name="remove_friend_confirm_title">Xóa %1$s khỏi Snaplet của bạn?</string>

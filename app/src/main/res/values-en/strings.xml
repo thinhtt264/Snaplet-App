@@ -67,7 +67,6 @@
     <string name="friend_sheet_empty_title">Your connection starts here</string>
     <string name="friend_sheet_empty_message">Add friends to share moments with. Only friends can see your snaps.</string>
     <string name="friend_sheet_share_profile_title">Share your profile link</string>
-    <string name="friend_sheet_share_profile_link">snaplet.app/@yourname</string>
     <string name="friend_sheet_copy_cta">Copy</string>
     <string name="accept">Accept</string>
     <string name="blocked">Blocked</string>

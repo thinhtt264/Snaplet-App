@@ -5,6 +5,7 @@ import androidx.camera.core.CameraSelector
 import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.domain.model.FriendSearchActionItem
 import com.thinh.snaplet.domain.model.ReactionUserUi
 import com.thinh.snaplet.domain.model.RelationshipAction
@@ -44,7 +45,7 @@ data class HomeUiState(
 
     val shouldScrollToFirstPost: Boolean = false,
 
-    val profileAvatarUrl: String? = null,
+    val userProfile: UserProfile? = null,
 
     val postReactionsState: PostReactionsUiState = PostReactionsUiState.Loading,
     val showReactionsSheet: Boolean = false,
