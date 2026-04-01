@@ -3,6 +3,7 @@ package com.thinh.snaplet.ui.screens.home.components
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,6 +48,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
@@ -72,6 +76,7 @@ import com.thinh.snaplet.ui.screens.home.FriendBottomSheetState
 import com.thinh.snaplet.ui.theme.MotionTokens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import thenIf
 
 private const val MAX_FRIENDS_DISPLAY = 30
 private val ICON_BUTTON_SIZE = 52.dp
@@ -126,6 +131,41 @@ fun FriendBottomSheet(
         val current = friendSheetState.relationshipCounts?.acceptedFriendCount ?: 0
         val isEmptyFriendAndPending =
             friendSheetState.friendList.isEmpty() && friendSheetState.pendingList.isEmpty()
+        var isSearchingFromEmptyState by remember { mutableStateOf(false) }
+        var isTopSearchFocused by remember { mutableStateOf(false) }
+        var hasTopSearchFocusedOnce by remember { mutableStateOf(false) }
+        val topSearchFocusRequester = remember { FocusRequester() }
+        val shouldShowTopSearch =
+            !isEmptyFriendAndPending || friendSheetState.searchResults.isNotEmpty() || isSearchingFromEmptyState
+
+        LaunchedEffect(isSearchingFromEmptyState) {
+            if (isSearchingFromEmptyState) {
+                topSearchFocusRequester.requestFocus()
+            } else {
+                isTopSearchFocused = false
+                hasTopSearchFocusedOnce = false
+            }
+        }
+
+        LaunchedEffect(
+            isSearchingFromEmptyState,
+            isTopSearchFocused,
+            hasTopSearchFocusedOnce,
+            searchQuery,
+            friendSheetState.searchResults,
+            isEmptyFriendAndPending
+        ) {
+            if (!isSearchingFromEmptyState) return@LaunchedEffect
+            val isUnfocused = hasTopSearchFocusedOnce && !isTopSearchFocused
+            val isQueryEmptyAfterFocus = hasTopSearchFocusedOnce && searchQuery.isBlank()
+            val shouldBackToEmpty =
+                (isUnfocused || (isQueryEmptyAfterFocus && !isTopSearchFocused)) &&
+                        (friendSheetState.searchResults.isEmpty() || isEmptyFriendAndPending)
+
+            if (shouldBackToEmpty) {
+                isSearchingFromEmptyState = false
+            }
+        }
 
         LazyColumn(
             modifier = Modifier
@@ -158,12 +198,17 @@ fun FriendBottomSheet(
                     )
                 }
             }
-            if (!isEmptyFriendAndPending || friendSheetState.searchResults.isNotEmpty()) {
+            if (shouldShowTopSearch) {
                 item(key = "search") {
                     FriendSearchField(
                         query = searchQuery,
                         onQueryChange = onSearchQueryChange,
-                        isSearching = friendSheetState.isSearchingUsers
+                        isSearching = friendSheetState.isSearchingUsers,
+                        focusRequester = topSearchFocusRequester,
+                        onFocusChanged = { focused ->
+                            isTopSearchFocused = focused
+                            if (focused) hasTopSearchFocusedOnce = true
+                        }
                     )
                 }
             }
@@ -264,19 +309,21 @@ fun FriendBottomSheet(
                         }
                     }
                 }
-                if (isEmptyFriendAndPending) {
+                if (isEmptyFriendAndPending && !isSearchingFromEmptyState) {
                     item(key = "empty_state_card") {
                         EmptyFriendStateCard(
                             searchQuery = searchQuery,
                             onSearchQueryChange = onSearchQueryChange,
                             isSearchingUsers = friendSheetState.isSearchingUsers,
+                            onActivateSearch = { isSearchingFromEmptyState = true },
+                            onShareOther = onShareOther,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 20.dp)
                         )
                     }
                 }
-                if (isEmptyFriendAndPending) {
+                if (isEmptyFriendAndPending && !shouldShowTopSearch) {
                     item(key = "share_link_card") {
                         ShareProfileLinkCard(
                             modifier = Modifier
@@ -349,10 +396,12 @@ fun FriendBottomSheet(
 
 @Composable
 private fun EmptyFriendStateCard(
+    modifier: Modifier = Modifier,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     isSearchingUsers: Boolean,
-    modifier: Modifier = Modifier,
+    onActivateSearch: () -> Unit,
+    onShareOther: () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -388,6 +437,9 @@ private fun EmptyFriendStateCard(
             query = searchQuery,
             onQueryChange = onSearchQueryChange,
             isSearching = isSearchingUsers,
+            onFocusChanged = { focused ->
+                if (focused) onActivateSearch()
+            },
             modifier = Modifier
                 .padding(top = 16.dp)
                 .clip(CircleShape)
@@ -397,15 +449,22 @@ private fun EmptyFriendStateCard(
 
 @Composable
 private fun FriendSearchField(
+    modifier: Modifier = Modifier,
     query: String,
     onQueryChange: (String) -> Unit,
     isSearching: Boolean,
-    modifier: Modifier = Modifier,
+    onFocusChanged: (Boolean) -> Unit = {},
+    focusRequester: FocusRequester? = null
 ) {
+    val focusManager = LocalFocusManager.current
+
     BaseTextField(
         value = query,
         onValueChange = onQueryChange,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .thenIf(focusRequester != null) { focusRequester(focusRequester!!) }
+            .onFocusChanged { onFocusChanged(it.isFocused) },
         colors = TextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -417,6 +476,21 @@ private fun FriendSearchField(
                 color = MaterialTheme.colorScheme.onSurface,
                 typography = MaterialTheme.typography.bodyMedium
             )
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable {
+                            onQueryChange("")
+                            focusManager.clearFocus(force = true)
+                        }
+                )
+            }
         },
         leadingIcon = {
             Crossfade(

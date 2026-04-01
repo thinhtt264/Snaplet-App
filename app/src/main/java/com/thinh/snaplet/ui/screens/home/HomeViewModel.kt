@@ -403,12 +403,7 @@ class HomeViewModel @Inject constructor(
         }
 
         // Show loading immediately while waiting for debounce.
-        updateFriendSheetState {
-            it.copy(
-                isSearchingUsers = true,
-                searchResults = emptyList(),
-            )
-        }
+        updateFriendSheetState { it.copy(isSearchingUsers = true) }
 
         friendSearchJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)

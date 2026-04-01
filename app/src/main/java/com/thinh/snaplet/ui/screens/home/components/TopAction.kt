@@ -107,12 +107,14 @@ fun TopAction(
                             Spacer(modifier = Modifier.width(6.dp))
 
                             relationshipCounts?.let { counts ->
-                                BaseText(
-                                    text = counts.acceptedFriendCount.toString(),
-                                    color = Color.White,
-                                    typography = Typography.bodyMedium
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                if (counts.acceptedFriendCount > 0) {
+                                    BaseText(
+                                        text = counts.acceptedFriendCount.toString(),
+                                        color = Color.White,
+                                        typography = Typography.bodyMedium
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                }
                             }
                             BaseText(
                                 text = stringResource(R.string.friends),
