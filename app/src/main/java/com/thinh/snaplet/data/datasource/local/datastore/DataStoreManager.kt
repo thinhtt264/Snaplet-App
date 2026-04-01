@@ -20,6 +20,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "snaplet_preferences")
+private val Context.sessionDataStore: DataStore<Preferences> by preferencesDataStore(name = "snaplet_session")
 
 private const val QUICK_CHAT_RECENT_LIMIT = 3
 
@@ -29,6 +30,7 @@ class DataStoreManager @Inject constructor(
 ) {
 
     private val dataStore = context.dataStore
+    private val sessionStore = context.sessionDataStore
 
     private val stringListType = object : TypeToken<List<String>>() {}.type
     private val quickChatRecentEmojisKey =
@@ -45,7 +47,7 @@ class DataStoreManager @Inject constructor(
 
     suspend fun saveAccessToken(token: String) {
         currentAccessToken.set(token)
-        dataStore.edit { preferences ->
+        sessionStore.edit { preferences ->
             preferences[accessTokenKey] = token
         }
         Logger.d("💾 Access token saved")
@@ -65,7 +67,7 @@ class DataStoreManager @Inject constructor(
         currentAccessToken.set(accessToken)
         currentRefreshToken.set(refreshToken)
 
-        dataStore.edit { preferences ->
+        sessionStore.edit { preferences ->
             preferences[accessTokenKey] = accessToken
             preferences[refreshTokenKey] = refreshToken
         }
@@ -75,7 +77,7 @@ class DataStoreManager @Inject constructor(
         currentAccessToken.set(null)
         currentRefreshToken.set(null)
 
-        dataStore.edit { preferences ->
+        sessionStore.edit { preferences ->
             preferences.remove(accessTokenKey)
             preferences.remove(refreshTokenKey)
         }
@@ -132,7 +134,7 @@ class DataStoreManager @Inject constructor(
 
     suspend fun loadAccessToken(): String? {
         return try {
-            val preferences = dataStore.data.first()
+            val preferences = sessionStore.data.first()
             val token = preferences[accessTokenKey]
             if (token != null) {
                 currentAccessToken.set(token)
@@ -145,7 +147,7 @@ class DataStoreManager @Inject constructor(
 
     suspend fun loadRefreshToken(): String? {
         return try {
-            val preferences = dataStore.data.first()
+            val preferences = sessionStore.data.first()
             val token = preferences[refreshTokenKey]
             if (token != null) {
                 currentRefreshToken.set(token)
