@@ -69,6 +69,7 @@
     <string name="invalid_credentials">Email hoặc mật khẩu không đúng</string>
     <string name="add_caption_placeholder">Thêm một tin nhắn</string>
     <string name="friends">Bạn bè</string>
+    <string name="feed_filter_everyone">Tất cả mọi người</string>
     <string name="send_to">Gửi đến...</string>
     <string name="friend_sheet_title">Bạn bè của tôi</string>
     <string name="friend_sheet_count">%1$d / %2$d người bạn đã được bổ sung</string>

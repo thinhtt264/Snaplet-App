@@ -15,7 +15,8 @@ class GetNewsfeedUseCase @Inject constructor(
     suspend operator fun invoke(
         limit: Int = FEED_PAGE_LIMIT,
         cursor: String? = null,
+        userId: String? = null,
     ): ApiResult<PostsFeedData> {
-        return postRepository.getNewsfeed(limit = limit, cursor = cursor)
+        return postRepository.getNewsfeed(limit = limit, cursor = cursor, userId = userId)
     }
 }

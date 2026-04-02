@@ -17,12 +17,12 @@ import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
 import com.thinh.snaplet.data.model.media.RequestUploadRequest
 import com.thinh.snaplet.data.model.media.UploadRequestData
 import com.thinh.snaplet.data.model.post.CreatePostRequest
-import com.thinh.snaplet.data.model.post.ReactToPostRequest
 import com.thinh.snaplet.data.model.post.MarkPostsSeenRequest
 import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.data.model.post.PostActivity
 import com.thinh.snaplet.data.model.post.PostReactionUser
 import com.thinh.snaplet.data.model.post.PostsFeedData
+import com.thinh.snaplet.data.model.post.ReactToPostRequest
 import com.thinh.snaplet.data.model.post.ReactToPostResponse
 import com.thinh.snaplet.data.model.post.UnreadPostsCountData
 import com.thinh.snaplet.data.model.user.AvatarUploadRequest
@@ -55,7 +55,8 @@ interface ApiService {
     @GET("posts/feed")
     suspend fun getPostsFeed(
         @Query("limit") limit: Int = 10,
-        @Query("cursor") cursor: String? = null
+        @Query("cursor") cursor: String? = null,
+        @Query("userId") userId: String? = null
     ): Response<BaseResponse<PostsFeedData>>
 
     @GET("posts/feed/newer")
@@ -98,8 +99,7 @@ interface ApiService {
 
     @PATCH("relationships/{relationshipId}")
     suspend fun updateRelationship(
-        @Path("relationshipId") relationshipId: String,
-        @Body body: UpdateRelationshipRequest
+        @Path("relationshipId") relationshipId: String, @Body body: UpdateRelationshipRequest
     ): Response<BaseResponse<Relationship>>
 
     @DELETE("relationships/{relationshipId}")

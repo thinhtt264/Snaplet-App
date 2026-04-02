@@ -1,5 +1,6 @@
 package com.thinh.snaplet.ui.screens.home.components
 
+import android.os.SystemClock
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -9,13 +10,21 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -26,6 +35,7 @@ import com.thinh.snaplet.ui.common.CommonImages
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
 import com.thinh.snaplet.ui.theme.MotionTokens
+import com.thinh.snaplet.utils.ensureMinLoadingTime
 import pressScaleClickable
 
 @Composable
@@ -33,11 +43,38 @@ fun PostActivityBar(
     modifier: Modifier = Modifier,
     model: PostActivityBarModel = PostActivityBarModel(),
 ) {
-    val isClickable =
-        model.state is PostReactionsUiState.Result && model.state.reactions.isNotEmpty()
+    var displayedState by remember { mutableStateOf(model.state) }
+    var loadingStartTimeMillis by remember {
+        mutableLongStateOf(
+            if (model.state is PostReactionsUiState.Loading) SystemClock.elapsedRealtime() else 0L
+        )
+    }
+
+    // Ensure the `Loading` UI stays visible for at least the configured minimum time,
+    LaunchedEffect(model.state) {
+        val targetState = model.state
+        val currentDisplayedState = displayedState
+
+        if (targetState is PostReactionsUiState.Loading) {
+            if (currentDisplayedState !is PostReactionsUiState.Loading) {
+                loadingStartTimeMillis = SystemClock.elapsedRealtime()
+            }
+            displayedState = targetState
+            return@LaunchedEffect
+        }
+
+        if (currentDisplayedState is PostReactionsUiState.Loading) {
+            val start = loadingStartTimeMillis
+            if (start > 0L) ensureMinLoadingTime(start)
+        }
+        displayedState = targetState
+    }
+
+    val isClickable: Boolean =
+        (displayedState as? PostReactionsUiState.Result)?.reactions?.isNotEmpty() == true
 
     AnimatedContent(
-        targetState = model.state,
+        targetState = displayedState,
         transitionSpec = {
             fadeIn(animationSpec = tween(durationMillis = MotionTokens.Slow)).togetherWith(
                 fadeOut(
@@ -76,6 +113,7 @@ fun PostActivityBar(
                         typography = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
+                    Spacer(Modifier.width(2.dp))
                     CircularProgressIndicator(
                         modifier = Modifier.size(13.dp),
                         color = MaterialTheme.colorScheme.onSurface,

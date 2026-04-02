@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.R
+import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.media.ImageTransform
@@ -172,7 +173,7 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadNewsfeed()
-        loadRelationshipCounts()
+        loadMyFriendList()
         loadUnreadPostsCount()
         observeUnreadPostsUpdates()
         loadQuickChatEmojiSlots()
@@ -288,6 +289,11 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(showFriendSheet = true) }
     }
 
+    fun onFeedFilterUserSelected(userId: String?) {
+        _uiState.update { it.copy(feedUserIdFilter = userId) }
+        loadNewsfeed(isLoadMore = false)
+    }
+
     fun onFriendSheetDismissed() {
         friendSearchJob?.cancel()
         friendSearchJob = null
@@ -326,14 +332,6 @@ class HomeViewModel @Inject constructor(
                 }
             }.onFailure {
                 updateFriendSheetState { it.copy(isSearchingUsers = false) }
-            }
-        }
-    }
-
-    private fun loadRelationshipCounts() {
-        viewModelScope.launch {
-            userRepository.getRelationshipCounts().onSuccess { counts ->
-                updateFriendSheetState { it.copy(relationshipCounts = counts) }
             }
         }
     }
@@ -377,6 +375,7 @@ class HomeViewModel @Inject constructor(
                     it.copy(
                         friendList = accepted,
                         pendingList = pendingWithActions,
+                        relationshipCounts = RelationshipCounts(accepted.size, pending.size),
                         loading = it.loading.copy(initialFriendList = false),
                         isLoadingFriendList = false
                     )
@@ -441,12 +440,18 @@ class HomeViewModel @Inject constructor(
             acceptFriendRequestUseCase(pending.id).onSuccess {
                 val acceptedRelationship = pending.copy(status = RelationshipStatus.ACCEPTED)
                 updateFriendSheetState { state ->
+                    val newPendingList =
+                        state.pendingList.filterNot { it.relationship.id == pending.id }
+                    val newFriendList = state.friendList + acceptedRelationship
                     state.copy(
-                        pendingList = state.pendingList.filterNot { it.relationship.id == pending.id },
-                        friendList = state.friendList + acceptedRelationship
+                        pendingList = newPendingList,
+                        friendList = newFriendList,
+                        relationshipCounts = RelationshipCounts(
+                            acceptedFriendCount = newFriendList.size,
+                            pendingRequestCount = newPendingList.size
+                        ),
                     )
                 }
-                loadRelationshipCounts()
                 loadNewsfeed(isLoadMore = false)
             }.onFailure { error ->
                 _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
@@ -462,7 +467,6 @@ class HomeViewModel @Inject constructor(
                 state.copy(loading = state.loading.copy(addingUserIds = state.loading.addingUserIds + targetUserId))
             }
             userRepository.sendFriendRequest(targetUserId).onSuccess {
-                loadRelationshipCounts()
                 loadMyFriendList()
                 refreshFriendSearchResults()
             }.onFailure { error ->
@@ -506,9 +510,16 @@ class HomeViewModel @Inject constructor(
             if (friend.status == RelationshipStatus.PENDING) {
                 removeRelationshipUseCase(friend.id).onSuccess {
                     updateFriendSheetState { s ->
-                        s.copy(pendingList = s.pendingList.filterNot { it.relationship.id == friend.id })
+                        val newPendingList =
+                            s.pendingList.filterNot { it.relationship.id == friend.id }
+                        s.copy(
+                            pendingList = newPendingList,
+                            relationshipCounts = RelationshipCounts(
+                                acceptedFriendCount = s.friendList.size,
+                                pendingRequestCount = newPendingList.size
+                            )
+                        )
                     }
-                    loadRelationshipCounts()
                     refreshFriendSearchResults()
                 }.onFailure { error ->
                     _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
@@ -517,9 +528,15 @@ class HomeViewModel @Inject constructor(
                 val currentAccepted = state.relationshipCounts?.acceptedFriendCount
                 removeFriendUseCase(friend.id, currentAccepted).onSuccess {
                     updateFriendSheetState { s ->
-                        s.copy(friendList = s.friendList.filterNot { it.id == friend.id })
+                        val newFriendList = s.friendList.filterNot { it.id == friend.id }
+                        s.copy(
+                            friendList = newFriendList,
+                            relationshipCounts = RelationshipCounts(
+                                acceptedFriendCount = newFriendList.size,
+                                pendingRequestCount = s.pendingList.size
+                            )
+                        )
                     }
-                    loadRelationshipCounts()
                     refreshFriendSearchResults()
                     loadNewsfeed(isLoadMore = false)
                 }.onFailure { error ->
@@ -568,9 +585,12 @@ class HomeViewModel @Inject constructor(
             }
 
             val cursor = if (isLoadMore) state.nextCursor else null
+            val userId = state.feedUserIdFilter
 
             getNewsfeedUseCase(
-                limit = FEED_PAGE_LIMIT, cursor = cursor
+                limit = FEED_PAGE_LIMIT,
+                cursor = cursor,
+                userId = userId,
             ).fold(onSuccess = { feedData ->
                 _uiState.update {
                     it.copy(
@@ -643,8 +663,8 @@ class HomeViewModel @Inject constructor(
             delay(DEBOUNCE_MS)
 
             runCatching { postRepository.recordQuickChatEmojiUsage(emoji) }.onFailure { error ->
-                    Logger.e("Failed to persist quick chat emoji usage: ${error.message}")
-                }
+                Logger.e("Failed to persist quick chat emoji usage: ${error.message}")
+            }
             postRepository.reactToPost(postId = postIdToReact, reactionIcon = emoji)
                 .onFailure { error ->
                     Logger.e("Failed to react to post: ${error.message}")

@@ -44,9 +44,9 @@ import com.thinh.snaplet.ui.screens.home.components.FriendBottomSheet
 import com.thinh.snaplet.ui.screens.home.components.HomeBottomContent
 import com.thinh.snaplet.ui.screens.home.components.MediaPage
 import com.thinh.snaplet.ui.screens.home.components.NewPostsBanner
-import com.thinh.snaplet.ui.screens.home.components.ReactionsBottomSheet
 import com.thinh.snaplet.ui.screens.home.components.PostActivityBarModel
 import com.thinh.snaplet.ui.screens.home.components.QuickChatBarModel
+import com.thinh.snaplet.ui.screens.home.components.ReactionsBottomSheet
 import com.thinh.snaplet.ui.screens.home.components.TopAction
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
@@ -304,6 +304,8 @@ private fun HomeScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        val isCameraPage = pagerState.currentPage == CAMERA_PAGE_INDEX
+
         VerticalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize(),
@@ -363,6 +365,11 @@ private fun HomeScreen(
             onChatClick = { /* TODO */ },
             relationshipCounts = uiState.friendSheetState.relationshipCounts,
             avatarUrl = uiState.userProfile?.avatarUrls?.forThumbnail().orEmpty(),
+            isCameraPage = isCameraPage,
+            myUserId = uiState.userProfile?.id,
+            selectedFeedUserId = uiState.feedUserIdFilter,
+            acceptedFriends = uiState.friendSheetState.friendList,
+            onFeedFilterUserSelected = viewModel::onFeedFilterUserSelected,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
@@ -380,7 +387,6 @@ private fun HomeScreen(
                 onShareOther = viewModel::shareOther,
                 onSheetVisible = {
                     viewModel.loadShareApps()
-                    viewModel.loadMyFriendList()
                 },
                 searchQuery = friendSearchQuery,
                 onSearchQueryChange = {

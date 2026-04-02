@@ -47,6 +47,8 @@ data class HomeUiState(
 
     val userProfile: UserProfile? = null,
 
+    val feedUserIdFilter: String? = null,
+
     val postReactionsState: PostReactionsUiState = PostReactionsUiState.Loading,
     val showReactionsSheet: Boolean = false,
 

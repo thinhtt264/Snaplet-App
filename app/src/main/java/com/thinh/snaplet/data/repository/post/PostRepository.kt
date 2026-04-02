@@ -15,7 +15,11 @@ interface PostRepository {
 
     suspend fun getUnreadPostsCount(): ApiResult<Int>
 
-    suspend fun getNewsfeed(limit: Int = 5, cursor: String? = null): ApiResult<PostsFeedData>
+    suspend fun getNewsfeed(
+        limit: Int = 5,
+        cursor: String? = null,
+        userId: String? = null
+    ): ApiResult<PostsFeedData>
 
     suspend fun getNewerPost(since: String, limit: Int): ApiResult<List<Post>>
 
