@@ -370,6 +370,7 @@ private fun HomeScreen(
             selectedFeedUserId = uiState.feedUserIdFilter,
             acceptedFriends = uiState.friendSheetState.friendList,
             onFeedFilterUserSelected = viewModel::onFeedFilterUserSelected,
+            isFeedFilterEnabled = uiState.isFeedFilterEnabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)

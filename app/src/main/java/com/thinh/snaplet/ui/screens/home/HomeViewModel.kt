@@ -132,7 +132,10 @@ class HomeViewModel @Inject constructor(
         userRepository.observeMyUserProfile().distinctUntilChanged(),
     ) { state, profileUi ->
         state.copy(
-            userProfile = profileUi
+            userProfile = profileUi,
+            isFeedFilterEnabled =
+                (state.friendSheetState.relationshipCounts?.acceptedFriendCount ?: 0) > 0 &&
+                        !state.isLoadingPosts
         )
     }.stateIn(
         scope = viewModelScope,

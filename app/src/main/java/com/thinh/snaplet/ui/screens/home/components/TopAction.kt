@@ -2,11 +2,12 @@ package com.thinh.snaplet.ui.screens.home.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -32,6 +33,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -81,12 +84,18 @@ fun TopAction(
     selectedFeedUserId: String?,
     acceptedFriends: List<RelationshipWithUser>,
     onFeedFilterUserSelected: (String?) -> Unit,
+    isFeedFilterEnabled: Boolean,
 ) {
     val pendingForBadge = relationshipCounts?.pendingRequestCount ?: 0
-    val acceptedFriendCount = relationshipCounts?.acceptedFriendCount ?: 0
-    val isFeedFilterMode = !isCameraPage && acceptedFriendCount > 0
+
+    val isFeedFilterMode = !isCameraPage && isFeedFilterEnabled
 
     var showFilterTooltip by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isFeedFilterMode) {
+        // If we enter a non-ready state (loading/error), ensure tooltip doesn't reappear unexpectedly.
+        if (!isFeedFilterMode) showFilterTooltip = false
+    }
 
     val selectedLabel = when (selectedFeedUserId) {
         null -> stringResource(id = R.string.feed_filter_everyone)
@@ -95,7 +104,11 @@ fun TopAction(
             ?: stringResource(id = R.string.feed_filter_everyone)
     }
 
-    val friendsForTooltip = acceptedFriends
+    val filterArrowRotation by animateFloatAsState(
+        targetValue = if (showFilterTooltip) 180f else 0f,
+        animationSpec = tween(durationMillis = MotionTokens.Emphasized),
+        label = "feed_filter_arrow_rotation"
+    )
 
     val toggleOrOpen = {
         if (isFeedFilterMode) {
@@ -180,7 +193,7 @@ fun TopAction(
                                 typography = Typography.bodyMedium
                             )
                         } else {
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             BaseText(
                                 text = selectedLabel,
                                 color = Color.White,
@@ -188,12 +201,14 @@ fun TopAction(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Icon(
                                 imageVector = Icons.Outlined.KeyboardArrowDown,
                                 contentDescription = null,
                                 tint = Color.White,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .graphicsLayer { rotationZ = filterArrowRotation }
                             )
                         }
                     }
@@ -220,7 +235,10 @@ fun TopAction(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .background(Color.Black.copy(alpha = 0.5f))
-                                        .clickable { showFilterTooltip = false })
+                                        .pointerInput(Unit) {
+                                            detectTapGestures { showFilterTooltip = false }
+                                        }
+                                )
 
                                 LazyColumn(
                                     modifier = Modifier
@@ -269,7 +287,7 @@ fun TopAction(
                                     }
 
                                     items(
-                                        friendsForTooltip, key = { it.userId }) { friend ->
+                                        acceptedFriends, key = { it.userId }) { friend ->
                                         FilterRow(leading = {
                                             Avatar(
                                                 avatarUrl = friend.avatarUrls.forThumbnail(),
