@@ -43,8 +43,6 @@
     <string name="register_username_title">What\'s your username?</string>
     <string name="username_required">Username is required</string>
     <string name="username_requirement1">Username must be at least 3 characters</string>
-    <string name="username_requirement2">Username cannot exceed 20 characters</string>
-
     <string name="register_password_title">Choose a password</string>
     <string name="username">Username</string>
     <string name="already_have_account">Already have an account?</string>
@@ -53,6 +51,14 @@
     <string name="username_already_taken">This username is already taken</string>
     <string name="username_check_failed">Unable to check username</string>
     <string name="username_invalid_characters">Username can only contain letters, numbers, and underscores</string>
+    <string name="username_no_spaces">Username cannot contain spaces</string>
+    <string name="first_name">First name</string>
+    <string name="first_name_placeholder">Your first name</string>
+    <string name="first_name_required">First name is required</string>
+    <string name="last_name">Last name</string>
+    <string name="last_name_placeholder">Your last name</string>
+    <string name="last_name_required">Last name is required</string>
+    <string name="register_name_max_length">Max %1$d characters</string>
     <string name="error">Error</string>
     <string name="invalid_credentials">Email or password is incorrect</string>
     <string name="add_caption_placeholder">Add a message</string>

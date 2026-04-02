@@ -161,7 +161,6 @@ fun Register(
         }
     }
 
-    // Error Alert Dialog
     errorDialogMessage?.let { message ->
         AlertDialog(
             onDismissRequest = { errorDialogMessage = null },

@@ -44,8 +44,6 @@
     <string name="register_username_title">Tên người dùng của bạn là gì?</string>
     <string name="username_required">Tên người dùng là bắt buộc</string>
     <string name="username_requirement1">Tên người dùng phải có ít nhất 3 ký tự</string>
-    <string name="username_requirement2">Tên người dùng không được vượt quá 20 ký tự</string>
-
     <string name="register_password_title">Chọn mật khẩu</string>
     <string name="username">Tên người dùng</string>
     <string name="already_have_account">Đã có tài khoản?</string>
@@ -54,12 +52,14 @@
     <string name="username_already_taken">Tên người dùng này đã được sử dụng</string>
     <string name="username_check_failed">Không thể kiểm tra tên người dùng</string>
     <string name="username_invalid_characters">Tên người dùng chỉ được chứa chữ cái, số và dấu gạch dưới</string>
+    <string name="username_no_spaces">Tên người dùng không được chứa dấu cách</string>
     <string name="first_name">Tên</string>
     <string name="first_name_placeholder">Tên của bạn</string>
     <string name="first_name_required">Tên là bắt buộc</string>
     <string name="last_name">Họ</string>
     <string name="last_name_placeholder">Họ của bạn</string>
     <string name="last_name_required">Họ là bắt buộc</string>
+    <string name="register_name_max_length">Tối đa %1$d ký tự</string>
     <string name="error">Lỗi</string>
     <string name="invalid_credentials">Email hoặc mật khẩu không đúng</string>
     <string name="add_caption_placeholder">Thêm một tin nhắn</string>

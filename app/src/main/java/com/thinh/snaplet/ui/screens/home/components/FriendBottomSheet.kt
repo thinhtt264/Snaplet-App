@@ -76,6 +76,7 @@ import com.thinh.snaplet.ui.screens.home.FriendBottomSheetState
 import com.thinh.snaplet.ui.theme.MotionTokens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import pressScaleClickable
 import thenIf
 
 private const val MAX_FRIENDS_DISPLAY = 30
@@ -98,8 +99,7 @@ fun FriendBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val isReady by remember(
-        friendSheetState.shareApps,
-        friendSheetState.loading.initialFriendList
+        friendSheetState.shareApps, friendSheetState.loading.initialFriendList
     ) {
         derivedStateOf {
             friendSheetState.shareApps.isNotEmpty() && !friendSheetState.loading.initialFriendList
@@ -160,8 +160,7 @@ fun FriendBottomSheet(
             val isUnfocused = hasTopSearchFocusedOnce && !isTopSearchFocused
             val isQueryEmptyAfterFocus = hasTopSearchFocusedOnce && searchQuery.isBlank()
             val shouldBackToEmpty =
-                (isUnfocused || (isQueryEmptyAfterFocus && !isTopSearchFocused)) &&
-                        (friendSheetState.searchResults.isEmpty() || isEmptyFriendAndPending)
+                (isUnfocused || (isQueryEmptyAfterFocus && !isTopSearchFocused)) && (friendSheetState.searchResults.isEmpty() || isEmptyFriendAndPending)
 
             if (shouldBackToEmpty) {
                 isSearchingFromEmptyState = false
@@ -209,8 +208,7 @@ fun FriendBottomSheet(
                         onFocusChanged = { focused ->
                             isTopSearchFocused = focused
                             if (focused) hasTopSearchFocusedOnce = true
-                        }
-                    )
+                        })
                 }
             }
 
@@ -317,7 +315,6 @@ fun FriendBottomSheet(
                             onSearchQueryChange = onSearchQueryChange,
                             isSearchingUsers = friendSheetState.isSearchingUsers,
                             onActivateSearch = { isSearchingFromEmptyState = true },
-                            onShareOther = onShareOther,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 20.dp)
@@ -403,7 +400,6 @@ private fun EmptyFriendStateCard(
     onSearchQueryChange: (String) -> Unit,
     isSearchingUsers: Boolean,
     onActivateSearch: () -> Unit,
-    onShareOther: () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -490,8 +486,7 @@ private fun FriendSearchField(
                         .clickable {
                             onQueryChange("")
                             focusManager.clearFocus(force = true)
-                        }
-                )
+                        })
             }
         },
         leadingIcon = {
@@ -514,8 +509,7 @@ private fun FriendSearchField(
                     )
                 }
             }
-        }
-    )
+        })
 }
 
 @Composable
@@ -530,14 +524,14 @@ private fun ShareProfileLinkCard(
                 color = MaterialTheme.colorScheme.surfaceContainer,
                 shape = RoundedCornerShape(16.dp)
             )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .pressScaleClickable(onClick = onCopyClick),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AppIconButton(
             modifier = Modifier.size(36.dp),
             icon = IconSpec.Vector(
-                Icons.Outlined.Link,
-                tint = MaterialTheme.colorScheme.primary
+                Icons.Outlined.Link, tint = MaterialTheme.colorScheme.primary
             ),
             onClick = onCopyClick,
             containerColor = MaterialTheme.colorScheme.surface,
@@ -558,19 +552,10 @@ private fun ShareProfileLinkCard(
                 text = "snaplet.cam/$username",
                 color = MaterialTheme.colorScheme.onSurface,
                 typography = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
         }
-        PrimaryButton(
-            onClick = onCopyClick,
-            title = stringResource(R.string.friend_sheet_copy_cta),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            typography = MaterialTheme.typography.titleSmall,
-            titleColor = Color.Black,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Color.Black
-            )
-        )
     }
 }
 

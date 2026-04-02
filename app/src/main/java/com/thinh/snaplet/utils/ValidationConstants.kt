@@ -3,8 +3,8 @@ package com.thinh.snaplet.utils
 
 object ValidationConstants {
     /**
-     * Regex pattern for username validation Allows only letters (a-z, A-Z),
-     * numbers (0-9), and underscores (_)
+     * Regex pattern for username validation. Allows only letters (a-z, A-Z),
+     * numbers (0-9), and underscores (_). No whitespace.
      */
     val USERNAME_PATTERN = Regex("^[a-zA-Z0-9_]+$")
 
@@ -15,4 +15,6 @@ object ValidationConstants {
     const val PASSWORD_MIN_LENGTH = 8
 
     const val CAPTION_MAX_LENGTH = 36
+
+    const val NAME_MAX_LENGTH = 20
 }
