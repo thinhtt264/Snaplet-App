@@ -443,6 +443,7 @@ class HomeViewModel @Inject constructor(
                     )
                 }
                 loadRelationshipCounts()
+                loadNewsfeed(isLoadMore = false)
             }.onFailure { error ->
                 _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
             }
@@ -516,6 +517,7 @@ class HomeViewModel @Inject constructor(
                     }
                     loadRelationshipCounts()
                     refreshFriendSearchResults()
+                    loadNewsfeed(isLoadMore = false)
                 }.onFailure { error ->
                     _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
                 }
