@@ -129,10 +129,12 @@ class HomeViewModel @Inject constructor(
 
     val uiState: StateFlow<HomeUiState> = combine(
         _uiState,
-        userRepository.observeMyUserProfile().map { it?.avatarUrls?.forThumbnail().orEmpty() }
+        userRepository.observeMyUserProfile()
             .distinctUntilChanged(),
-    ) { state, profileAvatarUrl ->
-        state.copy(profileAvatarUrl = profileAvatarUrl)
+    ) { state, profileUi ->
+        state.copy(
+            userProfile = profileUi
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -175,6 +177,20 @@ class HomeViewModel @Inject constructor(
         loadRelationshipCounts()
         loadUnreadPostsCount()
         observeUnreadPostsUpdates()
+        loadQuickChatEmojiSlots()
+    }
+
+    private fun loadQuickChatEmojiSlots() {
+        viewModelScope.launch {
+            refreshQuickChatEmojiSlots()
+        }
+    }
+
+    private suspend fun refreshQuickChatEmojiSlots() {
+        val recent = postRepository.getQuickChatRecentEmojis()
+        _uiState.update {
+            it.copy(quickChatEmojiSlots = QuickChatEmojiSlots.mergeForDisplay(recent))
+        }
     }
 
     private fun loadUnreadPostsCount() {
@@ -357,11 +373,17 @@ class HomeViewModel @Inject constructor(
                     it.copy(
                         friendList = accepted,
                         pendingList = pendingWithActions,
+                        loading = it.loading.copy(initialFriendList = false),
                         isLoadingFriendList = false
                     )
                 }
             }.onFailure {
-                updateFriendSheetState { it.copy(isLoadingFriendList = false) }
+                updateFriendSheetState {
+                    it.copy(
+                        loading = it.loading.copy(initialFriendList = false),
+                        isLoadingFriendList = false
+                    )
+                }
             }
         }
     }
@@ -383,12 +405,7 @@ class HomeViewModel @Inject constructor(
         }
 
         // Show loading immediately while waiting for debounce.
-        updateFriendSheetState {
-            it.copy(
-                isSearchingUsers = true,
-                searchResults = emptyList(),
-            )
-        }
+        updateFriendSheetState { it.copy(isSearchingUsers = true) }
 
         friendSearchJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
@@ -436,6 +453,9 @@ class HomeViewModel @Inject constructor(
         if (targetUserId.isBlank()) return
 
         viewModelScope.launch {
+            updateFriendSheetState { state ->
+                state.copy(loading = state.loading.copy(addingUserIds = state.loading.addingUserIds + targetUserId))
+            }
             userRepository.sendFriendRequest(targetUserId).onSuccess {
                 loadRelationshipCounts()
                 loadMyFriendList()
@@ -443,6 +463,14 @@ class HomeViewModel @Inject constructor(
             }.onFailure { error ->
                 Logger.e("❌ Failed to send friend request: ${error.message}")
                 // _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
+            }.also {
+                updateFriendSheetState { state ->
+                    state.copy(
+                        loading = state.loading.copy(
+                            addingUserIds = state.loading.addingUserIds - targetUserId
+                        )
+                    )
+                }
             }
         }
     }
@@ -462,6 +490,13 @@ class HomeViewModel @Inject constructor(
 
     private fun removeFriend(friend: RelationshipWithUser) {
         viewModelScope.launch {
+            updateFriendSheetState { state ->
+                state.copy(
+                    loading = state.loading.copy(
+                        removingRelationshipIds = state.loading.removingRelationshipIds + friend.id
+                    )
+                )
+            }
             val state = _uiState.value.friendSheetState
             if (friend.status == RelationshipStatus.PENDING) {
                 removeRelationshipUseCase(friend.id).onSuccess {
@@ -484,6 +519,13 @@ class HomeViewModel @Inject constructor(
                 }.onFailure { error ->
                     _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
                 }
+            }
+            updateFriendSheetState { current ->
+                current.copy(
+                    loading = current.loading.copy(
+                        removingRelationshipIds = current.loading.removingRelationshipIds - friend.id
+                    )
+                )
             }
         }
     }
@@ -536,10 +578,12 @@ class HomeViewModel @Inject constructor(
             }, onFailure = { apiError ->
                 _uiState.update {
                     it.copy(
-                        isLoadingPosts = false, isLoadingMore = false, error = apiError.message
+                        isLoadingPosts = false,
+                        isLoadingMore = false,
+                        error = apiError.message,
+                        snackbarMessage = UiText.DynamicString(apiError.message)
                     )
                 }
-                _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(apiError.message)) }
             })
         }
     }
@@ -592,8 +636,11 @@ class HomeViewModel @Inject constructor(
         reactToPostJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
 
-            postRepository
-                .reactToPost(postId = postIdToReact, reactionIcon = emoji)
+            runCatching { postRepository.recordQuickChatEmojiUsage(emoji) }
+                .onFailure { error ->
+                    Logger.e("Failed to persist quick chat emoji usage: ${error.message}")
+                }
+            postRepository.reactToPost(postId = postIdToReact, reactionIcon = emoji)
                 .onFailure { error ->
                     Logger.e("Failed to react to post: ${error.message}")
                 }
@@ -606,27 +653,23 @@ class HomeViewModel @Inject constructor(
         postReactionsJob?.cancel()
         _uiState.update { it.copy(postReactionsState = PostReactionsUiState.Loading) }
         postReactionsJob = viewModelScope.launch {
-            postRepository.getPostReactions(postId).fold(
-                onSuccess = { reactions ->
-                val mapped = runCatching { mapPostReactionUsersUseCase(reactions) }
-                        .onFailure { error ->
+            postRepository.getPostReactions(postId).fold(onSuccess = { reactions ->
+                val mapped =
+                    runCatching { mapPostReactionUsersUseCase(reactions) }.onFailure { error ->
                             Logger.e("Failed to map post reactions for postId=$postId: ${error.message}")
-                        }
-                        .getOrDefault(emptyList())
-                    _uiState.update {
-                        it.copy(
-                            postReactionsState = PostReactionsUiState.Result(mapped)
-                        )
-                    }
-                },
-                onFailure = {
-                    _uiState.update {
-                        it.copy(
-                            postReactionsState = PostReactionsUiState.Result(emptyList())
-                        )
-                    }
+                        }.getOrDefault(emptyList())
+                _uiState.update {
+                    it.copy(
+                        postReactionsState = PostReactionsUiState.Result(mapped)
+                    )
                 }
-            )
+            }, onFailure = {
+                _uiState.update {
+                    it.copy(
+                        postReactionsState = PostReactionsUiState.Result(emptyList())
+                    )
+                }
+            })
         }
     }
 

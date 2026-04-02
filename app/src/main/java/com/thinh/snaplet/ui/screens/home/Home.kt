@@ -269,9 +269,10 @@ private fun HomeScreen(
     val userScrollEnabled = !uiState.cameraState.isEditMode
     val isDownloading = uiState.isDownloading
 
-    val quickChatBar = remember(chatMessage, onEmojiReaction) {
+    val quickChatBar = remember(chatMessage, uiState.quickChatEmojiSlots, onEmojiReaction) {
         QuickChatBarModel(
             messageText = chatMessage,
+            quickEmojiSlots = uiState.quickChatEmojiSlots,
             onMessageChange = { chatMessage = it },
             onSendMessage = {
                 /* TODO: send chat message */
@@ -362,7 +363,7 @@ private fun HomeScreen(
             onFriendsClick = { showFriendSheet = true },
             onChatClick = { /* TODO */ },
             relationshipCounts = uiState.friendSheetState.relationshipCounts,
-            avatarUrl = uiState.profileAvatarUrl.orEmpty(),
+            avatarUrl = uiState.userProfile?.avatarUrls?.forThumbnail().orEmpty(),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
@@ -390,7 +391,8 @@ private fun HomeScreen(
                 },
                 onFriendRemove = viewModel::requestRemoveFriend,
                 onPendingAccept = viewModel::acceptFriendRequest,
-                onAddFriend = viewModel::sendFriendRequest
+                onAddFriend = viewModel::sendFriendRequest,
+                username = uiState.userProfile?.userName.orEmpty()
             )
         }
 

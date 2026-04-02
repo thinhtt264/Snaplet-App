@@ -11,6 +11,10 @@ data class EmojiParticle(
     val alpha: Float,
     val direction: FloatDirection,
     val frameCount: Int = 0,
+    /** Spawn position Y; fade-in uses this edge (includes random depth stagger, no frame delay). */
+    val spawnY: Float,
+    val fadeOutHeightFraction: Float,
+    val fadeZoneHeightFraction: Float,
 )
 
 enum class FloatDirection { UP, DOWN }

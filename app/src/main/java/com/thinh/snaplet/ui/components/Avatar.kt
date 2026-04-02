@@ -65,7 +65,7 @@ fun Avatar(
     val borderColor = if (isConnectedUser) {
         MaterialTheme.colorScheme.primary
     } else {
-        MaterialTheme.colorScheme.secondary
+        MaterialTheme.colorScheme.surfaceBright
     }
 
     Avatar(

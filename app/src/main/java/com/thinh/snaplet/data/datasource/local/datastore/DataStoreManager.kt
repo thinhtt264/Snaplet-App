@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.google.gson.reflect.TypeToken
 import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.GsonHolder.gson
@@ -19,6 +20,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "snaplet_preferences")
+private val Context.sessionDataStore: DataStore<Preferences> by preferencesDataStore(name = "snaplet_session")
+
+private const val QUICK_CHAT_RECENT_LIMIT = 3
 
 @Singleton
 class DataStoreManager @Inject constructor(
@@ -26,6 +30,11 @@ class DataStoreManager @Inject constructor(
 ) {
 
     private val dataStore = context.dataStore
+    private val sessionStore = context.sessionDataStore
+
+    private val stringListType = object : TypeToken<List<String>>() {}.type
+    private val quickChatRecentEmojisKey =
+        stringPreferencesKey(DataStoreKeys.QuickChatKeys.RECENT_EMOJIS)
 
     private val accessTokenKey = stringPreferencesKey(DataStoreKeys.SessionKeys.ACCESS_TOKEN)
     private val refreshTokenKey = stringPreferencesKey(DataStoreKeys.SessionKeys.REFRESH_TOKEN)
@@ -38,7 +47,7 @@ class DataStoreManager @Inject constructor(
 
     suspend fun saveAccessToken(token: String) {
         currentAccessToken.set(token)
-        dataStore.edit { preferences ->
+        sessionStore.edit { preferences ->
             preferences[accessTokenKey] = token
         }
         Logger.d("💾 Access token saved")
@@ -58,7 +67,7 @@ class DataStoreManager @Inject constructor(
         currentAccessToken.set(accessToken)
         currentRefreshToken.set(refreshToken)
 
-        dataStore.edit { preferences ->
+        sessionStore.edit { preferences ->
             preferences[accessTokenKey] = accessToken
             preferences[refreshTokenKey] = refreshToken
         }
@@ -68,7 +77,7 @@ class DataStoreManager @Inject constructor(
         currentAccessToken.set(null)
         currentRefreshToken.set(null)
 
-        dataStore.edit { preferences ->
+        sessionStore.edit { preferences ->
             preferences.remove(accessTokenKey)
             preferences.remove(refreshTokenKey)
         }
@@ -119,12 +128,13 @@ class DataStoreManager @Inject constructor(
         clearSession()
         clearUserProfile()
         clearFingerprint()
+        clearQuickChatRecentEmojis()
         Logger.d("🗑️ All data cleared")
     }
 
     suspend fun loadAccessToken(): String? {
         return try {
-            val preferences = dataStore.data.first()
+            val preferences = sessionStore.data.first()
             val token = preferences[accessTokenKey]
             if (token != null) {
                 currentAccessToken.set(token)
@@ -137,7 +147,7 @@ class DataStoreManager @Inject constructor(
 
     suspend fun loadRefreshToken(): String? {
         return try {
-            val preferences = dataStore.data.first()
+            val preferences = sessionStore.data.first()
             val token = preferences[refreshTokenKey]
             if (token != null) {
                 currentRefreshToken.set(token)
@@ -167,6 +177,33 @@ class DataStoreManager @Inject constructor(
         dataStore.edit { preferences ->
             preferences.remove(fingerprintKey)
         }
+    }
+
+    suspend fun clearQuickChatRecentEmojis() {
+        dataStore.edit { preferences ->
+            preferences.remove(quickChatRecentEmojisKey)
+        }
+    }
+
+    suspend fun getQuickChatRecentEmojis(): List<String> {
+        val preferences = dataStore.data.first()
+        return parseQuickChatRecentEmojis(preferences[quickChatRecentEmojisKey])
+    }
+
+    suspend fun recordQuickChatEmojiUsage(emoji: String) {
+        dataStore.edit { prefs ->
+            val current = parseQuickChatRecentEmojis(prefs[quickChatRecentEmojisKey])
+            val updated = listOf(emoji) + current.filter { it != emoji }
+            val trimmed = updated.take(QUICK_CHAT_RECENT_LIMIT)
+            prefs[quickChatRecentEmojisKey] = gson.toJson(trimmed)
+        }
+    }
+
+    private fun parseQuickChatRecentEmojis(json: String?): List<String> {
+        if (json.isNullOrBlank()) return emptyList()
+        return runCatching {
+            gson.fromJson<List<String>>(json, stringListType) ?: emptyList()
+        }.getOrElse { emptyList() }.take(QUICK_CHAT_RECENT_LIMIT)
     }
 }
 

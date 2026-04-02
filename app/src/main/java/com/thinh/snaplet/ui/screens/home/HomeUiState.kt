@@ -5,6 +5,7 @@ import androidx.camera.core.CameraSelector
 import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.domain.model.FriendSearchActionItem
 import com.thinh.snaplet.domain.model.ReactionUserUi
 import com.thinh.snaplet.domain.model.RelationshipAction
@@ -44,10 +45,12 @@ data class HomeUiState(
 
     val shouldScrollToFirstPost: Boolean = false,
 
-    val profileAvatarUrl: String? = null,
+    val userProfile: UserProfile? = null,
 
     val postReactionsState: PostReactionsUiState = PostReactionsUiState.Loading,
     val showReactionsSheet: Boolean = false,
+
+    val quickChatEmojiSlots: List<String> = QuickChatEmojiSlots.mergeForDisplay(emptyList()),
 ) {
     /** Returns true if more data can be loaded (nextCursor is not null and not currently loading) */
     val canLoadMore: Boolean get() = nextCursor != null && !isLoadingMore && !isLoadingPosts
@@ -81,7 +84,14 @@ data class FriendBottomSheetState(
     val friendList: List<RelationshipWithUser> = emptyList(),
     val pendingList: List<RelationshipActionItemState> = emptyList(),
     val isLoadingFriendList: Boolean = false,
+    val loading: FriendBottomSheetLoadingState = FriendBottomSheetLoadingState(),
     val searchResults: List<FriendSearchActionItem> = emptyList(),
     val isSearchingUsers: Boolean = false,
     val shareApps: List<ShareApp> = emptyList(),
+)
+
+data class FriendBottomSheetLoadingState(
+    val initialFriendList: Boolean = true,
+    val addingUserIds: Set<String> = emptySet(),
+    val removingRelationshipIds: Set<String> = emptySet(),
 )

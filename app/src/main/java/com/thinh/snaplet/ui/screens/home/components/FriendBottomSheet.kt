@@ -2,6 +2,8 @@ package com.thinh.snaplet.ui.screens.home.components
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,9 +20,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.PersonAddAlt1
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.ButtonDefaults
@@ -41,10 +47,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -65,6 +76,7 @@ import com.thinh.snaplet.ui.screens.home.FriendBottomSheetState
 import com.thinh.snaplet.ui.theme.MotionTokens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import thenIf
 
 private const val MAX_FRIENDS_DISPLAY = 30
 private val ICON_BUTTON_SIZE = 52.dp
@@ -82,11 +94,15 @@ fun FriendBottomSheet(
     onFriendRemove: (RelationshipWithUser) -> Unit,
     onPendingAccept: (RelationshipWithUser) -> Unit,
     onAddFriend: (String) -> Unit,
+    username: String = "",
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val isReady by remember(friendSheetState.shareApps, friendSheetState.friendList) {
+    val isReady by remember(
+        friendSheetState.shareApps,
+        friendSheetState.loading.initialFriendList
+    ) {
         derivedStateOf {
-            friendSheetState.shareApps.isNotEmpty() && friendSheetState.friendList.isNotEmpty()
+            friendSheetState.shareApps.isNotEmpty() && !friendSheetState.loading.initialFriendList
         }
     }
 
@@ -114,6 +130,43 @@ fun FriendBottomSheet(
 
         val focusManager = LocalFocusManager.current
         val current = friendSheetState.relationshipCounts?.acceptedFriendCount ?: 0
+        val isEmptyFriendAndPending =
+            friendSheetState.friendList.isEmpty() && friendSheetState.pendingList.isEmpty()
+        var isSearchingFromEmptyState by remember { mutableStateOf(false) }
+        var isTopSearchFocused by remember { mutableStateOf(false) }
+        var hasTopSearchFocusedOnce by remember { mutableStateOf(false) }
+        val topSearchFocusRequester = remember { FocusRequester() }
+        val shouldShowTopSearch =
+            !isEmptyFriendAndPending || friendSheetState.searchResults.isNotEmpty() || isSearchingFromEmptyState
+
+        LaunchedEffect(isSearchingFromEmptyState) {
+            if (isSearchingFromEmptyState) {
+                topSearchFocusRequester.requestFocus()
+            } else {
+                isTopSearchFocused = false
+                hasTopSearchFocusedOnce = false
+            }
+        }
+
+        LaunchedEffect(
+            isSearchingFromEmptyState,
+            isTopSearchFocused,
+            hasTopSearchFocusedOnce,
+            searchQuery,
+            friendSheetState.searchResults,
+            isEmptyFriendAndPending
+        ) {
+            if (!isSearchingFromEmptyState) return@LaunchedEffect
+            val isUnfocused = hasTopSearchFocusedOnce && !isTopSearchFocused
+            val isQueryEmptyAfterFocus = hasTopSearchFocusedOnce && searchQuery.isBlank()
+            val shouldBackToEmpty =
+                (isUnfocused || (isQueryEmptyAfterFocus && !isTopSearchFocused)) &&
+                        (friendSheetState.searchResults.isEmpty() || isEmptyFriendAndPending)
+
+            if (shouldBackToEmpty) {
+                isSearchingFromEmptyState = false
+            }
+        }
 
         LazyColumn(
             modifier = Modifier
@@ -146,44 +199,19 @@ fun FriendBottomSheet(
                     )
                 }
             }
-            item(key = "search") {
-                BaseTextField(
-                    value = searchQuery,
-                    onValueChange = onSearchQueryChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        unfocusedIndicatorColor = Color.Transparent
-                    ),
-                    placeholder = {
-                        BaseText(
-                            text = stringResource(R.string.friend_sheet_add_placeholder),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            typography = MaterialTheme.typography.bodyMedium
-                        )
-                    },
-                    leadingIcon = {
-                        Crossfade(
-                            targetState = friendSheetState.isSearchingUsers,
-                            animationSpec = tween(durationMillis = MotionTokens.Emphasized)
-                        ) { isSearching ->
-                            if (isSearching) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Filled.Search,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onBackground,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+            if (shouldShowTopSearch) {
+                item(key = "search") {
+                    FriendSearchField(
+                        query = searchQuery,
+                        onQueryChange = onSearchQueryChange,
+                        isSearching = friendSheetState.isSearchingUsers,
+                        focusRequester = topSearchFocusRequester,
+                        onFocusChanged = { focused ->
+                            isTopSearchFocused = focused
+                            if (focused) hasTopSearchFocusedOnce = true
                         }
-                    })
+                    )
+                }
             }
 
             if (friendSheetState.searchResults.isNotEmpty()) {
@@ -237,6 +265,10 @@ fun FriendBottomSheet(
                             )
                         },
                         onAddFriend = { onAddFriend(item.user.userId) },
+                        isAddingFriend = friendSheetState.loading.addingUserIds.contains(item.user.userId),
+                        isRemovingFriend = item.user.relationshipId?.let {
+                            friendSheetState.loading.removingRelationshipIds.contains(it)
+                        } ?: false,
                     )
                 }
             } else {
@@ -278,6 +310,31 @@ fun FriendBottomSheet(
                         }
                     }
                 }
+                if (isEmptyFriendAndPending && !isSearchingFromEmptyState) {
+                    item(key = "empty_state_card") {
+                        EmptyFriendStateCard(
+                            searchQuery = searchQuery,
+                            onSearchQueryChange = onSearchQueryChange,
+                            isSearchingUsers = friendSheetState.isSearchingUsers,
+                            onActivateSearch = { isSearchingFromEmptyState = true },
+                            onShareOther = onShareOther,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 20.dp)
+                        )
+                    }
+                }
+                if (isEmptyFriendAndPending && !shouldShowTopSearch) {
+                    item(key = "share_link_card") {
+                        ShareProfileLinkCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp),
+                            onCopyClick = onShareOther,
+                            username = username
+                        )
+                    }
+                }
                 if (friendSheetState.pendingList.isNotEmpty()) {
                     item(key = "pending_section_title") {
                         BaseText(
@@ -299,6 +356,9 @@ fun FriendBottomSheet(
                             firstName = friend.firstName,
                             relationshipStatus = friend.status,
                             avatarUrls = friend.avatarUrls,
+                            isRemovingFriend = friendSheetState.loading.removingRelationshipIds.contains(
+                                friend.id
+                            ),
                         )
                     }
                 }
@@ -321,6 +381,9 @@ fun FriendBottomSheet(
                             firstName = friend.firstName,
                             relationshipStatus = friend.status,
                             avatarUrls = friend.avatarUrls,
+                            isRemovingFriend = friendSheetState.loading.removingRelationshipIds.contains(
+                                friend.id
+                            ),
                         )
                     }
                 }
@@ -334,12 +397,192 @@ fun FriendBottomSheet(
 }
 
 @Composable
+private fun EmptyFriendStateCard(
+    modifier: Modifier = Modifier,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    isSearchingUsers: Boolean,
+    onActivateSearch: () -> Unit,
+    onShareOther: () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(20.dp)
+            )
+            .padding(horizontal = 20.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.PersonAddAlt1,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(28.dp)
+        )
+        BaseText(
+            text = stringResource(R.string.friend_sheet_empty_title),
+            color = MaterialTheme.colorScheme.onBackground,
+            typography = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(top = 12.dp),
+            textAlign = TextAlign.Center
+        )
+        BaseText(
+            text = stringResource(R.string.friend_sheet_empty_message),
+            color = MaterialTheme.colorScheme.onSurface,
+            typography = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 8.dp),
+            textAlign = TextAlign.Center
+        )
+        FriendSearchField(
+            query = searchQuery,
+            onQueryChange = onSearchQueryChange,
+            isSearching = isSearchingUsers,
+            onFocusChanged = { focused ->
+                if (focused) onActivateSearch()
+            },
+            modifier = Modifier
+                .padding(top = 16.dp)
+                .clip(CircleShape)
+        )
+    }
+}
+
+@Composable
+private fun FriendSearchField(
+    modifier: Modifier = Modifier,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    isSearching: Boolean,
+    onFocusChanged: (Boolean) -> Unit = {},
+    focusRequester: FocusRequester? = null
+) {
+    val focusManager = LocalFocusManager.current
+
+    BaseTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = modifier
+            .fillMaxWidth()
+            .thenIf(focusRequester != null) { focusRequester(focusRequester!!) }
+            .onFocusChanged { onFocusChanged(it.isFocused) },
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedIndicatorColor = Color.Transparent
+        ),
+        placeholder = {
+            BaseText(
+                text = stringResource(R.string.friend_sheet_add_placeholder),
+                color = MaterialTheme.colorScheme.onSurface,
+                typography = MaterialTheme.typography.bodyMedium
+            )
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                Icon(
+                    imageVector = Icons.Outlined.Close,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable {
+                            onQueryChange("")
+                            focusManager.clearFocus(force = true)
+                        }
+                )
+            }
+        },
+        leadingIcon = {
+            Crossfade(
+                targetState = isSearching,
+                animationSpec = tween(durationMillis = MotionTokens.Emphasized)
+            ) { searching ->
+                if (searching) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun ShareProfileLinkCard(
+    onCopyClick: () -> Unit,
+    username: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AppIconButton(
+            modifier = Modifier.size(36.dp),
+            icon = IconSpec.Vector(
+                Icons.Outlined.Link,
+                tint = MaterialTheme.colorScheme.primary
+            ),
+            onClick = onCopyClick,
+            containerColor = MaterialTheme.colorScheme.surface,
+            iconSize = 20.dp
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp, end = 8.dp)
+        ) {
+            BaseText(
+                text = stringResource(R.string.friend_sheet_share_profile_title),
+                color = MaterialTheme.colorScheme.onBackground,
+                typography = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            BaseText(
+                text = "snaplet.cam/$username",
+                color = MaterialTheme.colorScheme.onSurface,
+                typography = MaterialTheme.typography.bodySmall,
+            )
+        }
+        PrimaryButton(
+            onClick = onCopyClick,
+            title = stringResource(R.string.friend_sheet_copy_cta),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            typography = MaterialTheme.typography.titleSmall,
+            titleColor = Color.Black,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = Color.Black
+            )
+        )
+    }
+}
+
+@Composable
 private fun FriendSearchListItem(
     user: UserSearchResult,
     relationshipAction: RelationshipAction,
     onAcceptRequest: () -> Unit,
     onRemove: () -> Unit,
     onAddFriend: () -> Unit,
+    isAddingFriend: Boolean = false,
+    isRemovingFriend: Boolean = false,
 ) {
     val relationshipStatus =
         user.relationshipStatus?.let { RelationshipStatus.from(it) } ?: RelationshipStatus.PENDING
@@ -390,6 +633,7 @@ private fun FriendSearchListItem(
             relationshipAction = relationshipAction,
             onAcceptRequest = onAcceptRequest,
             onAddFriend = onAddFriend,
+            isAddingFriend = isAddingFriend,
         )
         if (canRemove) {
             Spacer(Modifier.size(8.dp))
@@ -399,6 +643,7 @@ private fun FriendSearchListItem(
                     Icons.Outlined.Close, tint = MaterialTheme.colorScheme.onBackground
                 ),
                 onClick = onRemove,
+                loading = isRemovingFriend,
                 containerColor = MaterialTheme.colorScheme.surface,
                 iconSize = ICON_BUTTON_SIZE / 2
             )
@@ -415,6 +660,7 @@ private fun FriendListItem(
     relationshipAction: RelationshipAction,
     onAcceptRequest: () -> Unit,
     onRemove: () -> Unit,
+    isRemovingFriend: Boolean = false,
 ) {
     Row(
         modifier = Modifier
@@ -450,6 +696,7 @@ private fun FriendListItem(
                 Icons.Outlined.Close, tint = MaterialTheme.colorScheme.onBackground
             ),
             onClick = onRemove,
+            loading = isRemovingFriend,
             containerColor = MaterialTheme.colorScheme.surface,
             iconSize = ICON_BUTTON_SIZE / 2
         )
@@ -461,6 +708,7 @@ private fun FriendListItemActionSlot(
     relationshipAction: RelationshipAction,
     onAcceptRequest: () -> Unit,
     onAddFriend: () -> Unit = {},
+    isAddingFriend: Boolean = false,
 ) {
     var isResending by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -505,6 +753,7 @@ private fun FriendListItemActionSlot(
         is RelationshipAction.AddFriend -> {
             PrimaryButton(
                 onClick = onAddFriend,
+                isLoading = isAddingFriend,
                 title = stringResource(R.string.add_friend),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 typography = MaterialTheme.typography.titleSmall,
