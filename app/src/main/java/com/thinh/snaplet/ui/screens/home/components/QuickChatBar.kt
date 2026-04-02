@@ -130,6 +130,7 @@ private fun MessageInput(
     BasicTextField(
         value = text,
         onValueChange = onTextChange,
+        enabled = false,
         modifier = modifier.padding(horizontal = 10.dp, vertical = 8.dp),
         textStyle = textStyle,
         singleLine = true,
