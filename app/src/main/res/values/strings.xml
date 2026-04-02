@@ -18,6 +18,11 @@
     <string name="create_account">Tạo một tài khoản</string>
     <string name="login">Đăng nhập</string>
     <string name="camera_unavailable">Máy ảnh không khả dụng</string>
+    <string name="capture_no_friends_dialog_title">Hãy thêm một người bạn trước đã</string>
+    <string name="capture_no_friends_dialog_message">Bạn chưa có bạn bè, sau khi một người bạn chấp nhận yêu cầu kết bạn, bạn có thể chia sẻ khoảnh khắc với họ</string>
+    <string name="capture_no_friends_dialog_add_friend">Thêm bạn bè</string>
+    <string name="capture_friends_count_pending">Chưa có thông tin bạn bè. Đang tải lại…</string>
+    <string name="ok">OK</string>
     <string name="approve_camera">Cho phép Snaplet truy cập camera của bạn để chụp ảnh</string>
     <string name="approve">Cho phép</string>
     <string name="recent_photos">Ảnh gần đây</string>
@@ -72,7 +77,7 @@
     <string name="friend_sheet_other">Khác</string>
     <string name="friend_request_section_title">Yêu cầu kết bạn</string>
     <string name="friend_sheet_empty_title">Kết nối của bạn bắt đầu từ đây</string>
-    <string name="friend_sheet_empty_message">Thêm bạn bè để chia sẻ khoảnh khắc. Chỉ bạn bè mới xem được snap của bạn.</string>
+    <string name="friend_sheet_empty_message">Thêm bạn bè để chia sẻ khoảnh khắc. Chỉ bạn bè mới xem được ảnh của bạn.</string>
     <string name="friend_sheet_share_profile_title">Chia sẻ hồ sơ của bạn</string>
     <string name="friend_sheet_copy_cta">Sao chép</string>
     <string name="accept">Chấp nhận</string>

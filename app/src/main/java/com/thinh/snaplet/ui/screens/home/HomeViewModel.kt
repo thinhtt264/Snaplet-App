@@ -69,7 +69,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -129,8 +128,7 @@ class HomeViewModel @Inject constructor(
 
     val uiState: StateFlow<HomeUiState> = combine(
         _uiState,
-        userRepository.observeMyUserProfile()
-            .distinctUntilChanged(),
+        userRepository.observeMyUserProfile().distinctUntilChanged(),
     ) { state, profileUi ->
         state.copy(
             userProfile = profileUi
@@ -286,15 +284,21 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(friendSheetState = transform(it.friendSheetState)) }
     }
 
+    fun showFriendSheet() {
+        _uiState.update { it.copy(showFriendSheet = true) }
+    }
+
     fun onFriendSheetDismissed() {
         friendSearchJob?.cancel()
         friendSearchJob = null
         lastFriendSearchQuery = ""
 
-        updateFriendSheetState {
-            it.copy(
-                isSearchingUsers = false,
-                searchResults = emptyList(),
+        _uiState.update { state ->
+            state.copy(
+                showFriendSheet = false, friendSheetState = state.friendSheetState.copy(
+                    isSearchingUsers = false,
+                    searchResults = emptyList(),
+                )
             )
         }
     }
@@ -638,8 +642,7 @@ class HomeViewModel @Inject constructor(
         reactToPostJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
 
-            runCatching { postRepository.recordQuickChatEmojiUsage(emoji) }
-                .onFailure { error ->
+            runCatching { postRepository.recordQuickChatEmojiUsage(emoji) }.onFailure { error ->
                     Logger.e("Failed to persist quick chat emoji usage: ${error.message}")
                 }
             postRepository.reactToPost(postId = postIdToReact, reactionIcon = emoji)
@@ -658,8 +661,8 @@ class HomeViewModel @Inject constructor(
             postRepository.getPostReactions(postId).fold(onSuccess = { reactions ->
                 val mapped =
                     runCatching { mapPostReactionUsersUseCase(reactions) }.onFailure { error ->
-                            Logger.e("Failed to map post reactions for postId=$postId: ${error.message}")
-                        }.getOrDefault(emptyList())
+                        Logger.e("Failed to map post reactions for postId=$postId: ${error.message}")
+                    }.getOrDefault(emptyList())
                 _uiState.update {
                     it.copy(
                         postReactionsState = PostReactionsUiState.Result(mapped)
@@ -739,7 +742,20 @@ class HomeViewModel @Inject constructor(
                 it.copy(snackbarMessage = UiText.DynamicString("Camera is not ready"))
             }
 
-            CaptureReadiness.Ready -> takePhoto(context)
+            CaptureReadiness.Ready -> {
+                val counts = _uiState.value.friendSheetState.relationshipCounts
+                if (counts != null && counts.acceptedFriendCount > 0) {
+                    takePhoto(context)
+                } else {
+                    OverlayEventBus.showConfirmDialog(
+                        title = UiText.StringResource(R.string.capture_no_friends_dialog_title),
+                        message = UiText.StringResource(R.string.capture_no_friends_dialog_message),
+                        confirmText = UiText.StringResource(R.string.capture_no_friends_dialog_add_friend),
+                        cancelText = UiText.StringResource(R.string.ok),
+                        onConfirm = { showFriendSheet() },
+                    )
+                }
+            }
         }
     }
 

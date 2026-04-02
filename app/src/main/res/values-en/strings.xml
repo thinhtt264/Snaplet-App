@@ -17,6 +17,11 @@
     <string name="create_account">Create an account</string>
     <string name="login">Log in</string>
     <string name="camera_unavailable">Camera unavailable</string>
+    <string name="capture_no_friends_dialog_title">Add a friend first</string>
+    <string name="capture_no_friends_dialog_message">You don\'t have any friends yet. After someone accepts your friend request, you can share moments with them.</string>
+    <string name="capture_no_friends_dialog_add_friend">Add friends</string>
+    <string name="capture_friends_count_pending">Friend info isn\'t ready yet. Loading…</string>
+    <string name="ok">OK</string>
     <string name="approve_camera">Allow Snaplet to access your camera to take photos</string>
     <string name="approve">Allow</string>
     <string name="recent_photos">Recent Photos</string>

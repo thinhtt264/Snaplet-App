@@ -255,7 +255,6 @@ private fun HomeScreen(
     onProfileClick: () -> Unit = {},
     onEmojiReaction: (String) -> Unit = {},
 ) {
-    var showFriendSheet by remember { mutableStateOf(false) }
     var friendSearchQuery by remember { mutableStateOf("") }
     var chatMessage by remember { mutableStateOf("") }
 
@@ -331,7 +330,7 @@ private fun HomeScreen(
 
                 else -> {
                     if (uiState.posts.isEmpty()) {
-                        EmptyMediaPage(onAddFriendClick = { showFriendSheet = true })
+                        EmptyMediaPage(onAddFriendClick = viewModel::showFriendSheet)
                     } else {
                         val post = uiState.posts[page - 1]
                         MediaPage(
@@ -360,7 +359,7 @@ private fun HomeScreen(
         TopAction(
             hasCaptureImage = uiState.cameraState.capturedImagePath != null,
             onProfileClick = onProfileClick,
-            onFriendsClick = { showFriendSheet = true },
+            onFriendsClick = viewModel::showFriendSheet,
             onChatClick = { /* TODO */ },
             relationshipCounts = uiState.friendSheetState.relationshipCounts,
             avatarUrl = uiState.userProfile?.avatarUrls?.forThumbnail().orEmpty(),
@@ -370,10 +369,9 @@ private fun HomeScreen(
                 .align(Alignment.TopCenter)
         )
 
-        if (showFriendSheet) {
+        if (uiState.showFriendSheet) {
             FriendBottomSheet(
                 onDismiss = {
-                    showFriendSheet = false
                     friendSearchQuery = ""
                     viewModel.onFriendSheetDismissed()
                 },
