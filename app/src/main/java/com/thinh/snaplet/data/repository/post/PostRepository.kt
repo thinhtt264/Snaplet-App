@@ -38,6 +38,14 @@ interface PostRepository {
         lastSeenPostCreatedAt: Date,
     ): ApiResult<Unit>
 
+    suspend fun markPostOwnerViewed(
+        postId: String,
+    ): ApiResult<Unit>
+
+    suspend fun getPostById(
+        postId: String,
+    ): ApiResult<Post>
+
     suspend fun getQuickChatRecentEmojis(): List<String>
 
     suspend fun recordQuickChatEmojiUsage(emoji: String)

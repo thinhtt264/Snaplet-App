@@ -110,6 +110,22 @@ class PostRepositoryImpl @Inject constructor(
         )
     }
 
+    override suspend fun markPostOwnerViewed(
+        postId: String,
+    ): ApiResult<Unit> {
+        return safeApiCall(
+            apiCall = { apiService.markPostOwnerViewed(postId = postId) }
+        )
+    }
+
+    override suspend fun getPostById(
+        postId: String,
+    ): ApiResult<Post> {
+        return safeApiCall(
+            apiCall = { apiService.getPostById(postId = postId) }
+        )
+    }
+
     override suspend fun getQuickChatRecentEmojis(): List<String> {
         return dataStoreManager.getQuickChatRecentEmojis()
     }

@@ -27,6 +27,7 @@ import com.thinh.snaplet.domain.feed.ShouldTriggerLoadMoreUseCase
 import com.thinh.snaplet.domain.media.DownloadPostImageUseCase
 import com.thinh.snaplet.domain.media.ValidateCaptureReadinessUseCase
 import com.thinh.snaplet.domain.model.CaptureReadiness
+import com.thinh.snaplet.domain.model.FloatDirection
 import com.thinh.snaplet.domain.model.NewerFeedResult
 import com.thinh.snaplet.domain.model.PostAction
 import com.thinh.snaplet.domain.model.UploadPostResult
@@ -136,9 +137,8 @@ class HomeViewModel @Inject constructor(
     ) { state, profileUi ->
         state.copy(
             userProfile = profileUi,
-            isFeedFilterEnabled =
-                (state.friendSheetState.relationshipCounts?.acceptedFriendCount ?: 0) > 0 &&
-                        !state.isLoadingPosts
+            isFeedFilterEnabled = (state.friendSheetState.relationshipCounts?.acceptedFriendCount
+                ?: 0) > 0 && !state.isLoadingPosts
         )
     }.stateIn(
         scope = viewModelScope,
@@ -520,8 +520,7 @@ class HomeViewModel @Inject constructor(
                         val newPendingList =
                             s.pendingList.filterNot { it.relationship.id == friend.id }
                         s.copy(
-                            pendingList = newPendingList,
-                            relationshipCounts = RelationshipCounts(
+                            pendingList = newPendingList, relationshipCounts = RelationshipCounts(
                                 acceptedFriendCount = s.friendList.size,
                                 pendingRequestCount = newPendingList.size
                             )
@@ -537,14 +536,11 @@ class HomeViewModel @Inject constructor(
                     _uiState.update { home ->
                         val s = home.friendSheetState
                         val newFriendList = s.friendList.filterNot { it.id == friend.id }
-                        val newFilter =
-                            if (home.feedUserIdFilter == friend.userId) null
-                            else home.feedUserIdFilter
+                        val newFilter = if (home.feedUserIdFilter == friend.userId) null
+                        else home.feedUserIdFilter
                         home.copy(
-                            feedUserIdFilter = newFilter,
-                            friendSheetState = s.copy(
-                                friendList = newFriendList,
-                                relationshipCounts = RelationshipCounts(
+                            feedUserIdFilter = newFilter, friendSheetState = s.copy(
+                                friendList = newFriendList, relationshipCounts = RelationshipCounts(
                                     acceptedFriendCount = newFriendList.size,
                                     pendingRequestCount = s.pendingList.size
                                 )
@@ -586,17 +582,15 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun observeNetworkReconnect() {
-        connectivityObserver.isInternetAvailable
-            .onEach { isAvailable ->
-                if (!isAvailable) return@onEach
-                loadMyFriendList()
+        connectivityObserver.isInternetAvailable.onEach { isAvailable ->
+            if (!isAvailable) return@onEach
+            loadMyFriendList()
 
-                val state = _uiState.value
-                if (state.isLoadingPosts || state.isLoadingMore || state.posts.isNotEmpty()) return@onEach
+            val state = _uiState.value
+            if (state.isLoadingPosts || state.isLoadingMore || state.posts.isNotEmpty()) return@onEach
 
-                loadNewsfeed(isLoadMore = false)
-            }
-            .launchIn(viewModelScope)
+            loadNewsfeed(isLoadMore = false)
+        }.launchIn(viewModelScope)
     }
 
     private fun loadNewsfeed(isLoadMore: Boolean = false) {
@@ -666,7 +660,7 @@ class HomeViewModel @Inject constructor(
 
         val visiblePost = state.posts.getOrNull(currentIndex)
         if (visiblePost != null && visiblePost.isOwnPost) {
-            loadPostReactions(visiblePost.id)
+            loadPostReactions(visiblePost.id, visiblePost.isOwnerViewedPost)
         }
     }
 
@@ -704,7 +698,7 @@ class HomeViewModel @Inject constructor(
 
     private var postReactionsJob: Job? = null
 
-    private fun loadPostReactions(postId: String) {
+    private fun loadPostReactions(postId: String, isOwnerViewed: Boolean = false) {
         postReactionsJob?.cancel()
         _uiState.update { it.copy(postReactionsState = PostReactionsUiState.Loading) }
         postReactionsJob = viewModelScope.launch {
@@ -713,10 +707,14 @@ class HomeViewModel @Inject constructor(
                     runCatching { mapPostReactionUsersUseCase(reactions) }.onFailure { error ->
                         Logger.e("Failed to map post reactions for postId=$postId: ${error.message}")
                     }.getOrDefault(emptyList())
-                _uiState.update {
-                    it.copy(
-                        postReactionsState = PostReactionsUiState.Result(mapped)
+                _uiState.update { it.copy(postReactionsState = PostReactionsUiState.Result(mapped)) }
+
+                if (!isOwnerViewed) {
+                    emojiFloatController.emit(
+                        emoji = mapped.first().reactionIcons.first(),
+                        direction = FloatDirection.DOWN
                     )
+                    markPostOwnerViewed(postId)
                 }
             }, onFailure = {
                 _uiState.update {
@@ -725,6 +723,31 @@ class HomeViewModel @Inject constructor(
                     )
                 }
             })
+        }
+    }
+
+    private fun markPostOwnerViewed(postId: String) {
+        viewModelScope.launch {
+            postRepository.markPostOwnerViewed(postId)
+                .onSuccess {
+                    postRepository.getPostById(postId)
+                        .onSuccess { latestPost ->
+                            if (!latestPost.isOwnerViewedPost) return@onSuccess
+                            _uiState.update { state ->
+                                state.copy(
+                                    posts = state.posts.map { post ->
+                                        if (post.id == postId) latestPost else post
+                                    }
+                                )
+                            }
+                        }
+                        .onFailure { error ->
+                            Logger.e("Failed to refresh post after owner viewed mark: ${error.message}")
+                        }
+                }
+                .onFailure { error ->
+                    Logger.e("Failed to mark post owner viewed: ${error.message}")
+                }
         }
     }
 

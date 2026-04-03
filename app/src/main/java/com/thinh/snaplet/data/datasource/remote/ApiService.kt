@@ -164,6 +164,11 @@ interface ApiService {
         @Path("postId") postId: String
     ): Response<BaseResponse<Unit>>
 
+    @GET("posts/{postId}")
+    suspend fun getPostById(
+        @Path("postId") postId: String
+    ): Response<BaseResponse<Post>>
+
     @GET("posts/unread-count")
     suspend fun getUnreadPostsCount(
     ): Response<BaseResponse<UnreadPostsCountData>>
@@ -183,4 +188,9 @@ interface ApiService {
         @Path("postId") postId: String,
         @Body body: ReactToPostRequest,
     ): Response<BaseResponse<ReactToPostResponse>>
+
+    @PATCH("posts/{postId}/owner-viewed")
+    suspend fun markPostOwnerViewed(
+        @Path("postId") postId: String,
+    ): Response<BaseResponse<Unit>>
 }
