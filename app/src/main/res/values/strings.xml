@@ -143,6 +143,17 @@
     <string name="widget_guide_step_3">Tìm Snaplet và thêm tiện ích</string>
     <string name="widget_guide_step_4">Giữ và kéo để sắp xếp và thay đổi kích cỡ.</string>
 
+    <!-- After registration: widget promo -->
+    <string name="post_register_widget_title_line1">Xem bạn bè ngay</string>
+    <string name="post_register_widget_title_line2">từ màn hình chính</string>
+    <string name="post_register_widget_feature1_title">Luôn cập nhật</string>
+    <string name="post_register_widget_feature1_body">Hiển thị ảnh mới nhất từ bạn bè ngay trên màn hình chính của bạn.</string>
+    <string name="post_register_widget_feature2_title">Mở thẳng vào bài đăng</string>
+    <string name="post_register_widget_feature2_body">Chạm vào ảnh trên widget để mở thẳng bài đăng đó trong Snaplet.</string>
+    <string name="post_register_widget_cta">Thêm Widget ngay</string>
+    <string name="post_register_widget_later">Để sau</string>
+    <string name="post_register_widget_illustration_cd">Minh họa widget Snaplet trên màn hình chính</string>
+
     <!-- Quick Chat Bar -->
     <string name="quick_chat_placeholder">Gửi tin nhắn…</string>
 

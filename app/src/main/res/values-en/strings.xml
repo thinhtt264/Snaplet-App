@@ -140,6 +140,17 @@
     <string name="widget_guide_step_3">Search Snaplet and add the widget</string>
     <string name="widget_guide_step_4">Press and drag to arrange and resize it.</string>
 
+    <!-- After registration: widget promo -->
+    <string name="post_register_widget_title_line1">See friends right away</string>
+    <string name="post_register_widget_title_line2">from your home screen</string>
+    <string name="post_register_widget_feature1_title">Always up to date</string>
+    <string name="post_register_widget_feature1_body">See the latest photos from friends directly on your home screen.</string>
+    <string name="post_register_widget_feature2_title">Open straight into the post</string>
+    <string name="post_register_widget_feature2_body">Tap a photo on the widget to open that post in Snaplet.</string>
+    <string name="post_register_widget_cta">Add widget now</string>
+    <string name="post_register_widget_later">Not now</string>
+    <string name="post_register_widget_illustration_cd">Illustration of the Snaplet widget on the home screen</string>
+
     <!-- Quick Chat Bar -->
     <string name="quick_chat_placeholder">Send a message…</string>
 

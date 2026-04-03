@@ -277,8 +277,12 @@ class RegisterViewModel @Inject constructor(
 
             result.fold(
                 onSuccess = {
-                    _uiState.update { it.copy(isLoading = false) }
-                    _uiEvent.emit(RegisterUIEvent.RegisterSuccess)
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            showPostRegisterWidgetPromo = true,
+                        )
+                    }
                 },
                 onFailure = { error ->
                     _uiState.update { it.copy(isLoading = false) }
@@ -292,6 +296,11 @@ class RegisterViewModel @Inject constructor(
         viewModelScope.launch {
             _uiEvent.emit(RegisterUIEvent.NavigateToLogin)
         }
+    }
+
+    suspend fun finishRegistrationPromo() {
+        authRepository.activatePendingRegistrationSession()
+        _uiState.update { it.copy(showPostRegisterWidgetPromo = false) }
     }
 
     private fun validateEmail(email: String): UiText? {

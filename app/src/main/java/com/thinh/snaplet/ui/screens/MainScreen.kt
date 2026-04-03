@@ -33,9 +33,12 @@ fun MainScreen(
                 when (event) {
                     is AppUiEvent.NavigateToAuthGraph -> {
                         navController.navigate(AuthGraph) {
-                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            popUpTo(navController.graph.id) {
+                                inclusive = true
+                                saveState = false
+                            }
                             launchSingleTop = true
-                            restoreState = true
+                            restoreState = false
                         }
                     }
 

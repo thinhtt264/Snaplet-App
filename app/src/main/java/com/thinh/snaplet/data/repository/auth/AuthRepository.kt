@@ -19,6 +19,8 @@ interface AuthRepository {
         password: String
     ): ApiResult<UserProfile>
 
+    suspend fun activatePendingRegistrationSession()
+
     suspend fun logout()
 
     suspend fun forceLogout()
