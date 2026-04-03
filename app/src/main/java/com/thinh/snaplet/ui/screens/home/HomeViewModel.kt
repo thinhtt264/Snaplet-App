@@ -43,6 +43,7 @@ import com.thinh.snaplet.domain.relationship.GetRelationshipActionUseCase
 import com.thinh.snaplet.domain.relationship.GetRelationshipsByStatusesUseCase
 import com.thinh.snaplet.domain.relationship.RemoveFriendUseCase
 import com.thinh.snaplet.domain.relationship.RemoveRelationshipUseCase
+import com.thinh.snaplet.platform.network.ConnectivityObserver
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.platform.permission.PermissionManager
 import com.thinh.snaplet.platform.share.ShareApp
@@ -109,6 +110,7 @@ class HomeViewModel @Inject constructor(
     private val postRepository: PostRepository,
     private val shouldMarkLatestPostAsSeenUseCase: ShouldMarkLatestPostAsSeenUseCase,
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
+    private val connectivityObserver: ConnectivityObserver,
     private val widgetUpdateManager: WidgetUpdateManager,
 ) : ViewModel() {
 
@@ -181,6 +183,7 @@ class HomeViewModel @Inject constructor(
         loadUnreadPostsCount()
         observeUnreadPostsUpdates()
         loadQuickChatEmojiSlots()
+        observeNetworkReconnect()
     }
 
     private fun loadQuickChatEmojiSlots() {
@@ -580,6 +583,20 @@ class HomeViewModel @Inject constructor(
             val content = shareManager.buildInviteShareContent(userName)
             shareManager.openSystemChooser(content)
         }
+    }
+
+    private fun observeNetworkReconnect() {
+        connectivityObserver.isInternetAvailable
+            .onEach { isAvailable ->
+                if (!isAvailable) return@onEach
+                loadMyFriendList()
+
+                val state = _uiState.value
+                if (state.isLoadingPosts || state.isLoadingMore || state.posts.isNotEmpty()) return@onEach
+
+                loadNewsfeed(isLoadMore = false)
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun loadNewsfeed(isLoadMore: Boolean = false) {
