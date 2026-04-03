@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -43,6 +44,7 @@ fun Modifier.pressScaleClickable(
     onClick: () -> Unit
 ): Modifier = composed {
     val finalInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
+    val currentOnClick by rememberUpdatedState(onClick)
 
     var isProcessing by remember { mutableStateOf(false) }
     val isPressed by finalInteractionSource.collectIsPressedAsState()
@@ -81,7 +83,7 @@ fun Modifier.pressScaleClickable(
                         }
 
                         try {
-                            onClick()
+                            currentOnClick()
                         } finally {
                             finalInteractionSource.tryEmit(
                                 PressInteraction.Release(press)
