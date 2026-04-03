@@ -11,9 +11,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -27,11 +29,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.R
 import com.thinh.snaplet.ui.common.CommonImages
+import com.thinh.snaplet.ui.components.AvatarGroup
+import com.thinh.snaplet.ui.components.AvatarGroupItem
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
 import com.thinh.snaplet.ui.theme.MotionTokens
@@ -87,11 +92,14 @@ fun PostActivityBar(
     ) { currentState ->
         Row(
             modifier = Modifier
+                .clip(RoundedCornerShape(24.dp))
                 .background(
                     MaterialTheme.colorScheme.surfaceContainerHighest,
                     shape = RoundedCornerShape(24.dp)
                 )
-                .padding(horizontal = 12.dp, vertical = 12.dp)
+                .height(48.dp)
+                .widthIn(max = 220.dp)
+                .padding(horizontal = 12.dp)
                 .animateContentSize()
                 .pressScaleClickable(enabled = isClickable, onClick = model.onClick),
             verticalAlignment = Alignment.CenterVertically,
@@ -115,7 +123,7 @@ fun PostActivityBar(
                     )
                     Spacer(Modifier.width(2.dp))
                     CircularProgressIndicator(
-                        modifier = Modifier.size(13.dp),
+                        modifier = Modifier.size(14.dp),
                         color = MaterialTheme.colorScheme.onSurface,
                         strokeWidth = 1.5.dp,
                     )
@@ -129,11 +137,24 @@ fun PostActivityBar(
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                     } else {
-                        BaseText(
-                            text = "${currentState.reactions.size} hoạt động",
-                            typography = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            BaseText(
+                                text = stringResource(R.string.post_activity_bar_loading),
+                                typography = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            AvatarGroup(
+                                items = currentState.reactions.map {
+                                    AvatarGroupItem(
+                                        avatarUrl = it.avatarUrl.ifBlank { null },
+                                        firstName = it.firstName,
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
             }
