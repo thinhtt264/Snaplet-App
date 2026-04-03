@@ -530,13 +530,20 @@ class HomeViewModel @Inject constructor(
             } else {
                 val currentAccepted = state.relationshipCounts?.acceptedFriendCount
                 removeFriendUseCase(friend.id, currentAccepted).onSuccess {
-                    updateFriendSheetState { s ->
+                    _uiState.update { home ->
+                        val s = home.friendSheetState
                         val newFriendList = s.friendList.filterNot { it.id == friend.id }
-                        s.copy(
-                            friendList = newFriendList,
-                            relationshipCounts = RelationshipCounts(
-                                acceptedFriendCount = newFriendList.size,
-                                pendingRequestCount = s.pendingList.size
+                        val newFilter =
+                            if (home.feedUserIdFilter == friend.userId) null
+                            else home.feedUserIdFilter
+                        home.copy(
+                            feedUserIdFilter = newFilter,
+                            friendSheetState = s.copy(
+                                friendList = newFriendList,
+                                relationshipCounts = RelationshipCounts(
+                                    acceptedFriendCount = newFriendList.size,
+                                    pendingRequestCount = s.pendingList.size
+                                )
                             )
                         )
                     }
