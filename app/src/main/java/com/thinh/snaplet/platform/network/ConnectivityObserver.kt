@@ -46,10 +46,10 @@ class ConnectivityObserver @Inject constructor(
         val activeNetwork = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
 
-        // Prefer "validated" when present to avoid captive portals.
+        // Require validated connectivity to avoid captive portals.
         val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
         val hasValidated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 
-        return hasInternet && (hasValidated || !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+        return hasInternet && hasValidated
     }
 }
