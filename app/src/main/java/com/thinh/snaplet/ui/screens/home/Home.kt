@@ -77,6 +77,16 @@ fun Home(
     val pagerState = rememberPagerState(
         initialPage = CAMERA_PAGE_INDEX, pageCount = { pageCount })
 
+    // When the post list shrinks (feed filter, reload, …), `pageCount` can drop before
+    // `currentPage` catches up, leaving the user past the last valid page.
+    // `scrollToPage` snaps into 0..lastPageIndex so the pager stays aligned with data.
+    LaunchedEffect(pageCount) {
+        val lastPageIndex = pageCount - 1
+        if (pagerState.currentPage > lastPageIndex) {
+            pagerState.scrollToPage(lastPageIndex)
+        }
+    }
+
     var snapshotHandler by remember { mutableStateOf<(() -> Bitmap?)?>(null) }
 
     val cameraActions = remember(viewModel) {
@@ -410,14 +420,17 @@ private fun HomeScreen(
         }
 
         if (showGlobalBottomContent) {
-            val currentPost = uiState.posts[pagerState.currentPage - 1]
-            HomeBottomContent(
-                quickChatBar = quickChatBar,
-                bottomAction = bottomAction,
-                modifier = Modifier.align(Alignment.BottomCenter),
-                isShowActivityBar = currentPost.isOwnPost,
-                postActivityBar = postActivityBar,
-            )
+            val postIndex = pagerState.currentPage - 1
+            if (postIndex in uiState.posts.indices) {
+                val currentPost = uiState.posts[postIndex]
+                HomeBottomContent(
+                    quickChatBar = quickChatBar,
+                    bottomAction = bottomAction,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    isShowActivityBar = currentPost.isOwnPost,
+                    postActivityBar = postActivityBar,
+                )
+            }
         }
 
         EmojiFloatCanvas(
