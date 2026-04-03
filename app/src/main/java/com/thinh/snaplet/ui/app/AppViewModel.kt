@@ -15,6 +15,7 @@ import com.thinh.snaplet.platform.widget.WidgetUpdateManager
 import com.thinh.snaplet.ui.overlay.ModalContent
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.screens.friend_request.FriendRequestUiState
+import com.thinh.snaplet.utils.CrashlyticsLogger
 import com.thinh.snaplet.utils.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.BufferOverflow
@@ -51,6 +52,7 @@ class AppViewModel @Inject constructor(
     private var isInitialized = false
     private val isAuthenticated = MutableStateFlow(false)
     private val isForegrounded = MutableStateFlow(false)
+
 
     /** Pending friend request deeplink (userName) to show after login in this session. */
     private var pendingFriendRequestUserName: String? = null
@@ -112,6 +114,8 @@ class AppViewModel @Inject constructor(
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
                 isInitialized = true
+
+                CrashlyticsLogger.setUser(userRepository.getCurrentUserProfile()?.id.orEmpty())
                 observeDeepLinkEvents()
             }
         }

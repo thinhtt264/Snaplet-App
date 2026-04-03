@@ -53,6 +53,7 @@ import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
 import com.thinh.snaplet.ui.theme.Error50
+import com.thinh.snaplet.utils.CrashlyticsLogger
 import com.thinh.snaplet.utils.FileUtils
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.onFailure
@@ -583,6 +584,8 @@ class HomeViewModel @Inject constructor(
 
     private fun loadNewsfeed(isLoadMore: Boolean = false) {
         val state = _uiState.value
+
+        CrashlyticsLogger.action("loadNewsFeed", isLoadMore.toString())
 
         if (isLoadMore) {
             if (state.isLoadingMore || state.nextCursor == null) return
