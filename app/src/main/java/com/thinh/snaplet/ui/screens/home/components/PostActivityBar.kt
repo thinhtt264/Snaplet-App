@@ -99,7 +99,7 @@ fun PostActivityBar(
                     shape = RoundedCornerShape(24.dp)
                 )
                 .height(48.dp)
-                .widthIn(max = 220.dp)
+                .widthIn(max = 260.dp)
                 .padding(horizontal = 12.dp)
                 .animateContentSize()
                 .pressScaleClickable(enabled = isClickable, onClick = model.onClick),
