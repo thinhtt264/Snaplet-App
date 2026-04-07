@@ -3,6 +3,15 @@ package com.thinh.snaplet.ui.screens.home
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.camera.core.ImageCapture
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,6 +42,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.ui.components.EmojiFloatCanvas
 import com.thinh.snaplet.ui.components.EmojiFloatController
@@ -45,9 +55,11 @@ import com.thinh.snaplet.ui.screens.home.components.HomeBottomContent
 import com.thinh.snaplet.ui.screens.home.components.MediaPage
 import com.thinh.snaplet.ui.screens.home.components.NewPostsBanner
 import com.thinh.snaplet.ui.screens.home.components.PostActivityBarModel
+import com.thinh.snaplet.ui.screens.home.components.PostGridView
 import com.thinh.snaplet.ui.screens.home.components.QuickChatBarModel
 import com.thinh.snaplet.ui.screens.home.components.ReactionsBottomSheet
 import com.thinh.snaplet.ui.screens.home.components.TopAction
+import com.thinh.snaplet.ui.theme.MotionTokens
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 
@@ -267,11 +279,12 @@ private fun HomeScreen(
 ) {
     var friendSearchQuery by remember { mutableStateOf("") }
     var chatMessage by remember { mutableStateOf("") }
+    var previousPostListViewMode by remember { mutableStateOf(uiState.postListViewMode) }
 
     val showGlobalBottomContent by remember {
         derivedStateOf {
             val absolutePosition = pagerState.currentPage + pagerState.currentPageOffsetFraction
-            absolutePosition > 1.0f
+            uiState.postListViewMode == PostListViewMode.PAGER && absolutePosition > 1.0f
         }
     }
 
@@ -291,9 +304,21 @@ private fun HomeScreen(
         )
     }
 
-    val bottomAction = remember(onNavigateToCameraPage, onMoreClick, isDownloading) {
+    val bottomAction = remember(
+        onNavigateToCameraPage,
+        onMoreClick,
+        isDownloading,
+        uiState.postListViewMode,
+    ) {
         BottomActionModel(
-            onGridClick = { /* TODO */ },
+            onGridClick = {
+                val nextMode = if (uiState.postListViewMode == PostListViewMode.PAGER) {
+                    PostListViewMode.GRID
+                } else {
+                    PostListViewMode.PAGER
+                }
+                viewModel.onViewModeToggle(nextMode)
+            },
             onCaptureClick = onNavigateToCameraPage,
             onMoreClick = onMoreClick,
             showMoreButtonLoading = isDownloading,
@@ -307,61 +332,129 @@ private fun HomeScreen(
         )
     }
 
-    LaunchedEffect(pagerState.currentPage) {
-        val currentPage = pagerState.currentPage
-        val postIndex = currentPage - 1
-        onItemVisible(postIndex)
+    LaunchedEffect(pagerState.currentPage, uiState.postListViewMode) {
+        if (uiState.postListViewMode != PostListViewMode.PAGER) return@LaunchedEffect
+        onItemVisible(pagerState.currentPage - 1)
+    }
+
+    LaunchedEffect(uiState.postListViewMode, uiState.pagerInitialIndex) {
+        val shouldJumpToPagerItem = previousPostListViewMode == PostListViewMode.GRID &&
+                uiState.postListViewMode == PostListViewMode.PAGER
+
+        if (shouldJumpToPagerItem) {
+            val targetPage = (uiState.pagerInitialIndex + 1).coerceIn(0, pagerState.pageCount - 1)
+            if (pagerState.currentPage != targetPage) {
+                pagerState.scrollToPage(targetPage)
+            }
+        }
+
+        previousPostListViewMode = uiState.postListViewMode
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        val isCameraPage = pagerState.currentPage == CAMERA_PAGE_INDEX
+        val isCameraPage = uiState.postListViewMode == PostListViewMode.PAGER &&
+                pagerState.currentPage == CAMERA_PAGE_INDEX
 
-        VerticalPager(
-            state = pagerState,
+        val gridToPagerTransition: ContentTransform =
+            (scaleIn(
+                initialScale = 0.92f,
+                animationSpec = tween(
+                    durationMillis = MotionTokens.Emphasized,
+                    easing = FastOutSlowInEasing
+                ),
+            ) + fadeIn(tween(MotionTokens.Normal))) togetherWith
+                    (scaleOut(
+                        targetScale = 1.04f,
+                        animationSpec = tween(MotionTokens.Normal),
+                    ) + fadeOut(tween(MotionTokens.Fast)))
+
+        val pagerToGridTransition: ContentTransform =
+            (scaleIn(
+                initialScale = 1.04f,
+                animationSpec = tween(
+                    durationMillis = MotionTokens.Emphasized,
+                    easing = FastOutSlowInEasing
+                ),
+            ) + fadeIn(tween(MotionTokens.Normal))) togetherWith
+                    (scaleOut(
+                        targetScale = 0.92f,
+                        animationSpec = tween(MotionTokens.Normal),
+                    ) + fadeOut(tween(MotionTokens.Fast)))
+
+        AnimatedContent(
+            targetState = uiState.postListViewMode,
+            transitionSpec = {
+                if (targetState == PostListViewMode.PAGER) gridToPagerTransition
+                else pagerToGridTransition
+            },
+            label = "PostListViewMode",
             modifier = Modifier.fillMaxSize(),
-            userScrollEnabled = userScrollEnabled,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            beyondViewportPageCount = 1,
-            key = { page ->
-                when {
-                    page == CAMERA_PAGE_INDEX -> "camera"
-                    uiState.posts.isEmpty() -> "empty_media"
-                    else -> uiState.posts[page - 1].id
-                }
-            }) { page ->
-            when (page) {
-                CAMERA_PAGE_INDEX -> CameraPage(
-                    onDownloadImage = viewModel::downloadCaptureImage,
-                    cameraState = uiState.cameraState,
-                    currentCaption = uiState.currentCaption,
-                    isUploading = uiState.uploadStatuses.values.any { it is UploadStatus.Uploading },
-                    cameraActions = cameraActions,
-                    unreadPostsCount = uiState.unreadPostsCount,
-                    onHistoryClick = onScrollToFirstPost,
-                )
+        ) { mode ->
+            when (mode) {
+                PostListViewMode.PAGER -> {
+                    VerticalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize(),
+                        userScrollEnabled = userScrollEnabled,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        beyondViewportPageCount = 1,
+                        key = { page ->
+                            when {
+                                page == CAMERA_PAGE_INDEX -> "camera"
+                                uiState.posts.isEmpty() -> "empty_media"
+                                else -> uiState.posts[page - 1].id
+                            }
+                        }) { page ->
+                        when (page) {
+                            CAMERA_PAGE_INDEX -> CameraPage(
+                                onDownloadImage = viewModel::downloadCaptureImage,
+                                cameraState = uiState.cameraState,
+                                currentCaption = uiState.currentCaption,
+                                isUploading = uiState.uploadStatuses.values.any { it is UploadStatus.Uploading },
+                                cameraActions = cameraActions,
+                                unreadPostsCount = uiState.unreadPostsCount,
+                                onHistoryClick = onScrollToFirstPost,
+                            )
 
-                else -> {
-                    if (uiState.posts.isEmpty()) {
-                        EmptyMediaPage(onAddFriendClick = viewModel::showFriendSheet)
-                    } else {
-                        val post = uiState.posts[page - 1]
-                        MediaPage(
-                            post = post,
-                            uploadStatus = uiState.uploadStatuses[post.id],
-                            showBottomContent = !showGlobalBottomContent,
-                            quickChatBar = quickChatBar,
-                            bottomAction = bottomAction,
-                            postActivityBar = postActivityBar,
-                            onRetryClick = { viewModel.retryUpload(post.id) },
-                            onDeleteClick = { viewModel.deleteFailedPost(post.id) })
+                            else -> {
+                                val post = uiState.posts.getOrNull(page - 1)
+                                if (post == null) {
+                                    EmptyMediaPage(onAddFriendClick = viewModel::showFriendSheet)
+                                } else {
+                                    MediaPage(
+                                        post = post,
+                                        uploadStatus = uiState.uploadStatuses[post.id],
+                                        showBottomContent = !showGlobalBottomContent,
+                                        quickChatBar = quickChatBar,
+                                        bottomAction = bottomAction,
+                                        postActivityBar = postActivityBar,
+                                        onRetryClick = { viewModel.retryUpload(post.id) },
+                                        onDeleteClick = { viewModel.deleteFailedPost(post.id) }
+                                    )
+                                }
+                            }
+                        }
                     }
+                }
+
+                PostListViewMode.GRID -> {
+                    PostGridView(
+                        posts = uiState.posts,
+                        onItemClick = viewModel::onGridItemClick,
+                        onLoadMore = viewModel::onGridNearEndReached,
+                        canLoadMore = uiState.canLoadMore,
+                        loadMoreTriggerFromBottomRatio = GetNewsfeedUseCase.GRID_TRIGGER_FROM_BOTTOM_RATIO,
+                        modifier = Modifier.fillMaxSize(),
+                    )
                 }
             }
         }
 
         NewPostsBanner(
             bannerMessage = uiState.bannerMessage,
-            isEligiblePage = pagerState.currentPage > CAMERA_PAGE_INDEX && uiState.unreadPostsCount > 0,
+            isEligiblePage = uiState.postListViewMode == PostListViewMode.PAGER &&
+                    pagerState.currentPage > CAMERA_PAGE_INDEX &&
+                    uiState.unreadPostsCount > 0,
             onClick = viewModel::onNewPostsBannerTapped,
             modifier = Modifier
                 .align(Alignment.TopCenter)

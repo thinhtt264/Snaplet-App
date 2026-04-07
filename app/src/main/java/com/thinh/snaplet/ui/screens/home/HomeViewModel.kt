@@ -21,6 +21,7 @@ import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.domain.feed.FetchNewerFeedUseCase
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase.Companion.FEED_PAGE_LIMIT
+import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase.Companion.GRID_LOAD_MORE_STEP
 import com.thinh.snaplet.domain.feed.ObserveNewPostEventUseCase
 import com.thinh.snaplet.domain.feed.ShouldMarkLatestPostAsSeenUseCase
 import com.thinh.snaplet.domain.feed.ShouldTriggerLoadMoreUseCase
@@ -316,6 +317,36 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun onViewModeToggle(mode: PostListViewMode) {
+        _uiState.update { it.copy(postListViewMode = mode) }
+        if (mode == PostListViewMode.GRID) {
+            ensureGridFeedCapacity()
+        }
+    }
+
+    fun onGridItemClick(index: Int) {
+        _uiState.update {
+            it.copy(
+                pagerInitialIndex = index,
+                postListViewMode = PostListViewMode.PAGER,
+            )
+        }
+    }
+
+    fun onGridNearEndReached() {
+        val state = _uiState.value
+        if (state.postListViewMode != PostListViewMode.GRID) return
+        loadNewsfeed(isLoadMore = true, limit = GRID_LOAD_MORE_STEP)
+    }
+
+    private fun ensureGridFeedCapacity() {
+        val state = _uiState.value
+        if (state.isLoadingPosts || state.isLoadingMore || state.nextCursor == null) return
+
+        val loadLimit = getNewsfeedUseCase.gridInitialTopUpLimit(state.posts.size) ?: return
+        loadNewsfeed(isLoadMore = true, limit = loadLimit)
+    }
+
     private fun refreshFriendSearchResults() {
         val query = lastFriendSearchQuery
         if (query.isBlank()) return
@@ -593,7 +624,10 @@ class HomeViewModel @Inject constructor(
         }.launchIn(viewModelScope)
     }
 
-    private fun loadNewsfeed(isLoadMore: Boolean = false) {
+    private fun loadNewsfeed(
+        isLoadMore: Boolean = false,
+        limit: Int = FEED_PAGE_LIMIT,
+    ) {
         val state = _uiState.value
 
         CrashlyticsLogger.action("loadNewsFeed", isLoadMore.toString())
@@ -612,7 +646,7 @@ class HomeViewModel @Inject constructor(
             val userId = state.feedUserIdFilter
 
             getNewsfeedUseCase(
-                limit = FEED_PAGE_LIMIT,
+                limit = limit,
                 cursor = cursor,
                 userId = userId,
             ).fold(onSuccess = { feedData ->
@@ -656,7 +690,12 @@ class HomeViewModel @Inject constructor(
             totalItems = state.posts.size,
             canLoadMore = state.canLoadMore
         )
-        if (shouldLoad) loadNewsfeed(isLoadMore = true)
+        if (shouldLoad) {
+            loadNewsfeed(
+                isLoadMore = true,
+                limit = FEED_PAGE_LIMIT,
+            )
+        }
 
         val visiblePost = state.posts.getOrNull(currentIndex)
         if (visiblePost != null && visiblePost.isOwnPost) {
