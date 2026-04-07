@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.R
@@ -141,8 +142,13 @@ fun PostActivityBar(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            val reactionCount = currentState.reactions.size
                             BaseText(
-                                text = stringResource(R.string.post_activity_bar_loading),
+                                text = pluralStringResource(
+                                    R.plurals.post_activity_bar_count,
+                                    reactionCount,
+                                    reactionCount,
+                                ),
                                 typography = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                             )

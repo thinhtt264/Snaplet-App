@@ -749,10 +749,13 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { it.copy(postReactionsState = PostReactionsUiState.Result(mapped)) }
 
                 if (!isOwnerViewed) {
-                    emojiFloatController.emit(
-                        emoji = mapped.first().reactionIcons.first(),
-                        direction = FloatDirection.DOWN
-                    )
+                    val emoji = mapped.firstOrNull()?.reactionIcons?.firstOrNull()
+                    if (emoji != null) {
+                        emojiFloatController.emit(
+                            emoji = emoji,
+                            direction = FloatDirection.DOWN
+                        )
+                    }
                     markPostOwnerViewed(postId)
                 }
             }, onFailure = {

@@ -102,6 +102,11 @@
 
     <string name="post_activity_bar_loading">Activity</string>
     <string name="post_activity_bar_empty">No activity yet</string>
+
+    <plurals name="post_activity_bar_count">
+        <item quantity="one">%d activity</item>
+        <item quantity="other">%d activities</item>
+    </plurals>
     <string name="reactions_sheet_title">Reactions</string>
 
     <!-- My Profile -->
