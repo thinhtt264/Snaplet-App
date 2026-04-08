@@ -1,15 +1,16 @@
 package com.thinh.snaplet.ui.screens.spotlight_post
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -23,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -30,12 +32,14 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thinh.snaplet.R
 import com.thinh.snaplet.ui.components.BaseText
+import com.thinh.snaplet.ui.components.EmojiFloatCanvas
 import com.thinh.snaplet.ui.components.PrimaryButton
 import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
 import com.thinh.snaplet.ui.screens.home.components.BottomActionModel
 import com.thinh.snaplet.ui.screens.home.components.MediaPage
 import com.thinh.snaplet.ui.screens.home.components.PostActivityBar
 import com.thinh.snaplet.ui.screens.home.components.PostActivityBarModel
+import com.thinh.snaplet.ui.screens.home.components.QuickChatBar
 import com.thinh.snaplet.ui.screens.home.components.QuickChatBarModel
 import com.thinh.snaplet.ui.screens.home.components.ReactionsBottomSheet
 
@@ -46,9 +50,24 @@ private fun BoxScope.SpotlightPostActivityBar(model: PostActivityBarModel) {
         model = model,
         modifier = Modifier
             .align(Alignment.BottomCenter)
-            .fillMaxWidth()
+            .wrapContentWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 32.dp, vertical = 24.dp),
+            .padding(horizontal = 64.dp),
+    )
+}
+
+@Composable
+private fun BoxScope.SpotlightQuickChatBar(model: QuickChatBarModel) {
+    QuickChatBar(
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .navigationBarsPadding()
+            .padding(horizontal = 32.dp),
+        messageText = model.messageText,
+        quickEmojiSlots = model.quickEmojiSlots,
+        onMessageChange = model.onMessageChange,
+        onSendMessage = model.onSendMessage,
+        onEmojiSelected = model.onEmojiSelected,
     )
 }
 
@@ -69,6 +88,8 @@ fun SpotlightPostScreen(
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
+                    expandedHeight = 72.dp,
+                    windowInsets = WindowInsets(0, 0, 0, 0),
                     title = {
                         BaseText(
                             text = stringResource(R.string.spotlight_post_title),
@@ -129,10 +150,10 @@ fun SpotlightPostScreen(
                         val post = uiState.post!!
                         val quickChatBar = QuickChatBarModel(
                             messageText = "",
-                            quickEmojiSlots = emptyList(),
+                            quickEmojiSlots = uiState.quickChatEmojiSlots,
                             onMessageChange = {},
                             onSendMessage = {},
-                            onEmojiSelected = {},
+                            onEmojiSelected = viewModel::onEmojiReaction,
                         )
                         val bottomAction = BottomActionModel(
                             onGridClick = {},
@@ -144,7 +165,11 @@ fun SpotlightPostScreen(
                             state = uiState.postReactionsState,
                             onClick = viewModel::onPostActivityClick,
                         )
-                        Box(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer { translationY = -56.dp.toPx() },
+                        ) {
                             MediaPage(
                                 post = post,
                                 uploadStatus = null,
@@ -155,6 +180,8 @@ fun SpotlightPostScreen(
                             )
                             if (post.isOwnPost) {
                                 SpotlightPostActivityBar(model = postActivityBar)
+                            } else {
+                                SpotlightQuickChatBar(model = quickChatBar)
                             }
                         }
                     }
@@ -168,5 +195,10 @@ fun SpotlightPostScreen(
                 onDismiss = viewModel::onReactionsSheetDismissed,
             )
         }
+
+        EmojiFloatCanvas(
+            controller = viewModel.emojiFloatController,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }

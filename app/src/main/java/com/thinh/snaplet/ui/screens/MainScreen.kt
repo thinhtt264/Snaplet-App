@@ -53,9 +53,7 @@ fun MainScreen(
                     }
 
                     is AppUiEvent.NavigateToSpotlightPost -> {
-                        navController.navigate(SpotlightPost(postId = event.postId)) {
-                            launchSingleTop = true
-                        }
+                        navController.navigate(SpotlightPost(postId = event.postId))
                     }
                 }
             }

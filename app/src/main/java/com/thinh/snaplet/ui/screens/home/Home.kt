@@ -346,7 +346,12 @@ private fun HomeScreen(
                 }
                 viewModel.onViewModeToggle(nextMode)
             },
-            onCaptureClick = onNavigateToCameraPage,
+            onCaptureClick = {
+                if (uiState.postListViewMode == PostListViewMode.GRID) {
+                    viewModel.onViewModeToggle(PostListViewMode.PAGER)
+                }
+                onNavigateToCameraPage()
+            },
             onMoreClick = onMoreClick,
             showMoreButtonLoading = isDownloading,
         )
@@ -470,6 +475,10 @@ private fun HomeScreen(
                         onItemClick = viewModel::onGridItemClick,
                         onLoadMore = viewModel::onGridNearEndReached,
                         canLoadMore = uiState.canLoadMore,
+                        onCaptureClick = {
+                            viewModel.onViewModeToggle(PostListViewMode.PAGER)
+                            onNavigateToCameraPage()
+                        },
                         loadMoreTriggerFromBottomRatio = GetNewsfeedUseCase.GRID_TRIGGER_FROM_BOTTOM_RATIO,
                         modifier = Modifier.fillMaxSize(),
                     )

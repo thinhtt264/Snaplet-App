@@ -8,10 +8,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class EmojiFloatController(
-    private val maxActiveBatches: Int = MAX_ACTIVE_BATCHES,
-) {
+@Singleton
+class EmojiFloatController @Inject constructor() {
 
     private companion object {
         const val MAX_ACTIVE_BATCHES = 3
@@ -46,7 +47,7 @@ class EmojiFloatController(
             cancelTrackedAnimation()
         }
         val activeBatches = _particles.value.distinctBy { it.batchId }.size
-        if (activeBatches >= maxActiveBatches) return null
+        if (activeBatches >= MAX_ACTIVE_BATCHES) return null
         val batch = EmojiParticleEngine.spawnBatch(
             emoji = emoji,
             canvasWidth = canvasSize.width,

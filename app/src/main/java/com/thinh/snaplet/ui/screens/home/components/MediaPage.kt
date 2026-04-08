@@ -54,6 +54,7 @@ private const val TOP_SPACE_RATIO = 0.16f
 
 @Composable
 fun MediaPage(
+    modifier: Modifier = Modifier,
     post: Post,
     uploadStatus: UploadStatus?,
     showBottomContent: Boolean = false,
@@ -63,7 +64,7 @@ fun MediaPage(
     onRetryClick: () -> Unit = {},
     onDeleteClick: () -> Unit = {},
 ) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val screenHeight = maxHeight
         val topPadding = screenHeight * TOP_SPACE_RATIO
         val isUploadFailed = uploadStatus is UploadStatus.Failed

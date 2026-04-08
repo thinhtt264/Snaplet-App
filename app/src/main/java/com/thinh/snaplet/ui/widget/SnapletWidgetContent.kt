@@ -15,6 +15,8 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
+import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.cornerRadius
@@ -36,6 +38,8 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.thinh.snaplet.MainActivity
 import com.thinh.snaplet.R
+import com.thinh.snaplet.platform.deeplink.DeepLinkUtils
+import com.thinh.snaplet.platform.notification.NotificationHelper
 import com.thinh.snaplet.ui.theme.WidgetStatePanelBackground
 import com.thinh.snaplet.ui.theme.onBackground_dark
 import com.thinh.snaplet.ui.theme.onPrimaryContainer_light
@@ -46,15 +50,20 @@ fun SnapletWidgetContent(
     data: WidgetDisplayData,
     modifier: GlanceModifier = GlanceModifier,
 ) {
-
     Box(
-        modifier = modifier.fillMaxSize().background(glanceColor(Color.Transparent))
-            .clickable(actionStartActivity<MainActivity>()),
+        modifier = modifier.fillMaxSize().background(glanceColor(Color.Transparent)).clickable(
+            actionStartActivity<MainActivity>(
+                parameters = actionParametersOf(
+                    WidgetActionParams.DeepLinkUri to data.postId.orEmpty().let { postId ->
+                        if (postId.isBlank()) "" else DeepLinkUtils.buildSpotlightDeepLink(postId).toString()
+                    },
+                )
+            )
+        ),
         contentAlignment = Alignment.Center,
     ) {
         when {
-            !data.postImageUrl.isNullOrBlank() ->
-                WidgetPostState(data = data)
+            !data.postImageUrl.isNullOrBlank() -> WidgetPostState(data = data)
 
             else -> WidgetErrorState(showCenterContent = true)
         }
@@ -176,8 +185,7 @@ private fun WidgetPostState(
                 }
 
                 if (data.unreadCount > 0) {
-                    val badgeText =
-                        if (data.unreadCount > 9) "9+" else data.unreadCount.toString()
+                    val badgeText = if (data.unreadCount > 9) "9+" else data.unreadCount.toString()
                     Box(
                         modifier = GlanceModifier.fillMaxSize()
                             .padding(vertical = 8.dp, horizontal = 10.dp),
@@ -211,9 +219,13 @@ private fun WidgetPostState(
                             modifier = GlanceModifier.padding(all = 10.dp),
                         ) {
                             Box(
-                                modifier = GlanceModifier
-                                    .background(glanceColor(Color.Black.copy(alpha = 0.5f)))
-                                    .cornerRadius(12.dp)
+                                modifier = GlanceModifier.background(
+                                    glanceColor(
+                                        Color.Black.copy(
+                                            alpha = 0.5f
+                                        )
+                                    )
+                                ).cornerRadius(12.dp)
                                     .padding(horizontal = 10.dp, vertical = 4.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -234,8 +246,7 @@ private fun WidgetPostState(
             }
         }
 
-        postImageLoadFinished ->
-            WidgetErrorState(showCenterContent = true)
+        postImageLoadFinished -> WidgetErrorState(showCenterContent = true)
 
         else ->
             // Placeholder while bitmap is still loading.
@@ -246,3 +257,7 @@ private fun WidgetPostState(
 
 private fun glanceColor(color: Color): ColorProvider =
     androidx.glance.color.ColorProvider(day = color, night = color)
+
+private object WidgetActionParams {
+    val DeepLinkUri = ActionParameters.Key<String>(NotificationHelper.EXTRA_DEEP_LINK_URI)
+}

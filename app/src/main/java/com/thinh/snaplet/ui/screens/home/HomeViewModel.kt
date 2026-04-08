@@ -114,13 +114,12 @@ class HomeViewModel @Inject constructor(
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
     private val connectivityObserver: ConnectivityObserver,
     private val widgetUpdateManager: WidgetUpdateManager,
+    val emojiFloatController: EmojiFloatController,
 ) : ViewModel() {
 
     private companion object {
         private const val DEBOUNCE_MS = 500L
     }
-
-    val emojiFloatController by lazy { EmojiFloatController() }
 
     private var lastFriendSearchQuery: String = ""
 

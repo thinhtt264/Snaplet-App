@@ -17,6 +17,7 @@ import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.thinh.snaplet.MainActivity
 import com.thinh.snaplet.R
+import com.thinh.snaplet.platform.deeplink.DeepLinkUtils
 import com.thinh.snaplet.utils.Logger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -37,9 +38,11 @@ class NotificationHelper @Inject constructor(
         postId: String,
         actorAvatarUrl: String?,
     ) {
-        val tapIntent = Intent(context, MainActivity::class.java).apply {
+        val deepLinkUri = DeepLinkUtils.buildSpotlightDeepLink(postId)
+        val tapIntent = Intent(Intent.ACTION_VIEW, deepLinkUri, context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(EXTRA_POST_ID, postId)
+            putExtra(EXTRA_DEEP_LINK_URI, deepLinkUri.toString())
             putExtra(EXTRA_NOTIFICATION_TYPE, TYPE_POST_REACTION)
         }
 
@@ -120,7 +123,9 @@ class NotificationHelper @Inject constructor(
         const val CHANNEL_ID = "reactions_channel"
         private const val CHANNEL_NAME = "Reactions"
         const val EXTRA_POST_ID = "postId"
+        const val EXTRA_DEEP_LINK_URI = "deepLinkUri"
         const val EXTRA_NOTIFICATION_TYPE = "notificationType"
         const val TYPE_POST_REACTION = "post_reaction"
+
     }
 }

@@ -3,6 +3,7 @@ package com.thinh.snaplet.ui.widget
 import androidx.datastore.preferences.core.Preferences
 
 data class WidgetDisplayData(
+    val postId: String?,
     val postImageUrl: String?,
     val postCaption: String?,
     val senderAvatarUrl: String?,
@@ -13,6 +14,7 @@ data class WidgetDisplayData(
     companion object {
         fun fromPreferences(prefs: Preferences): WidgetDisplayData {
             return WidgetDisplayData(
+                postId = prefs[SnapletWidgetStateKeys.POST_ID],
                 postImageUrl = prefs[SnapletWidgetStateKeys.POST_IMAGE_URL],
                 postCaption = prefs[SnapletWidgetStateKeys.POST_CAPTION],
                 senderAvatarUrl = prefs[SnapletWidgetStateKeys.SENDER_AVATAR_URL],

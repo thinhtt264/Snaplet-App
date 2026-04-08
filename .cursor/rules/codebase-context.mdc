@@ -1,6 +1,6 @@
 ---
 description: Updated codebase map for SnapletApp to target relevant paths quickly without scanning the entire project.
-alwaysApply: false
+alwaysApply: true
 globs: app/src/main/java/**/*.kt
 ---
 # Codebase context (SnapletApp)
@@ -55,11 +55,15 @@ Android app with Kotlin + Jetpack Compose + Hilt. Main flow: `ApiService` -> `Re
 | **platform/permission/** | PermissionManager, PermissionState | permission |
 | **platform/share/** | ShareManager | share |
 | **platform/deeplink/** | DeepLinkManager, DeepLinkEvent | deep link |
+| **platform/notification/** | NotificationHelper, FcmTokenRegistrar, SnapletFirebaseMessagingService | push notification, FCM token sync, notification tap routing |
+| **platform/network/** | ConnectivityObserver | internet connectivity observation |
 | **platform/socket/** | SocketManager, SocketEvent, message/state models | realtime socket events |
 | **platform/widget/** | widget scheduling/update helpers | widget workers, pinned widgets |
 | **network/** | TokenAuthenticator, TokenRefreshCoordinator, SessionController, FingerprintInterceptor | token/auth header/refresh/session lifecycle |
-| **utils/** | Logger, FileUtils, CommonExtensions, ValidationConstants, InviteConstants | utils, validation, logging |
+| **utils/** | Logger, CrashlyticsLogger, FileUtils, CommonExtensions, ValidationConstants, InviteConstants | utils, validation, logging, crash reporting bridge |
 | **utils/network/** | ApiResult, ApiError, ApiErrorCode, NetworkExtensions, GsonHolder | ApiResult, safeApiCall, API error mapping |
+| **ui/screens/spotlight_post/** | SpotlightPost screen + ViewModel + ui state | spotlight detail, open post from deeplink/notification |
+| **domain/notification/** | RegisterFcmTokenUseCase | FCM token registration flow |
 
 ## Practical routing hints
 
@@ -67,3 +71,6 @@ Android app with Kotlin + Jetpack Compose + Hilt. Main flow: `ApiService` -> `Re
 - Prompt mentions **reactions/unread/new posts** -> start at `data/repository/post/`, `domain/feed/`, `ui/screens/home/` and related components.
 - Prompt mentions **token/session/logout** -> inspect `data/repository/auth/`, `network/`, `data/datasource/local/datastore/`.
 - Prompt mentions **widget** -> inspect both `ui/widget/` and `platform/widget/`, plus `di/WorkManagerModule.kt`.
+- Prompt mentions **notification/FCM** -> inspect `platform/notification/`, `domain/notification/`, `data/repository/UserRepository(Impl)`, and `AndroidManifest.xml`.
+- Prompt mentions **deeplink to spotlight post** -> inspect `platform/deeplink/`, `navigation/NavScreen.kt`, `navigation/NavGraph.kt`, and `ui/screens/spotlight_post/`.
+- Prompt mentions **Crashlytics/release logging** -> inspect `HiltApplication.kt`, `utils/CrashlyticsLogger.kt`, and Gradle Firebase dependencies/config.

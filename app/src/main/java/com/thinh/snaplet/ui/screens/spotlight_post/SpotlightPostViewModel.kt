@@ -9,7 +9,10 @@ import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
 import com.thinh.snaplet.navigation.SpotlightPost
 import com.thinh.snaplet.ui.common.UiText
+import com.thinh.snaplet.ui.components.EmojiFloatController
+import com.thinh.snaplet.domain.model.FloatDirection
 import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
+import com.thinh.snaplet.ui.screens.home.QuickChatEmojiSlots
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
@@ -19,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -26,8 +30,12 @@ import javax.inject.Inject
 class SpotlightPostViewModel @Inject constructor(
     private val postRepository: PostRepository,
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
+    val emojiFloatController: EmojiFloatController,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+    private companion object {
+        private const val DEBOUNCE_MS = 500L
+    }
 
     private val route = savedStateHandle.toRoute<SpotlightPost>()
 
@@ -37,7 +45,17 @@ class SpotlightPostViewModel @Inject constructor(
     private var postReactionsJob: Job? = null
 
     init {
+        loadQuickChatEmojiSlots()
         loadPost()
+    }
+
+    private fun loadQuickChatEmojiSlots() {
+        viewModelScope.launch {
+            val recent = postRepository.getQuickChatRecentEmojis()
+            _uiState.update {
+                it.copy(quickChatEmojiSlots = QuickChatEmojiSlots.mergeForDisplay(recent))
+            }
+        }
     }
 
     fun loadPost() {
@@ -87,6 +105,27 @@ class SpotlightPostViewModel @Inject constructor(
         _uiState.update { it.copy(showReactionsSheet = false) }
     }
 
+    private var reactToPostJob: Job? = null
+
+    fun onEmojiReaction(emoji: String) {
+        emojiFloatController.emit(emoji)
+
+        val postIdToReact = _uiState.value.post?.id ?: return
+
+        reactToPostJob?.cancel()
+        reactToPostJob = viewModelScope.launch {
+            delay(DEBOUNCE_MS)
+
+            runCatching { postRepository.recordQuickChatEmojiUsage(emoji) }.onFailure { error ->
+                Logger.e("Failed to persist quick chat emoji usage: ${error.message}")
+            }
+            postRepository.reactToPost(postId = postIdToReact, reactionIcon = emoji)
+                .onFailure { error ->
+                    Logger.e("Failed to react to spotlight post: ${error.message}")
+                }
+        }
+    }
+
     private fun loadPostReactions(postId: String, isOwnerViewed: Boolean) {
         postReactionsJob?.cancel()
         _uiState.update { it.copy(postReactionsState = PostReactionsUiState.Loading) }
@@ -104,7 +143,16 @@ class SpotlightPostViewModel @Inject constructor(
                         it.copy(postReactionsState = PostReactionsUiState.Result(mapped))
                     }
                     if (!isOwnerViewed) {
-                        markPostOwnerViewed(postId)
+                        val emoji = mapped.firstOrNull()?.reactionIcons?.firstOrNull()
+                        if (emoji != null) {
+                            emojiFloatController.emit(
+                                emoji = emoji,
+                                direction = FloatDirection.DOWN,
+                                onEnd = {
+                                    markPostOwnerViewed(postId)
+                                },
+                            )
+                        }
                     }
                 },
                 onFailure = {

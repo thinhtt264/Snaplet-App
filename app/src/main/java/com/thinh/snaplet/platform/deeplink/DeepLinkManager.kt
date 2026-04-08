@@ -1,6 +1,7 @@
 package com.thinh.snaplet.platform.deeplink
 
 import android.content.Intent
+import android.net.Uri
 import com.thinh.snaplet.platform.notification.NotificationHelper
 import com.thinh.snaplet.utils.Logger
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -11,6 +12,11 @@ import javax.inject.Singleton
 
 @Singleton
 class DeepLinkManager @Inject constructor() {
+    companion object {
+        private const val APP_SCHEME = "snaplet"
+        private const val APP_HOST = "app"
+        private const val SPOTLIGHT_PATH = "spotlight"
+    }
 
     private val _events = MutableSharedFlow<DeepLinkEvent>(
         replay = 1,              // Replay last event to new subscribers (fix cold start)
@@ -19,25 +25,32 @@ class DeepLinkManager @Inject constructor() {
 
     val events: SharedFlow<DeepLinkEvent> = _events.asSharedFlow()
 
-    suspend fun handleDeepLink(intent: Intent?) {
-        if (intent?.action != Intent.ACTION_VIEW) return
+    suspend fun handleIntent(intent: Intent?) {
+        if (intent == null) return
+        if (intent.action == Intent.ACTION_VIEW && handleUri(intent.data)) return
 
-        val data = intent.data ?: return
-
-        Logger.d("🔗 DeepLink received: $data")
-
-        val userName = data.getQueryParameter("userName")
-
-        if (!userName.isNullOrBlank()) {
-            _events.emit(DeepLinkEvent.FriendRequest(userName))
-        }
+        val deepLinkString = intent.getStringExtra(NotificationHelper.EXTRA_DEEP_LINK_URI)
+            ?: intent.extras?.getString(NotificationHelper.EXTRA_DEEP_LINK_URI)
+        if (!deepLinkString.isNullOrBlank() && handleUri(Uri.parse(deepLinkString))) return
     }
 
-    suspend fun handleNotificationIntent(intent: Intent?) {
-        val postId = intent?.getStringExtra(NotificationHelper.EXTRA_POST_ID)
-            ?: intent?.extras?.getString(NotificationHelper.EXTRA_POST_ID)
-            ?: return
+    private suspend fun handleUri(uri: Uri?): Boolean {
+        if (uri == null) return false
+        if (uri.scheme != APP_SCHEME || uri.host != APP_HOST) return false
 
-        _events.emit(DeepLinkEvent.OpenSpotlightPost(postId))
+        Logger.d("🔗 DeepLink received: $uri")
+
+        val userName = uri.getQueryParameter("userName")
+        if (!userName.isNullOrBlank()) {
+            _events.emit(DeepLinkEvent.FriendRequest(userName))
+            return true
+        }
+
+        val path = uri.pathSegments
+        if (path.size >= 2 && path[0] == SPOTLIGHT_PATH && path[1].isNotBlank()) {
+            _events.emit(DeepLinkEvent.OpenSpotlightPost(path[1]))
+            return true
+        }
+        return false
     }
 }

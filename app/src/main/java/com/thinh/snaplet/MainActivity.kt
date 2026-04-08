@@ -53,8 +53,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         lifecycleScope.launch {
-            deepLinkManager.handleDeepLink(intent)
-            deepLinkManager.handleNotificationIntent(intent)
+            deepLinkManager.handleIntent(intent)
         }
 
         enableEdgeToEdge(
@@ -67,8 +66,7 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         lifecycleScope.launch {
-            deepLinkManager.handleDeepLink(intent)
-            deepLinkManager.handleNotificationIntent(intent)
+            deepLinkManager.handleIntent(intent)
         }
     }
 }
