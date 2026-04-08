@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.os.Build
 import androidx.camera.core.ImageCapture
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -308,7 +309,7 @@ private fun HomeScreen(
     var chatMessage by remember { mutableStateOf("") }
     var previousPostListViewMode by remember { mutableStateOf(uiState.postListViewMode) }
 
-    val showGlobalBottomContent by remember {
+    val showGlobalBottomContent by remember(uiState.postListViewMode) {
         derivedStateOf {
             val absolutePosition = pagerState.currentPage + pagerState.currentPageOffsetFraction
             uiState.postListViewMode == PostListViewMode.PAGER && absolutePosition > 1.0f
@@ -548,14 +549,18 @@ private fun HomeScreen(
             )
         }
 
-        if (showGlobalBottomContent) {
+        AnimatedVisibility(
+            visible = showGlobalBottomContent,
+            enter = fadeIn(animationSpec = tween(durationMillis = MotionTokens.Normal)),
+            exit = fadeOut(animationSpec = tween(durationMillis = MotionTokens.Fast)),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
             val postIndex = pagerState.currentPage - 1
             if (postIndex in uiState.posts.indices) {
                 val currentPost = uiState.posts[postIndex]
                 HomeBottomContent(
                     quickChatBar = quickChatBar,
                     bottomAction = bottomAction,
-                    modifier = Modifier.align(Alignment.BottomCenter),
                     isShowActivityBar = currentPost.isOwnPost,
                     postActivityBar = postActivityBar,
                 )
