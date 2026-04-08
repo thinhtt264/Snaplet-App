@@ -8,11 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class EmojiFloatController @Inject constructor() {
+class EmojiFloatController {
 
     private companion object {
         const val MAX_ACTIVE_BATCHES = 3

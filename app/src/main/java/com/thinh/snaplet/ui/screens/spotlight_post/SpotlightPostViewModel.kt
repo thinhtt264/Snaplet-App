@@ -30,9 +30,9 @@ import javax.inject.Inject
 class SpotlightPostViewModel @Inject constructor(
     private val postRepository: PostRepository,
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
-    val emojiFloatController: EmojiFloatController,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+    val emojiFloatController: EmojiFloatController by lazy { EmojiFloatController() }
     private companion object {
         private const val DEBOUNCE_MS = 500L
     }

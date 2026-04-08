@@ -114,8 +114,8 @@ class HomeViewModel @Inject constructor(
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
     private val connectivityObserver: ConnectivityObserver,
     private val widgetUpdateManager: WidgetUpdateManager,
-    val emojiFloatController: EmojiFloatController,
 ) : ViewModel() {
+    val emojiFloatController: EmojiFloatController by lazy { EmojiFloatController() }
 
     private companion object {
         private const val DEBOUNCE_MS = 500L
