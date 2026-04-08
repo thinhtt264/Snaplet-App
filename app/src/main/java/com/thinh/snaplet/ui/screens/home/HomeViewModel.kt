@@ -675,6 +675,9 @@ class HomeViewModel @Inject constructor(
     fun onItemVisible(currentIndex: Int) {
         val previousIndex = currentVisibleIndex
         currentVisibleIndex = currentIndex
+        if (currentIndex != previousIndex) {
+            emojiFloatController.cancelTrackedAnimation()
+        }
 
         val posts = _uiState.value.posts
         when {
@@ -753,10 +756,12 @@ class HomeViewModel @Inject constructor(
                     if (emoji != null) {
                         emojiFloatController.emit(
                             emoji = emoji,
-                            direction = FloatDirection.DOWN
+                            direction = FloatDirection.DOWN,
+                            onEnd = {
+                                markPostOwnerViewed(postId)
+                            },
                         )
                     }
-                    markPostOwnerViewed(postId)
                 }
             }, onFailure = {
                 _uiState.update {
@@ -769,27 +774,15 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun markPostOwnerViewed(postId: String) {
+        _uiState.update { state ->
+            state.copy(
+                posts = state.posts.map { post ->
+                    if (post.id == postId) post.copy(isOwnerViewedPost = true) else post
+                }
+            )
+        }
         viewModelScope.launch {
             postRepository.markPostOwnerViewed(postId)
-                .onSuccess {
-                    postRepository.getPostById(postId)
-                        .onSuccess { latestPost ->
-                            if (!latestPost.isOwnerViewedPost) return@onSuccess
-                            _uiState.update { state ->
-                                state.copy(
-                                    posts = state.posts.map { post ->
-                                        if (post.id == postId) latestPost else post
-                                    }
-                                )
-                            }
-                        }
-                        .onFailure { error ->
-                            Logger.e("Failed to refresh post after owner viewed mark: ${error.message}")
-                        }
-                }
-                .onFailure { error ->
-                    Logger.e("Failed to mark post owner viewed: ${error.message}")
-                }
         }
     }
 
