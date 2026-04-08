@@ -5,12 +5,19 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
+import coil.imageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.thinh.snaplet.MainActivity
 import com.thinh.snaplet.R
+import com.thinh.snaplet.utils.Logger
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,10 +31,11 @@ class NotificationHelper @Inject constructor(
         createNotificationChannel()
     }
 
-    fun showReactionNotification(
+    suspend fun showReactionNotification(
         title: String,
         body: String,
         postId: String,
+        actorAvatarUrl: String?,
     ) {
         val tapIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -42,14 +50,18 @@ class NotificationHelper @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+        val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher_round)
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .build()
+
+        val largeIconBitmap = loadAvatarBitmap(actorAvatarUrl) ?: loadLogoBitmap()
+        largeIconBitmap?.let(notificationBuilder::setLargeIcon)
+
+        val notification = notificationBuilder.build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ActivityCompat.checkSelfPermission(
@@ -78,6 +90,30 @@ class NotificationHelper @Inject constructor(
         }
         val manager = context.getSystemService(android.app.NotificationManager::class.java)
         manager.createNotificationChannel(channel)
+    }
+
+    private suspend fun loadAvatarBitmap(url: String?): Bitmap? {
+        if (url.isNullOrBlank()) return null
+
+        val request = ImageRequest.Builder(context)
+            .data(url)
+            .allowHardware(false)
+            .build()
+
+        return runCatching {
+            val result = context.imageLoader.execute(request)
+            (result as? SuccessResult)?.drawable?.toBitmap()
+        }.onFailure { throwable ->
+            Logger.w(throwable, "Failed to load notification avatar from %s", url)
+        }.getOrNull()
+    }
+
+    private fun loadLogoBitmap(): Bitmap? {
+        return runCatching {
+            ContextCompat.getDrawable(context, R.mipmap.ic_launcher_round)?.toBitmap()
+        }.onFailure { throwable ->
+            Logger.w(throwable, "Failed to load logo bitmap for notification")
+        }.getOrNull()
     }
 
     companion object {

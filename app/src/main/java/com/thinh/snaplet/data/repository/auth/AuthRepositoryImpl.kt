@@ -72,12 +72,14 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout() {
+        val accessToken = dataStoreManager.getAccessToken()
+
         _authState.value = AuthState.Unauthenticated
         dataStoreManager.clearSession()
 
-        // Fire-and-forget server logout. Local logout should not wait for network.
         logoutScope.launch {
-            safeApiCall(apiCall = { apiService.logout() })
+            if (accessToken.isNullOrBlank()) return@launch
+            safeApiCall(apiCall = { apiService.logout("Bearer $accessToken") })
         }
     }
 

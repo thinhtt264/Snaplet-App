@@ -30,16 +30,20 @@ class SnapletFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
-        val data = message.data
-        val postId = data["postId"] ?: return
+        scope.launch {
+            val data = message.data
+            val postId = data["postId"] ?: return@launch
+            val actorAvatarUrl = data["actorAvatarUrl"]
 
-        val title = message.notification?.title ?: data["title"] ?: return
-        val body = message.notification?.body ?: data["body"] ?: return
+            val title = message.notification?.title ?: data["title"] ?: return@launch
+            val body = message.notification?.body ?: data["body"] ?: return@launch
 
-        notificationHelper.showReactionNotification(
-            title = title,
-            body = body,
-            postId = postId,
-        )
+            notificationHelper.showReactionNotification(
+                title = title,
+                body = body,
+                postId = postId,
+                actorAvatarUrl = actorAvatarUrl,
+            )
+        }
     }
 }
