@@ -18,6 +18,11 @@
     <string name="create_account">Tạo một tài khoản</string>
     <string name="login">Đăng nhập</string>
     <string name="camera_unavailable">Máy ảnh không khả dụng</string>
+    <string name="capture_no_friends_dialog_title">Hãy thêm một người bạn trước đã</string>
+    <string name="capture_no_friends_dialog_message">Bạn chưa có bạn bè, sau khi một người bạn chấp nhận yêu cầu kết bạn, bạn có thể chia sẻ khoảnh khắc với họ</string>
+    <string name="capture_no_friends_dialog_add_friend">Thêm bạn bè</string>
+    <string name="capture_friends_count_pending">Chưa có thông tin bạn bè. Đang tải lại…</string>
+    <string name="ok">OK</string>
     <string name="approve_camera">Cho phép Snaplet truy cập camera của bạn để chụp ảnh</string>
     <string name="approve">Cho phép</string>
     <string name="recent_photos">Ảnh gần đây</string>
@@ -44,8 +49,6 @@
     <string name="register_username_title">Tên người dùng của bạn là gì?</string>
     <string name="username_required">Tên người dùng là bắt buộc</string>
     <string name="username_requirement1">Tên người dùng phải có ít nhất 3 ký tự</string>
-    <string name="username_requirement2">Tên người dùng không được vượt quá 20 ký tự</string>
-
     <string name="register_password_title">Chọn mật khẩu</string>
     <string name="username">Tên người dùng</string>
     <string name="already_have_account">Đã có tài khoản?</string>
@@ -54,16 +57,19 @@
     <string name="username_already_taken">Tên người dùng này đã được sử dụng</string>
     <string name="username_check_failed">Không thể kiểm tra tên người dùng</string>
     <string name="username_invalid_characters">Tên người dùng chỉ được chứa chữ cái, số và dấu gạch dưới</string>
+    <string name="username_no_spaces">Tên người dùng không được chứa dấu cách</string>
     <string name="first_name">Tên</string>
     <string name="first_name_placeholder">Tên của bạn</string>
     <string name="first_name_required">Tên là bắt buộc</string>
     <string name="last_name">Họ</string>
     <string name="last_name_placeholder">Họ của bạn</string>
     <string name="last_name_required">Họ là bắt buộc</string>
+    <string name="register_name_max_length">Tối đa %1$d ký tự</string>
     <string name="error">Lỗi</string>
     <string name="invalid_credentials">Email hoặc mật khẩu không đúng</string>
     <string name="add_caption_placeholder">Thêm một tin nhắn</string>
     <string name="friends">Bạn bè</string>
+    <string name="feed_filter_everyone">Tất cả bạn bè</string>
     <string name="send_to">Gửi đến...</string>
     <string name="friend_sheet_title">Bạn bè của tôi</string>
     <string name="friend_sheet_count">%1$d / %2$d người bạn đã được bổ sung</string>
@@ -72,7 +78,7 @@
     <string name="friend_sheet_other">Khác</string>
     <string name="friend_request_section_title">Yêu cầu kết bạn</string>
     <string name="friend_sheet_empty_title">Kết nối của bạn bắt đầu từ đây</string>
-    <string name="friend_sheet_empty_message">Thêm bạn bè để chia sẻ khoảnh khắc. Chỉ bạn bè mới xem được snap của bạn.</string>
+    <string name="friend_sheet_empty_message">Thêm bạn bè để chia sẻ khoảnh khắc. Chỉ bạn bè mới xem được ảnh của bạn.</string>
     <string name="friend_sheet_share_profile_title">Chia sẻ hồ sơ của bạn</string>
     <string name="friend_sheet_copy_cta">Sao chép</string>
     <string name="accept">Chấp nhận</string>
@@ -99,6 +105,11 @@
 
     <string name="post_activity_bar_loading">Hoạt động</string>
     <string name="post_activity_bar_empty">Chưa có hoạt động nào!</string>
+
+    <plurals name="post_activity_bar_count">
+        <item quantity="one">%d hoạt động</item>
+        <item quantity="other">%d hoạt động</item>
+    </plurals>
     <string name="reactions_sheet_title">Cảm xúc</string>
 
     <!-- My Profile -->
@@ -136,6 +147,17 @@
     <string name="widget_guide_step_2">Chạm vào nút &quot;Tiện ích&quot; để thêm một tiện ích mới</string>
     <string name="widget_guide_step_3">Tìm Snaplet và thêm tiện ích</string>
     <string name="widget_guide_step_4">Giữ và kéo để sắp xếp và thay đổi kích cỡ.</string>
+
+    <!-- After registration: widget promo -->
+    <string name="post_register_widget_title_line1">Xem bạn bè ngay</string>
+    <string name="post_register_widget_title_line2">từ màn hình chính</string>
+    <string name="post_register_widget_feature1_title">Luôn cập nhật</string>
+    <string name="post_register_widget_feature1_body">Hiển thị ảnh mới nhất từ bạn bè ngay trên màn hình chính của bạn.</string>
+    <string name="post_register_widget_feature2_title">Mở thẳng vào bài đăng</string>
+    <string name="post_register_widget_feature2_body">Chạm vào ảnh trên widget để mở thẳng bài đăng đó trong Snaplet.</string>
+    <string name="post_register_widget_cta">Thêm Widget ngay</string>
+    <string name="post_register_widget_later">Để sau</string>
+    <string name="post_register_widget_illustration_cd">Minh họa widget Snaplet trên màn hình chính</string>
 
     <!-- Quick Chat Bar -->
     <string name="quick_chat_placeholder">Gửi tin nhắn…</string>

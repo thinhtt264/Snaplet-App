@@ -11,4 +11,5 @@ object CommonImages {
     val WidgetGuide2 = R.drawable.widget_guide_2
     val WidgetGuide3 = R.drawable.widget_guide_3
     val WidgetGuide4 = R.drawable.widget_guide_4
+    val WidgetIllustration = R.drawable.widget_illustration
 }

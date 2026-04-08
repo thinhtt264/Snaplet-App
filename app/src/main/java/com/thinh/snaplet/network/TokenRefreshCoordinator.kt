@@ -102,8 +102,6 @@ class TokenRefreshCoordinator @Inject constructor(
         forceLogoutMutex.withLock {
             if (forceLogoutTriggered.getAndSet(true)) return@withLock
 
-            Logger.e("🛑 Force logout popup shown; cancel refresh/retry until user confirmed")
-
             OverlayEventBus.showModal(
                 isBlocking = true,
                 content = ModalContent.ForceLogoutDialog(

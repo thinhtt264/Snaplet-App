@@ -22,6 +22,6 @@ data class RegisterUiState(
     val firstNameError: UiText? = null,
     val lastNameError: UiText? = null,
     val passwordError: UiText? = null,
-    val isPasswordVisible: Boolean = false
+    val isPasswordVisible: Boolean = false,
+    val showPostRegisterWidgetPromo: Boolean = false,
 )
-

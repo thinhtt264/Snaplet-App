@@ -44,7 +44,8 @@ class CreateTempPostUseCase @Inject constructor() {
             caption = caption,
             visibility = "friend-only",
             createdAt = Date(),
-            isOwnPost = true
+            isOwnPost = true,
+            isOwnerViewedPost = true
         )
     }
 }

@@ -38,6 +38,9 @@ data class Post(
 
     @SerializedName("isOwnPost")
     val isOwnPost: Boolean,
+
+    @SerializedName("isOwnerViewedPost")
+    val isOwnerViewedPost: Boolean,
 ) {
     val displayName: String
         get() = "$firstName $lastName"

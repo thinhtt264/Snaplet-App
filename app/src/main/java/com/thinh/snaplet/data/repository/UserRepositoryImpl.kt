@@ -13,8 +13,8 @@ import com.thinh.snaplet.data.model.user.AvatarUploadRequest
 import com.thinh.snaplet.data.model.user.AvatarUploadRequestResponse
 import com.thinh.snaplet.data.model.user.ConfirmAvatarUploadRequest
 import com.thinh.snaplet.data.model.user.UpdateDisplayNameRequest
-import com.thinh.snaplet.data.model.user.UserSearchResult
 import com.thinh.snaplet.data.model.user.UserProfile
+import com.thinh.snaplet.data.model.user.UserSearchResult
 import com.thinh.snaplet.di.BaseOkHttpClient
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.ApiError
@@ -267,4 +267,3 @@ class UserRepositoryImpl @Inject constructor(
         return dataStoreManager.loadUserProfile()
     }
 }
-

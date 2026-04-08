@@ -18,6 +18,7 @@ import com.thinh.snaplet.ui.app.AppUiEvent
 import com.thinh.snaplet.ui.app.AppViewModel
 import com.thinh.snaplet.ui.overlay.OverlayHost
 import com.thinh.snaplet.ui.theme.SnapletTheme
+import com.thinh.snaplet.utils.CrashlyticsLogger
 
 @Composable
 fun MainScreen(
@@ -33,9 +34,12 @@ fun MainScreen(
                 when (event) {
                     is AppUiEvent.NavigateToAuthGraph -> {
                         navController.navigate(AuthGraph) {
-                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            popUpTo(navController.graph.id) {
+                                inclusive = true
+                                saveState = false
+                            }
                             launchSingleTop = true
-                            restoreState = true
+                            restoreState = false
                         }
                     }
 
@@ -47,6 +51,13 @@ fun MainScreen(
                         }
                     }
                 }
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            navController.currentBackStackEntryFlow.collect { entry ->
+                val route = entry.destination.route ?: return@collect
+                CrashlyticsLogger.screen(route)
             }
         }
 

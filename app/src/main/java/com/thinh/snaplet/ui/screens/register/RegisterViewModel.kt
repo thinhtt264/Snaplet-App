@@ -39,21 +39,52 @@ class RegisterViewModel @Inject constructor(
     }
 
     fun onUsernameChange(username: String) {
-        _uiState.update { it.copy(username = username, usernameError = null, errorMessage = null) }
+        val maxLen = ValidationConstants.USERNAME_MAX_LENGTH
+        val exceeded = username.length > maxLen
+        val hasWhitespace = username.any { it.isWhitespace() }
+        _uiState.update {
+            it.copy(
+                username = username,
+                usernameError = when {
+                    exceeded -> registerMaxLengthError(maxLen)
+                    hasWhitespace -> UiText.StringResource(R.string.username_no_spaces)
+                    else -> null
+                },
+                errorMessage = null
+            )
+        }
     }
 
     fun onFirstNameChange(firstName: String) {
+        val maxLen = ValidationConstants.NAME_MAX_LENGTH
+        val exceeded = firstName.length > maxLen
         _uiState.update {
             it.copy(
                 firstName = firstName,
-                firstNameError = null,
+                firstNameError = if (exceeded) {
+                    registerMaxLengthError(ValidationConstants.NAME_MAX_LENGTH)
+                } else {
+                    null
+                },
                 errorMessage = null
             )
         }
     }
 
     fun onLastNameChange(lastName: String) {
-        _uiState.update { it.copy(lastName = lastName, lastNameError = null, errorMessage = null) }
+        val maxLen = ValidationConstants.NAME_MAX_LENGTH
+        val exceeded = lastName.length > maxLen
+        _uiState.update {
+            it.copy(
+                lastName = lastName,
+                lastNameError = if (exceeded) {
+                    registerMaxLengthError(ValidationConstants.NAME_MAX_LENGTH)
+                } else {
+                    null
+                },
+                errorMessage = null
+            )
+        }
     }
 
     fun onPasswordChange(password: String) {
@@ -246,8 +277,12 @@ class RegisterViewModel @Inject constructor(
 
             result.fold(
                 onSuccess = {
-                    _uiState.update { it.copy(isLoading = false) }
-                    _uiEvent.emit(RegisterUIEvent.RegisterSuccess)
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            showPostRegisterWidgetPromo = true,
+                        )
+                    }
                 },
                 onFailure = { error ->
                     _uiState.update { it.copy(isLoading = false) }
@@ -261,6 +296,11 @@ class RegisterViewModel @Inject constructor(
         viewModelScope.launch {
             _uiEvent.emit(RegisterUIEvent.NavigateToLogin)
         }
+    }
+
+    suspend fun finishRegistrationPromo() {
+        authRepository.activatePendingRegistrationSession()
+        _uiState.update { it.copy(showPostRegisterWidgetPromo = false) }
     }
 
     private fun validateEmail(email: String): UiText? {
@@ -277,7 +317,10 @@ class RegisterViewModel @Inject constructor(
         return when {
             username.isBlank() -> UiText.StringResource(R.string.username_required)
             username.length < ValidationConstants.USERNAME_MIN_LENGTH -> UiText.StringResource(R.string.username_requirement1)
-            username.length > ValidationConstants.USERNAME_MAX_LENGTH -> UiText.StringResource(R.string.username_requirement2)
+            username.length > ValidationConstants.USERNAME_MAX_LENGTH ->
+                registerMaxLengthError(ValidationConstants.USERNAME_MAX_LENGTH)
+            username.any { it.isWhitespace() } ->
+                UiText.StringResource(R.string.username_no_spaces)
             !username.matches(ValidationConstants.USERNAME_PATTERN) -> UiText.StringResource(R.string.username_invalid_characters)
             else -> null
         }
@@ -293,6 +336,9 @@ class RegisterViewModel @Inject constructor(
     private fun validateFirstName(firstName: String): UiText? {
         return when {
             firstName.isBlank() -> UiText.StringResource(R.string.first_name_required)
+            firstName.length > ValidationConstants.NAME_MAX_LENGTH ->
+                registerMaxLengthError(ValidationConstants.NAME_MAX_LENGTH)
+
             else -> null
         }
     }
@@ -300,7 +346,13 @@ class RegisterViewModel @Inject constructor(
     private fun validateLastName(lastName: String): UiText? {
         return when {
             lastName.isBlank() -> UiText.StringResource(R.string.last_name_required)
+            lastName.length > ValidationConstants.NAME_MAX_LENGTH ->
+                registerMaxLengthError(ValidationConstants.NAME_MAX_LENGTH)
+
             else -> null
         }
     }
+
+    private fun registerMaxLengthError(maxChars: Int): UiText =
+        UiText.StringResource(R.string.register_name_max_length, listOf(maxChars))
 }

@@ -16,8 +16,8 @@ object EmojiParticleEngine {
     private const val FADE_OUT_HEIGHT_FRAC_MAX = 0.97f
     private const val FADE_ZONE_HEIGHT_FRAC_MIN = 0.05f
     private const val FADE_ZONE_HEIGHT_FRAC_MAX = 0.08f
-    private const val BASE_SPEED_MIN = 2.5f
-    private const val BASE_SPEED_MAX = 6f
+    private const val BASE_SPEED_MIN = 3f
+    private const val BASE_SPEED_MAX = 6.5f
     private const val LARGE_GLYPH_SIZE_THRESHOLD_PX = SIZE_MAX + 1f
 
     private const val SPAWN_DEPTH_STAGGER_FRAC_MAX = 0.10f

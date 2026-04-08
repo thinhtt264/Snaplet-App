@@ -13,6 +13,8 @@ import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.platform.share.ShareApp
 import com.thinh.snaplet.ui.common.UiText
 
+enum class PostListViewMode { PAGER, GRID }
+
 data class RelationshipActionItemState(
     val relationship: RelationshipWithUser,
     val action: RelationshipAction,
@@ -47,10 +49,19 @@ data class HomeUiState(
 
     val userProfile: UserProfile? = null,
 
+    val feedUserIdFilter: String? = null,
+
+    val isFeedFilterEnabled: Boolean = false,
+
+    val postListViewMode: PostListViewMode = PostListViewMode.PAGER,
+    val pagerInitialIndex: Int = 0,
+
     val postReactionsState: PostReactionsUiState = PostReactionsUiState.Loading,
     val showReactionsSheet: Boolean = false,
 
     val quickChatEmojiSlots: List<String> = QuickChatEmojiSlots.mergeForDisplay(emptyList()),
+
+    val showFriendSheet: Boolean = false,
 ) {
     /** Returns true if more data can be loaded (nextCursor is not null and not currently loading) */
     val canLoadMore: Boolean get() = nextCursor != null && !isLoadingMore && !isLoadingPosts

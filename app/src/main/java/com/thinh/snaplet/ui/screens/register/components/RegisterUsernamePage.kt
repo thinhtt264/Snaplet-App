@@ -60,7 +60,10 @@ fun RegisterUsernamePage(
         subtitle = email,
         subtitleColor = colorScheme.primary,
         buttonText = stringResource(R.string.continue_text),
-        buttonEnabled = !isLoading && firstNameError == null && lastNameError == null,
+        buttonEnabled = !isLoading &&
+            usernameError == null &&
+            firstNameError == null &&
+            lastNameError == null,
         isLoading = isLoading,
         onButtonClick = onContinue,
         inputField = {

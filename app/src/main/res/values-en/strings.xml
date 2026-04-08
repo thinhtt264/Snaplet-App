@@ -17,6 +17,11 @@
     <string name="create_account">Create an account</string>
     <string name="login">Log in</string>
     <string name="camera_unavailable">Camera unavailable</string>
+    <string name="capture_no_friends_dialog_title">Add a friend first</string>
+    <string name="capture_no_friends_dialog_message">You don\'t have any friends yet. After someone accepts your friend request, you can share moments with them.</string>
+    <string name="capture_no_friends_dialog_add_friend">Add friends</string>
+    <string name="capture_friends_count_pending">Friend info isn\'t ready yet. Loading…</string>
+    <string name="ok">OK</string>
     <string name="approve_camera">Allow Snaplet to access your camera to take photos</string>
     <string name="approve">Allow</string>
     <string name="recent_photos">Recent Photos</string>
@@ -43,8 +48,6 @@
     <string name="register_username_title">What\'s your username?</string>
     <string name="username_required">Username is required</string>
     <string name="username_requirement1">Username must be at least 3 characters</string>
-    <string name="username_requirement2">Username cannot exceed 20 characters</string>
-
     <string name="register_password_title">Choose a password</string>
     <string name="username">Username</string>
     <string name="already_have_account">Already have an account?</string>
@@ -53,10 +56,19 @@
     <string name="username_already_taken">This username is already taken</string>
     <string name="username_check_failed">Unable to check username</string>
     <string name="username_invalid_characters">Username can only contain letters, numbers, and underscores</string>
+    <string name="username_no_spaces">Username cannot contain spaces</string>
+    <string name="first_name">First name</string>
+    <string name="first_name_placeholder">Your first name</string>
+    <string name="first_name_required">First name is required</string>
+    <string name="last_name">Last name</string>
+    <string name="last_name_placeholder">Your last name</string>
+    <string name="last_name_required">Last name is required</string>
+    <string name="register_name_max_length">Max %1$d characters</string>
     <string name="error">Error</string>
     <string name="invalid_credentials">Email or password is incorrect</string>
     <string name="add_caption_placeholder">Add a message</string>
     <string name="friends">Friends</string>
+    <string name="feed_filter_everyone">Everyone</string>
     <string name="send_to">Send to...</string>
     <string name="friend_sheet_title">My friends</string>
     <string name="friend_sheet_count">%1$d / %2$d friends added</string>
@@ -90,6 +102,11 @@
 
     <string name="post_activity_bar_loading">Activity</string>
     <string name="post_activity_bar_empty">No activity yet</string>
+
+    <plurals name="post_activity_bar_count">
+        <item quantity="one">%d activity</item>
+        <item quantity="other">%d activities</item>
+    </plurals>
     <string name="reactions_sheet_title">Reactions</string>
 
     <!-- My Profile -->
@@ -127,6 +144,17 @@
     <string name="widget_guide_step_2">Tap the &quot;Widgets&quot; button to add a new widget</string>
     <string name="widget_guide_step_3">Search Snaplet and add the widget</string>
     <string name="widget_guide_step_4">Press and drag to arrange and resize it.</string>
+
+    <!-- After registration: widget promo -->
+    <string name="post_register_widget_title_line1">See friends right away</string>
+    <string name="post_register_widget_title_line2">from your home screen</string>
+    <string name="post_register_widget_feature1_title">Always up to date</string>
+    <string name="post_register_widget_feature1_body">See the latest photos from friends directly on your home screen.</string>
+    <string name="post_register_widget_feature2_title">Open straight into the post</string>
+    <string name="post_register_widget_feature2_body">Tap a photo on the widget to open that post in Snaplet.</string>
+    <string name="post_register_widget_cta">Add widget now</string>
+    <string name="post_register_widget_later">Not now</string>
+    <string name="post_register_widget_illustration_cd">Illustration of the Snaplet widget on the home screen</string>
 
     <!-- Quick Chat Bar -->
     <string name="quick_chat_placeholder">Send a message…</string>

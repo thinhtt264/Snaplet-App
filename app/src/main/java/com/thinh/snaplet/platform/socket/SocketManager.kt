@@ -109,7 +109,6 @@ class SocketManager @Inject constructor(
         s.on(Socket.EVENT_CONNECT_ERROR) { args ->
             val message = (args.getOrNull(0) as? JSONObject)?.optString("message")
                 ?: args.getOrNull(0)?.toString() ?: ""
-            Logger.e("$LOG_TAG: connect_error=$message")
 
             if (message.contains("Unauthorized", ignoreCase = true)) {
                 scope.launch {

@@ -10,6 +10,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.R
+import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.media.ImageTransform
@@ -20,12 +21,14 @@ import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.domain.feed.FetchNewerFeedUseCase
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase.Companion.FEED_PAGE_LIMIT
+import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase.Companion.GRID_LOAD_MORE_STEP
 import com.thinh.snaplet.domain.feed.ObserveNewPostEventUseCase
 import com.thinh.snaplet.domain.feed.ShouldMarkLatestPostAsSeenUseCase
 import com.thinh.snaplet.domain.feed.ShouldTriggerLoadMoreUseCase
 import com.thinh.snaplet.domain.media.DownloadPostImageUseCase
 import com.thinh.snaplet.domain.media.ValidateCaptureReadinessUseCase
 import com.thinh.snaplet.domain.model.CaptureReadiness
+import com.thinh.snaplet.domain.model.FloatDirection
 import com.thinh.snaplet.domain.model.NewerFeedResult
 import com.thinh.snaplet.domain.model.PostAction
 import com.thinh.snaplet.domain.model.UploadPostResult
@@ -42,6 +45,7 @@ import com.thinh.snaplet.domain.relationship.GetRelationshipActionUseCase
 import com.thinh.snaplet.domain.relationship.GetRelationshipsByStatusesUseCase
 import com.thinh.snaplet.domain.relationship.RemoveFriendUseCase
 import com.thinh.snaplet.domain.relationship.RemoveRelationshipUseCase
+import com.thinh.snaplet.platform.network.ConnectivityObserver
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.platform.permission.PermissionManager
 import com.thinh.snaplet.platform.share.ShareApp
@@ -52,6 +56,7 @@ import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
 import com.thinh.snaplet.ui.theme.Error50
+import com.thinh.snaplet.utils.CrashlyticsLogger
 import com.thinh.snaplet.utils.FileUtils
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.onFailure
@@ -69,7 +74,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -108,6 +112,7 @@ class HomeViewModel @Inject constructor(
     private val postRepository: PostRepository,
     private val shouldMarkLatestPostAsSeenUseCase: ShouldMarkLatestPostAsSeenUseCase,
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
+    private val connectivityObserver: ConnectivityObserver,
     private val widgetUpdateManager: WidgetUpdateManager,
 ) : ViewModel() {
 
@@ -129,11 +134,12 @@ class HomeViewModel @Inject constructor(
 
     val uiState: StateFlow<HomeUiState> = combine(
         _uiState,
-        userRepository.observeMyUserProfile()
-            .distinctUntilChanged(),
+        userRepository.observeMyUserProfile().distinctUntilChanged(),
     ) { state, profileUi ->
         state.copy(
-            userProfile = profileUi
+            userProfile = profileUi,
+            isFeedFilterEnabled = (state.friendSheetState.relationshipCounts?.acceptedFriendCount
+                ?: 0) > 0 && !state.isLoadingPosts
         )
     }.stateIn(
         scope = viewModelScope,
@@ -174,10 +180,11 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadNewsfeed()
-        loadRelationshipCounts()
+        loadMyFriendList()
         loadUnreadPostsCount()
         observeUnreadPostsUpdates()
         loadQuickChatEmojiSlots()
+        observeNetworkReconnect()
     }
 
     private fun loadQuickChatEmojiSlots() {
@@ -286,17 +293,58 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(friendSheetState = transform(it.friendSheetState)) }
     }
 
+    fun showFriendSheet() {
+        _uiState.update { it.copy(showFriendSheet = true) }
+    }
+
+    fun onFeedFilterUserSelected(userId: String?) {
+        _uiState.update { it.copy(feedUserIdFilter = userId) }
+        loadNewsfeed(isLoadMore = false)
+    }
+
     fun onFriendSheetDismissed() {
         friendSearchJob?.cancel()
         friendSearchJob = null
         lastFriendSearchQuery = ""
 
-        updateFriendSheetState {
-            it.copy(
-                isSearchingUsers = false,
-                searchResults = emptyList(),
+        _uiState.update { state ->
+            state.copy(
+                showFriendSheet = false, friendSheetState = state.friendSheetState.copy(
+                    isSearchingUsers = false,
+                    searchResults = emptyList(),
+                )
             )
         }
+    }
+
+    fun onViewModeToggle(mode: PostListViewMode) {
+        _uiState.update { it.copy(postListViewMode = mode) }
+        if (mode == PostListViewMode.GRID) {
+            ensureGridFeedCapacity()
+        }
+    }
+
+    fun onGridItemClick(index: Int) {
+        _uiState.update {
+            it.copy(
+                pagerInitialIndex = index,
+                postListViewMode = PostListViewMode.PAGER,
+            )
+        }
+    }
+
+    fun onGridNearEndReached() {
+        val state = _uiState.value
+        if (state.postListViewMode != PostListViewMode.GRID) return
+        loadNewsfeed(isLoadMore = true, limit = GRID_LOAD_MORE_STEP)
+    }
+
+    private fun ensureGridFeedCapacity() {
+        val state = _uiState.value
+        if (state.isLoadingPosts || state.isLoadingMore || state.nextCursor == null) return
+
+        val loadLimit = getNewsfeedUseCase.gridInitialTopUpLimit(state.posts.size) ?: return
+        loadNewsfeed(isLoadMore = true, limit = loadLimit)
     }
 
     private fun refreshFriendSearchResults() {
@@ -322,14 +370,6 @@ class HomeViewModel @Inject constructor(
                 }
             }.onFailure {
                 updateFriendSheetState { it.copy(isSearchingUsers = false) }
-            }
-        }
-    }
-
-    private fun loadRelationshipCounts() {
-        viewModelScope.launch {
-            userRepository.getRelationshipCounts().onSuccess { counts ->
-                updateFriendSheetState { it.copy(relationshipCounts = counts) }
             }
         }
     }
@@ -373,6 +413,7 @@ class HomeViewModel @Inject constructor(
                     it.copy(
                         friendList = accepted,
                         pendingList = pendingWithActions,
+                        relationshipCounts = RelationshipCounts(accepted.size, pending.size),
                         loading = it.loading.copy(initialFriendList = false),
                         isLoadingFriendList = false
                     )
@@ -437,12 +478,19 @@ class HomeViewModel @Inject constructor(
             acceptFriendRequestUseCase(pending.id).onSuccess {
                 val acceptedRelationship = pending.copy(status = RelationshipStatus.ACCEPTED)
                 updateFriendSheetState { state ->
+                    val newPendingList =
+                        state.pendingList.filterNot { it.relationship.id == pending.id }
+                    val newFriendList = state.friendList + acceptedRelationship
                     state.copy(
-                        pendingList = state.pendingList.filterNot { it.relationship.id == pending.id },
-                        friendList = state.friendList + acceptedRelationship
+                        pendingList = newPendingList,
+                        friendList = newFriendList,
+                        relationshipCounts = RelationshipCounts(
+                            acceptedFriendCount = newFriendList.size,
+                            pendingRequestCount = newPendingList.size
+                        ),
                     )
                 }
-                loadRelationshipCounts()
+                loadNewsfeed(isLoadMore = false)
             }.onFailure { error ->
                 _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
             }
@@ -457,7 +505,6 @@ class HomeViewModel @Inject constructor(
                 state.copy(loading = state.loading.copy(addingUserIds = state.loading.addingUserIds + targetUserId))
             }
             userRepository.sendFriendRequest(targetUserId).onSuccess {
-                loadRelationshipCounts()
                 loadMyFriendList()
                 refreshFriendSearchResults()
             }.onFailure { error ->
@@ -501,9 +548,15 @@ class HomeViewModel @Inject constructor(
             if (friend.status == RelationshipStatus.PENDING) {
                 removeRelationshipUseCase(friend.id).onSuccess {
                     updateFriendSheetState { s ->
-                        s.copy(pendingList = s.pendingList.filterNot { it.relationship.id == friend.id })
+                        val newPendingList =
+                            s.pendingList.filterNot { it.relationship.id == friend.id }
+                        s.copy(
+                            pendingList = newPendingList, relationshipCounts = RelationshipCounts(
+                                acceptedFriendCount = s.friendList.size,
+                                pendingRequestCount = newPendingList.size
+                            )
+                        )
                     }
-                    loadRelationshipCounts()
                     refreshFriendSearchResults()
                 }.onFailure { error ->
                     _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
@@ -511,11 +564,22 @@ class HomeViewModel @Inject constructor(
             } else {
                 val currentAccepted = state.relationshipCounts?.acceptedFriendCount
                 removeFriendUseCase(friend.id, currentAccepted).onSuccess {
-                    updateFriendSheetState { s ->
-                        s.copy(friendList = s.friendList.filterNot { it.id == friend.id })
+                    _uiState.update { home ->
+                        val s = home.friendSheetState
+                        val newFriendList = s.friendList.filterNot { it.id == friend.id }
+                        val newFilter = if (home.feedUserIdFilter == friend.userId) null
+                        else home.feedUserIdFilter
+                        home.copy(
+                            feedUserIdFilter = newFilter, friendSheetState = s.copy(
+                                friendList = newFriendList, relationshipCounts = RelationshipCounts(
+                                    acceptedFriendCount = newFriendList.size,
+                                    pendingRequestCount = s.pendingList.size
+                                )
+                            )
+                        )
                     }
-                    loadRelationshipCounts()
                     refreshFriendSearchResults()
+                    loadNewsfeed(isLoadMore = false)
                 }.onFailure { error ->
                     _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
                 }
@@ -548,8 +612,25 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun loadNewsfeed(isLoadMore: Boolean = false) {
+    private fun observeNetworkReconnect() {
+        connectivityObserver.isInternetAvailable.onEach { isAvailable ->
+            if (!isAvailable) return@onEach
+            loadMyFriendList()
+
+            val state = _uiState.value
+            if (state.isLoadingPosts || state.isLoadingMore || state.posts.isNotEmpty()) return@onEach
+
+            loadNewsfeed(isLoadMore = false)
+        }.launchIn(viewModelScope)
+    }
+
+    private fun loadNewsfeed(
+        isLoadMore: Boolean = false,
+        limit: Int = FEED_PAGE_LIMIT,
+    ) {
         val state = _uiState.value
+
+        CrashlyticsLogger.action("loadNewsFeed", isLoadMore.toString())
 
         if (isLoadMore) {
             if (state.isLoadingMore || state.nextCursor == null) return
@@ -562,9 +643,12 @@ class HomeViewModel @Inject constructor(
             }
 
             val cursor = if (isLoadMore) state.nextCursor else null
+            val userId = state.feedUserIdFilter
 
             getNewsfeedUseCase(
-                limit = FEED_PAGE_LIMIT, cursor = cursor
+                limit = limit,
+                cursor = cursor,
+                userId = userId,
             ).fold(onSuccess = { feedData ->
                 _uiState.update {
                     it.copy(
@@ -606,11 +690,16 @@ class HomeViewModel @Inject constructor(
             totalItems = state.posts.size,
             canLoadMore = state.canLoadMore
         )
-        if (shouldLoad) loadNewsfeed(isLoadMore = true)
+        if (shouldLoad) {
+            loadNewsfeed(
+                isLoadMore = true,
+                limit = FEED_PAGE_LIMIT,
+            )
+        }
 
         val visiblePost = state.posts.getOrNull(currentIndex)
         if (visiblePost != null && visiblePost.isOwnPost) {
-            loadPostReactions(visiblePost.id)
+            loadPostReactions(visiblePost.id, visiblePost.isOwnerViewedPost)
         }
     }
 
@@ -636,10 +725,9 @@ class HomeViewModel @Inject constructor(
         reactToPostJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
 
-            runCatching { postRepository.recordQuickChatEmojiUsage(emoji) }
-                .onFailure { error ->
-                    Logger.e("Failed to persist quick chat emoji usage: ${error.message}")
-                }
+            runCatching { postRepository.recordQuickChatEmojiUsage(emoji) }.onFailure { error ->
+                Logger.e("Failed to persist quick chat emoji usage: ${error.message}")
+            }
             postRepository.reactToPost(postId = postIdToReact, reactionIcon = emoji)
                 .onFailure { error ->
                     Logger.e("Failed to react to post: ${error.message}")
@@ -649,19 +737,26 @@ class HomeViewModel @Inject constructor(
 
     private var postReactionsJob: Job? = null
 
-    private fun loadPostReactions(postId: String) {
+    private fun loadPostReactions(postId: String, isOwnerViewed: Boolean = false) {
         postReactionsJob?.cancel()
         _uiState.update { it.copy(postReactionsState = PostReactionsUiState.Loading) }
         postReactionsJob = viewModelScope.launch {
             postRepository.getPostReactions(postId).fold(onSuccess = { reactions ->
                 val mapped =
                     runCatching { mapPostReactionUsersUseCase(reactions) }.onFailure { error ->
-                            Logger.e("Failed to map post reactions for postId=$postId: ${error.message}")
-                        }.getOrDefault(emptyList())
-                _uiState.update {
-                    it.copy(
-                        postReactionsState = PostReactionsUiState.Result(mapped)
-                    )
+                        Logger.e("Failed to map post reactions for postId=$postId: ${error.message}")
+                    }.getOrDefault(emptyList())
+                _uiState.update { it.copy(postReactionsState = PostReactionsUiState.Result(mapped)) }
+
+                if (!isOwnerViewed) {
+                    val emoji = mapped.firstOrNull()?.reactionIcons?.firstOrNull()
+                    if (emoji != null) {
+                        emojiFloatController.emit(
+                            emoji = emoji,
+                            direction = FloatDirection.DOWN
+                        )
+                    }
+                    markPostOwnerViewed(postId)
                 }
             }, onFailure = {
                 _uiState.update {
@@ -670,6 +765,31 @@ class HomeViewModel @Inject constructor(
                     )
                 }
             })
+        }
+    }
+
+    private fun markPostOwnerViewed(postId: String) {
+        viewModelScope.launch {
+            postRepository.markPostOwnerViewed(postId)
+                .onSuccess {
+                    postRepository.getPostById(postId)
+                        .onSuccess { latestPost ->
+                            if (!latestPost.isOwnerViewedPost) return@onSuccess
+                            _uiState.update { state ->
+                                state.copy(
+                                    posts = state.posts.map { post ->
+                                        if (post.id == postId) latestPost else post
+                                    }
+                                )
+                            }
+                        }
+                        .onFailure { error ->
+                            Logger.e("Failed to refresh post after owner viewed mark: ${error.message}")
+                        }
+                }
+                .onFailure { error ->
+                    Logger.e("Failed to mark post owner viewed: ${error.message}")
+                }
         }
     }
 
@@ -737,7 +857,20 @@ class HomeViewModel @Inject constructor(
                 it.copy(snackbarMessage = UiText.DynamicString("Camera is not ready"))
             }
 
-            CaptureReadiness.Ready -> takePhoto(context)
+            CaptureReadiness.Ready -> {
+                val counts = _uiState.value.friendSheetState.relationshipCounts
+                if (counts != null && counts.acceptedFriendCount > 0) {
+                    takePhoto(context)
+                } else {
+                    OverlayEventBus.showConfirmDialog(
+                        title = UiText.StringResource(R.string.capture_no_friends_dialog_title),
+                        message = UiText.StringResource(R.string.capture_no_friends_dialog_message),
+                        confirmText = UiText.StringResource(R.string.capture_no_friends_dialog_add_friend),
+                        cancelText = UiText.StringResource(R.string.ok),
+                        onConfirm = { showFriendSheet() },
+                    )
+                }
+            }
         }
     }
 
@@ -1042,4 +1175,5 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
 }

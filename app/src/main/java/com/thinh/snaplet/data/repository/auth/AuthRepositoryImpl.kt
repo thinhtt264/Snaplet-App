@@ -57,9 +57,13 @@ class AuthRepositoryImpl @Inject constructor(
                 accessToken = result.token.accessToken, refreshToken = result.token.refreshToken
             )
             dataStoreManager.saveUserProfile(result.user)
-            _authState.value = AuthState.Authenticated
-            sessionController.onNewAuthenticatedSession()
         }, transform = { response -> response.user })
+    }
+
+    override suspend fun activatePendingRegistrationSession() {
+        if (_authState.value is AuthState.Authenticated) return
+        _authState.value = AuthState.Authenticated
+        sessionController.onNewAuthenticatedSession()
     }
 
     override suspend fun logout() {

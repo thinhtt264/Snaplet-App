@@ -6,8 +6,8 @@ import com.thinh.snaplet.data.model.post.MarkPostsSeenRequest
 import com.thinh.snaplet.data.model.post.NewPostUpdate
 import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.data.model.post.PostActivity
-import com.thinh.snaplet.data.model.post.PostsFeedData
 import com.thinh.snaplet.data.model.post.PostReactionUser
+import com.thinh.snaplet.data.model.post.PostsFeedData
 import com.thinh.snaplet.data.model.post.ReactToPostRequest
 import com.thinh.snaplet.data.model.post.ReactToPostResponse
 import com.thinh.snaplet.data.model.post.UnreadPostsCountData
@@ -26,7 +26,7 @@ import javax.inject.Singleton
 
 @Singleton
 class PostRepositoryImpl @Inject constructor(
-    private val socketManager: SocketManager,
+    socketManager: SocketManager,
     private val apiService: ApiService,
     private val dataStoreManager: DataStoreManager,
 ) : PostRepository {
@@ -50,9 +50,19 @@ class PostRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun getNewsfeed(limit: Int, cursor: String?): ApiResult<PostsFeedData> {
+    override suspend fun getNewsfeed(
+        limit: Int,
+        cursor: String?,
+        userId: String?
+    ): ApiResult<PostsFeedData> {
         return safeApiCall(
-            apiCall = { apiService.getPostsFeed(limit = limit, cursor = cursor) },
+            apiCall = {
+                apiService.getPostsFeed(
+                    limit = limit,
+                    cursor = cursor,
+                    userId = userId
+                )
+            },
         )
     }
 
@@ -97,6 +107,22 @@ class PostRepositoryImpl @Inject constructor(
         )
         return safeApiCall(
             apiCall = { apiService.markPostsSeen(body) }
+        )
+    }
+
+    override suspend fun markPostOwnerViewed(
+        postId: String,
+    ): ApiResult<Unit> {
+        return safeApiCall(
+            apiCall = { apiService.markPostOwnerViewed(postId = postId) }
+        )
+    }
+
+    override suspend fun getPostById(
+        postId: String,
+    ): ApiResult<Post> {
+        return safeApiCall(
+            apiCall = { apiService.getPostById(postId = postId) }
         )
     }
 
