@@ -7,6 +7,7 @@ import com.thinh.snaplet.R
 import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.auth.AuthRepository
+import com.thinh.snaplet.platform.notification.FcmTokenRegistrar
 import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.ValidationConstants
@@ -28,7 +29,8 @@ import javax.inject.Inject
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    userRepository: UserRepository
+    userRepository: UserRepository,
+    private val fcmTokenRegistrar: FcmTokenRegistrar,
 ) : ViewModel() {
 
     private val _currentUserProfile: Flow<UserProfile?> = userRepository.observeMyUserProfile()
@@ -118,6 +120,7 @@ class LoginViewModel @Inject constructor(
             result.fold(
                 onSuccess = { userProfile ->
                     _uiState.update { it.copy(isLoading = false) }
+                    fcmTokenRegistrar.syncCurrentTokenToBackend()
                     _uiEvent.emit(LoginUIEvent.LoginSuccess)
                 },
                 onFailure = { error ->

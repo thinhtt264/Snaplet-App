@@ -29,6 +29,7 @@ import com.thinh.snaplet.data.model.user.AvatarUploadRequest
 import com.thinh.snaplet.data.model.user.AvatarUploadRequestResponse
 import com.thinh.snaplet.data.model.user.ConfirmAvatarUploadRequest
 import com.thinh.snaplet.data.model.user.UpdateDisplayNameRequest
+import com.thinh.snaplet.data.model.user.UpdateFcmTokenRequest
 import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.data.model.user.UserSearchResult
 import retrofit2.Response
@@ -153,6 +154,11 @@ interface ApiService {
     suspend fun updateDisplayName(
         @Body body: UpdateDisplayNameRequest
     ): Response<BaseResponse<UserProfile>>
+
+    @PATCH("users/me/fcm-token")
+    suspend fun updateFcmToken(
+        @Body body: UpdateFcmTokenRequest
+    ): Response<BaseResponse<Unit>>
 
     @POST("posts")
     suspend fun createPost(

@@ -55,7 +55,6 @@ private const val TOP_SPACE_RATIO = 0.16f
 @Composable
 fun MediaPage(
     post: Post,
-    initialPage: Int = 0,
     uploadStatus: UploadStatus?,
     showBottomContent: Boolean = false,
     quickChatBar: QuickChatBarModel,
@@ -64,11 +63,6 @@ fun MediaPage(
     onRetryClick: () -> Unit = {},
     onDeleteClick: () -> Unit = {},
 ) {
-    // Reserved for pager-host integrations where callers need to pass the
-    // selected entry index before rendering this item.
-    @Suppress("UNUSED_VARIABLE")
-    val selectedInitialPage = initialPage
-
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenHeight = maxHeight
         val topPadding = screenHeight * TOP_SPACE_RATIO

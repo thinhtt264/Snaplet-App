@@ -1,7 +1,9 @@
 package com.thinh.snaplet.ui.screens.home
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.os.Build
 import androidx.camera.core.ImageCapture
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
@@ -37,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -46,7 +49,7 @@ import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.ui.components.EmojiFloatCanvas
 import com.thinh.snaplet.ui.components.EmojiFloatController
-import com.thinh.snaplet.ui.components.PermissionHandler
+import com.thinh.snaplet.ui.components.MultiplePermissionsHandler
 import com.thinh.snaplet.ui.screens.home.components.BottomActionModel
 import com.thinh.snaplet.ui.screens.home.components.CameraPage
 import com.thinh.snaplet.ui.screens.home.components.EmptyMediaPage
@@ -131,16 +134,40 @@ fun Home(
         }
     }
 
-    PermissionHandler(
-        permission = Permission.Camera, onPermissionResult = viewModel::onPermissionResult
-    ) { requestPermission ->
+    val homePermissions = remember {
+        buildList {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Permission.Notifications)
+            }
+            add(Permission.Camera)
+        }
+    }
+
+    MultiplePermissionsHandler(
+        permissions = homePermissions,
+        onPermissionsResult = { map ->
+            map[Permission.Camera.manifestPermission]?.let { granted ->
+                viewModel.onPermissionResult(granted)
+            }
+        },
+    ) { requestPermissions ->
+
+        LaunchedEffect(Unit) {
+            val anyMissing = homePermissions.any { perm ->
+                ContextCompat.checkSelfPermission(
+                    context,
+                    perm.manifestPermission,
+                ) != PackageManager.PERMISSION_GRANTED
+            }
+            if (anyMissing) requestPermissions()
+        }
 
         HomeStateEffects(
             uiState = uiState,
             viewModel = viewModel,
             context = context,
             snackBarHostState = snackBarHostState,
-            requestPermission = requestPermission,
+            requestPermission = requestPermissions,
             onScrollToFirstPost = scrollToFirstPost,
         )
 

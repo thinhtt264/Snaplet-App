@@ -57,6 +57,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            firebaseCrashlytics {
+                mappingFileUploadEnabled = false
+            }
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(
@@ -99,6 +104,7 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.messaging)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)

@@ -1,6 +1,7 @@
 package com.thinh.snaplet.platform.deeplink
 
 import android.content.Intent
+import com.thinh.snaplet.platform.notification.NotificationHelper
 import com.thinh.snaplet.utils.Logger
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -30,5 +31,13 @@ class DeepLinkManager @Inject constructor() {
         if (!userName.isNullOrBlank()) {
             _events.emit(DeepLinkEvent.FriendRequest(userName))
         }
+    }
+
+    suspend fun handleNotificationIntent(intent: Intent?) {
+        val postId = intent?.getStringExtra(NotificationHelper.EXTRA_POST_ID)
+            ?: intent?.extras?.getString(NotificationHelper.EXTRA_POST_ID)
+            ?: return
+
+        _events.emit(DeepLinkEvent.OpenSpotlightPost(postId))
     }
 }

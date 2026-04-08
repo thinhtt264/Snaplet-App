@@ -14,6 +14,7 @@ import androidx.navigation.compose.rememberNavController
 import com.thinh.snaplet.navigation.AuthGraph
 import com.thinh.snaplet.navigation.HomeGraph
 import com.thinh.snaplet.navigation.NavGraph
+import com.thinh.snaplet.navigation.SpotlightPost
 import com.thinh.snaplet.ui.app.AppUiEvent
 import com.thinh.snaplet.ui.app.AppViewModel
 import com.thinh.snaplet.ui.overlay.OverlayHost
@@ -48,6 +49,12 @@ fun MainScreen(
                             popUpTo<AuthGraph> { inclusive = true }
                             launchSingleTop = true
                             restoreState = true
+                        }
+                    }
+
+                    is AppUiEvent.NavigateToSpotlightPost -> {
+                        navController.navigate(SpotlightPost(postId = event.postId)) {
+                            launchSingleTop = true
                         }
                     }
                 }
