@@ -59,6 +59,7 @@ import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.CrashlyticsLogger
 import com.thinh.snaplet.utils.FileUtils
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.network.ApiErrorCode
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -115,12 +116,11 @@ class HomeViewModel @Inject constructor(
     private val connectivityObserver: ConnectivityObserver,
     private val widgetUpdateManager: WidgetUpdateManager,
 ) : ViewModel() {
+    val emojiFloatController: EmojiFloatController by lazy { EmojiFloatController() }
 
     private companion object {
         private const val DEBOUNCE_MS = 500L
     }
-
-    val emojiFloatController by lazy { EmojiFloatController() }
 
     private var lastFriendSearchQuery: String = ""
 
@@ -675,6 +675,9 @@ class HomeViewModel @Inject constructor(
     fun onItemVisible(currentIndex: Int) {
         val previousIndex = currentVisibleIndex
         currentVisibleIndex = currentIndex
+        if (currentIndex != previousIndex) {
+            emojiFloatController.cancelTrackedAnimation()
+        }
 
         val posts = _uiState.value.posts
         when {
@@ -753,10 +756,12 @@ class HomeViewModel @Inject constructor(
                     if (emoji != null) {
                         emojiFloatController.emit(
                             emoji = emoji,
-                            direction = FloatDirection.DOWN
+                            direction = FloatDirection.DOWN,
+                            onEnd = {
+                                markPostOwnerViewed(postId)
+                            },
                         )
                     }
-                    markPostOwnerViewed(postId)
                 }
             }, onFailure = {
                 _uiState.update {
@@ -769,27 +774,15 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun markPostOwnerViewed(postId: String) {
+        _uiState.update { state ->
+            state.copy(
+                posts = state.posts.map { post ->
+                    if (post.id == postId) post.copy(isOwnerViewedPost = true) else post
+                }
+            )
+        }
         viewModelScope.launch {
             postRepository.markPostOwnerViewed(postId)
-                .onSuccess {
-                    postRepository.getPostById(postId)
-                        .onSuccess { latestPost ->
-                            if (!latestPost.isOwnerViewedPost) return@onSuccess
-                            _uiState.update { state ->
-                                state.copy(
-                                    posts = state.posts.map { post ->
-                                        if (post.id == postId) latestPost else post
-                                    }
-                                )
-                            }
-                        }
-                        .onFailure { error ->
-                            Logger.e("Failed to refresh post after owner viewed mark: ${error.message}")
-                        }
-                }
-                .onFailure { error ->
-                    Logger.e("Failed to mark post owner viewed: ${error.message}")
-                }
         }
     }
 
@@ -998,11 +991,28 @@ class HomeViewModel @Inject constructor(
                 }
 
                 is UploadPostResult.Failed -> {
+                    showUploadLimitReachedDialogIfNeeded(result)
                     setUploadStatus(tempPostId, UploadStatus.Failed(result.message))
-//                    _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(result.message)) }
                 }
             }
         }
+    }
+
+    private fun showUploadLimitReachedDialogIfNeeded(result: UploadPostResult.Failed): Boolean {
+        val apiError = result.apiError ?: return false
+        if (apiError.errorCode != ApiErrorCode.POST_CREATE_LIMIT_EXCEEDED) return false
+
+        val hoursRemaining = (apiError.hoursRemaining ?: 24).coerceAtLeast(1)
+        OverlayEventBus.showConfirmDialog(
+            title = UiText.StringResource(R.string.upload_post_limit_title),
+            message = UiText.StringResource(
+                R.string.upload_post_limit_message,
+                listOf(hoursRemaining),
+            ),
+            confirmText = UiText.StringResource(R.string.ok),
+            onConfirm = {},
+        )
+        return true
     }
 
     fun onShowMoreOptions() {

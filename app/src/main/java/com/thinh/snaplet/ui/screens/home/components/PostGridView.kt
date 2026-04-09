@@ -6,6 +6,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -14,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -28,12 +33,13 @@ import kotlinx.coroutines.flow.map
 
 @Composable
 fun PostGridView(
+    modifier: Modifier = Modifier,
     posts: List<Post>,
     onItemClick: (index: Int) -> Unit,
     onLoadMore: () -> Unit,
     canLoadMore: Boolean,
+    onCaptureClick: () -> Unit,
     loadMoreTriggerFromBottomRatio: Float = 0.3f,
-    modifier: Modifier = Modifier,
 ) {
     val gridState = rememberLazyGridState()
 
@@ -56,18 +62,40 @@ fun PostGridView(
             .collectLatest { onLoadMore() }
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
-        state = gridState,
-        modifier = modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-        contentPadding = PaddingValues(2.dp),
-    ) {
-        itemsIndexed(posts, key = { _, post -> post.id }) { index, post ->
-            PostGridItem(
-                post = post,
-                onClick = { onItemClick(index) },
+    Box(modifier = modifier.fillMaxSize()) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            state = gridState,
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            contentPadding = PaddingValues(
+                start = 2.dp,
+                top = 2.dp,
+                end = 2.dp,
+                // Keep space for the capture button overlay at bottom-center.
+                bottom = 100.dp,
+            ),
+        ) {
+            itemsIndexed(posts, key = { _, post -> post.id }) { index, post ->
+                PostGridItem(
+                    post = post,
+                    onClick = { onItemClick(index) },
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
+                .navigationBarsPadding()
+                .align(Alignment.BottomCenter),
+            contentAlignment = Alignment.Center,
+        ) {
+            CaptureButton(
+                modifier = Modifier.size(56.dp),
+                onCapturePhoto = onCaptureClick,
             )
         }
     }

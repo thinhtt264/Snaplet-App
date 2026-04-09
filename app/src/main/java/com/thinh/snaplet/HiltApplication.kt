@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.WorkManager
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.thinh.snaplet.utils.CrashlyticsLogger
 import com.thinh.snaplet.utils.Logger
 import dagger.hilt.android.HiltAndroidApp
@@ -19,6 +20,7 @@ class HiltApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
         WorkManager.initialize(this, workManagerConfiguration)
         initializeTimber()
     }

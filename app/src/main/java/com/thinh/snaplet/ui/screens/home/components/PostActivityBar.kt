@@ -104,7 +104,7 @@ fun PostActivityBar(
                 .animateContentSize()
                 .pressScaleClickable(enabled = isClickable, onClick = model.onClick),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
         ) {
             Icon(
                 painter = painterResource(CommonImages.SparkleIcon),

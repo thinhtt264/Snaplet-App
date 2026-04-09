@@ -57,6 +57,9 @@ class AppViewModel @Inject constructor(
     /** Pending friend request deeplink (userName) to show after login in this session. */
     private var pendingFriendRequestUserName: String? = null
 
+    /** Pending post id from notification tap before auth completes. */
+    private var pendingSpotlightPostId: String? = null
+
     init {
         initializeApp()
         observeAuthState()
@@ -132,10 +135,17 @@ class AppViewModel @Inject constructor(
                         pendingFriendRequestUserName = null
                         handleFriendRequestDeepLink(userName)
                     }
+                    pendingSpotlightPostId?.let { postId ->
+                        pendingSpotlightPostId = null
+                        viewModelScope.launch {
+                            _uiEvent.emit(AppUiEvent.NavigateToSpotlightPost(postId))
+                        }
+                    }
                 }
 
                 is AuthState.Unauthenticated -> {
                     isAuthenticated.value = false
+                    pendingSpotlightPostId = null
                     _uiEvent.emit(AppUiEvent.NavigateToAuthGraph)
                 }
             }
@@ -150,11 +160,20 @@ class AppViewModel @Inject constructor(
     private fun observeDeepLinkEvents() {
         viewModelScope.launch {
             deepLinkManager.events.collect { event ->
-                if (event is DeepLinkEvent.FriendRequest) {
-                    handleFriendRequestDeepLink(event.userName)
+                when (event) {
+                    is DeepLinkEvent.FriendRequest -> handleFriendRequestDeepLink(event.userName)
+                    is DeepLinkEvent.OpenSpotlightPost -> handleOpenSpotlightPostDeepLink(event.postId)
                 }
             }
         }
+    }
+
+    private suspend fun handleOpenSpotlightPostDeepLink(postId: String) {
+        if (!authRepository.isAuthenticated()) {
+            pendingSpotlightPostId = postId
+            return
+        }
+        _uiEvent.emit(AppUiEvent.NavigateToSpotlightPost(postId))
     }
 
     private suspend fun handleFriendRequestDeepLink(userName: String) {

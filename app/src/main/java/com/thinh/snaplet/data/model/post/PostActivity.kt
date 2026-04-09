@@ -3,6 +3,8 @@ package com.thinh.snaplet.data.model.post
 import com.google.gson.annotations.SerializedName
 
 data class PostActivity(
+    @SerializedName("postId")
+    val postId: String?,
     @SerializedName("imageUrl")
     val imageUrl: String,
     @SerializedName("caption")

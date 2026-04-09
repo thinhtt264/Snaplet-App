@@ -20,7 +20,7 @@ fun PermissionHandler(
         onPermissionResult(isGranted)
     }
 
-    val requestPermission = remember {
+    val requestPermission = remember(permission) {
         {
             Logger.d("Requesting permission: ${permission.manifestPermission}")
             launcher.launch(permission.manifestPermission)
@@ -46,7 +46,7 @@ fun MultiplePermissionsHandler(
         onPermissionsResult(permissionsMap)
     }
 
-    val requestPermissions = remember {
+    val requestPermissions = remember(permissions) {
         {
             Logger.d("Requesting permissions: ${permissions.map { it.manifestPermission }}")
             launcher.launch(permissions.map { it.manifestPermission }.toTypedArray())
@@ -55,4 +55,3 @@ fun MultiplePermissionsHandler(
 
     content(requestPermissions)
 }
-

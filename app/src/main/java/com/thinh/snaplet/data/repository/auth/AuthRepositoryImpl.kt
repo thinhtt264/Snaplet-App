@@ -12,8 +12,12 @@ import com.thinh.snaplet.network.SessionController
 import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.ApiResult
 import com.thinh.snaplet.utils.network.safeApiCall
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
@@ -23,6 +27,7 @@ class AuthRepositoryImpl @Inject constructor(
 ) : AuthRepository {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
+    private val logoutScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val authState: StateFlow<AuthState> = _authState
 
@@ -67,11 +72,15 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout() {
+        val accessToken = dataStoreManager.getAccessToken()
+
         _authState.value = AuthState.Unauthenticated
         dataStoreManager.clearSession()
 
-//        val result = safeApiCall(apiCall = { apiService.logout() })
-//        return result
+        logoutScope.launch {
+            if (accessToken.isNullOrBlank()) return@launch
+            safeApiCall(apiCall = { apiService.logout("Bearer $accessToken") })
+        }
     }
 
     override suspend fun forceLogout() {

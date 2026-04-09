@@ -14,6 +14,7 @@ import com.thinh.snaplet.ui.screens.image_crop.ImageCrop
 import com.thinh.snaplet.ui.screens.login.Login
 import com.thinh.snaplet.ui.screens.my_profile.MyProfile
 import com.thinh.snaplet.ui.screens.onboarding.Onboarding
+import com.thinh.snaplet.ui.screens.spotlight_post.SpotlightPostScreen
 import com.thinh.snaplet.ui.screens.register.Register
 import com.thinh.snaplet.navigation.ImageCrop as ImageCropRoute
 
@@ -64,6 +65,15 @@ fun NavGraphBuilder.homeGraph(navController: NavHostController) {
                 )
                 actions.popBackStack()
             }, onBack = actions::popBackStack)
+        }
+        composable<SpotlightPost>(
+            enterTransition = NavTransitions.Default.enter,
+            popExitTransition = NavTransitions.Default.popExit,
+        ) {
+            SpotlightPostScreen(
+                onNavigateBack = actions::popBackStack,
+                onNavigateHome = actions::navigateToHome,
+            )
         }
     }
 }

@@ -56,5 +56,7 @@ interface UserRepository {
         firstName: String,
         lastName: String,
     ): ApiResult<UserProfile>
+
+    suspend fun updateFcmToken(token: String): ApiResult<Unit>
 }
 

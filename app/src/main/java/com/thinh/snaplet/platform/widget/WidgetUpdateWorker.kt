@@ -55,6 +55,10 @@ class WidgetUpdateWorker @AssistedInject constructor(
                         key = SnapletWidgetStateKeys.POST_IMAGE_URL,
                         newValue = latestPost.imageUrl,
                     )
+                    val postIdChanged = prefs.updateNullableString(
+                        key = SnapletWidgetStateKeys.POST_ID,
+                        newValue = latestPost.postId,
+                    )
                     val captionChanged = prefs.updateNullableString(
                         key = SnapletWidgetStateKeys.POST_CAPTION,
                         newValue = latestPost.caption,
@@ -71,6 +75,7 @@ class WidgetUpdateWorker @AssistedInject constructor(
                     if (errorWasSet) prefs[SnapletWidgetStateKeys.IS_ERROR] = false
 
                     val hasContentChanged = listOf(
+                        postIdChanged,
                         imageChanged,
                         captionChanged,
                         avatarChanged,
@@ -100,6 +105,10 @@ class WidgetUpdateWorker @AssistedInject constructor(
                 val errorChanged = prefs[SnapletWidgetStateKeys.IS_ERROR] != true
                 if (errorChanged) prefs[SnapletWidgetStateKeys.IS_ERROR] = true
 
+                prefs.updateNullableString(
+                    key = SnapletWidgetStateKeys.POST_ID,
+                    newValue = null,
+                )
                 prefs.updateNullableString(
                     key = SnapletWidgetStateKeys.POST_IMAGE_URL,
                     newValue = null,

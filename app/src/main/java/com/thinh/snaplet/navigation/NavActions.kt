@@ -14,6 +14,13 @@ class NavActions(
         nav.navigate(MyProfile)
     }
 
+    fun navigateToHome() {
+        nav.navigate(Home) {
+            popUpTo<HomeGraph> { inclusive = false }
+            launchSingleTop = true
+        }
+    }
+
     fun navigateToImageCrop(uri: Uri) {
         nav.navigate(ImageCrop(sourceUri = uri.toString()))
     }

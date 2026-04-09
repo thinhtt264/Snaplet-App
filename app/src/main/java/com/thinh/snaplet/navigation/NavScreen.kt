@@ -21,6 +21,9 @@ object MyProfile
 data class ImageCrop(val sourceUri: String)
 
 @Serializable
+data class SpotlightPost(val postId: String)
+
+@Serializable
 object Login
 
 @Serializable

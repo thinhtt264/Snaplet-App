@@ -13,6 +13,7 @@ import com.thinh.snaplet.data.model.user.AvatarUploadRequest
 import com.thinh.snaplet.data.model.user.AvatarUploadRequestResponse
 import com.thinh.snaplet.data.model.user.ConfirmAvatarUploadRequest
 import com.thinh.snaplet.data.model.user.UpdateDisplayNameRequest
+import com.thinh.snaplet.data.model.user.UpdateFcmTokenRequest
 import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.data.model.user.UserSearchResult
 import com.thinh.snaplet.di.BaseOkHttpClient
@@ -255,6 +256,14 @@ class UserRepositoryImpl @Inject constructor(
             apiCall = { apiService.updateDisplayName(body) },
             onSuccess = { updatedProfile ->
                 dataStoreManager.saveUserProfile(updatedProfile)
+            }
+        )
+    }
+
+    override suspend fun updateFcmToken(token: String): ApiResult<Unit> {
+        return safeApiCall(
+            apiCall = {
+                apiService.updateFcmToken(UpdateFcmTokenRequest(fcmToken = token))
             }
         )
     }

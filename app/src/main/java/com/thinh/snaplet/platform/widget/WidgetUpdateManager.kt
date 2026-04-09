@@ -89,6 +89,7 @@ class WidgetUpdateManager @Inject constructor(
         prefs: MutablePreferences,
     ) {
         prefs.remove(SnapletWidgetStateKeys.POST_IMAGE_URL)
+        prefs.remove(SnapletWidgetStateKeys.POST_ID)
         prefs.remove(SnapletWidgetStateKeys.POST_CAPTION)
         prefs.remove(SnapletWidgetStateKeys.SENDER_AVATAR_URL)
 

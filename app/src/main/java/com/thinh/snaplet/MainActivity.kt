@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.thinh.snaplet.platform.deeplink.DeepLinkManager
+import com.thinh.snaplet.platform.notification.NotificationHelper
 import com.thinh.snaplet.ui.app.AppViewModel
 import com.thinh.snaplet.ui.screens.MainScreen
 import dagger.hilt.android.AndroidEntryPoint
@@ -26,9 +27,17 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var deepLinkManager: DeepLinkManager
 
+    @Inject
+    lateinit var notificationHelper: NotificationHelper
+
     override fun onStart() {
         super.onStart()
         appViewModel.onAppVisibilityChanged(isVisible = true)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        notificationHelper.cancelAllNotifications()
     }
 
     override fun onStop() {
@@ -43,7 +52,9 @@ class MainActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
 
-        lifecycleScope.launch { deepLinkManager.handleDeepLink(intent) }
+        lifecycleScope.launch {
+            deepLinkManager.handleIntent(intent)
+        }
 
         enableEdgeToEdge(
             navigationBarStyle = SystemBarStyle.dark(Color.Transparent.toArgb())
@@ -54,6 +65,8 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        lifecycleScope.launch { deepLinkManager.handleDeepLink(intent) }
+        lifecycleScope.launch {
+            deepLinkManager.handleIntent(intent)
+        }
     }
 }
