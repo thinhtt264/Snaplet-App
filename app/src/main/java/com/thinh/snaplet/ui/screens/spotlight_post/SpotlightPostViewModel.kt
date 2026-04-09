@@ -103,7 +103,7 @@ class SpotlightPostViewModel @Inject constructor(
         }
     }
 
-    private fun ApiError.isPostDeleted(): Boolean = httpCode == 500
+    private fun ApiError.isPostDeleted(): Boolean = httpCode == 404
 
     fun onPostActivityClick() {
         val state = _uiState.value.postReactionsState
