@@ -37,7 +37,11 @@ fun Response<*>.toApiError(): ApiError {
         val message = getDefaultMessage(httpCode) ?: base.status.message ?: "Lỗi không xác định"
 
         ApiError(
-            httpCode = httpCode, message = message, errorCode = errorCode, reason = meta?.reason
+            httpCode = httpCode,
+            message = message,
+            errorCode = errorCode,
+            reason = meta?.reason,
+            hoursRemaining = meta?.hoursRemaining,
         )
     }.getOrElse {
         ApiError(

@@ -17,8 +17,14 @@ data class ErrorMeta(
     @SerializedName("errorCode")
     val errorCode: String? = null,
 
+    @SerializedName("message")
+    val message: String? = null,
+
     @SerializedName("reason")
-    val reason: String? = null
+    val reason: String? = null,
+
+    @SerializedName("hoursRemaining")
+    val hoursRemaining: Int? = null,
 )
 
 data class BaseResponse<T>(

@@ -3,8 +3,8 @@ package com.thinh.snaplet.domain.post
 import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.domain.model.UploadPostResult
+import com.thinh.snaplet.utils.network.ApiResult
 import com.thinh.snaplet.utils.network.onFailure
-import com.thinh.snaplet.utils.network.onSuccess
 import javax.inject.Inject
 
 /**
@@ -20,13 +20,23 @@ class UploadPostUseCase @Inject constructor(
         transform: ImageTransform,
         caption: String?
     ): UploadPostResult {
+        fun fail(step: String, result: ApiResult<*>): UploadPostResult.Failed {
+            val error = (result as? ApiResult.Failure)?.error
+            val message = error?.message ?: "Unknown error"
+            return UploadPostResult.Failed(
+                message = "$step: $message",
+                apiError = error,
+            )
+        }
+
         return runCatching {
-            val uploadRequestData = mediaRepository.requestUpload(
+            val uploadRequestResult = mediaRepository.requestUpload(
                 items = listOf(imagePath),
                 transforms = listOf(transform)
-            ).fold(
+            )
+            val uploadRequestData = uploadRequestResult.fold(
                 onSuccess = { it },
-                onFailure = { return UploadPostResult.Failed("Upload request failed: ${it.message}") }
+                onFailure = { return fail("Upload request failed", uploadRequestResult) }
             )
 
             if (uploadRequestData.data.isEmpty()) {
@@ -35,22 +45,28 @@ class UploadPostUseCase @Inject constructor(
 
             val uploadItem = uploadRequestData.data.first()
 
-            mediaRepository.uploadMedia(uploadItem.uploadUrl, imagePath).onFailure { error ->
-                return UploadPostResult.Failed("Upload failed: ${error.message}")
+            val uploadMediaResult = mediaRepository.uploadMedia(uploadItem.uploadUrl, imagePath)
+            uploadMediaResult.onFailure { error ->
+                return UploadPostResult.Failed(
+                    message = "Upload failed: ${error.message}",
+                    apiError = error,
+                )
             }
 
-            mediaRepository.confirmUpload(listOf(uploadItem.mediaId)).fold(
+            val confirmUploadResult = mediaRepository.confirmUpload(listOf(uploadItem.mediaId))
+            confirmUploadResult.fold(
                 onSuccess = { confirmData ->
-                    mediaRepository.createPost(
+                    val createPostResult = mediaRepository.createPost(
                         mediaIds = confirmData.media.map { it.id },
                         caption = caption,
                         visibility = "friend-only"
-                    ).fold(
+                    )
+                    createPostResult.fold(
                         onSuccess = { createdPost -> UploadPostResult.Success(createdPost) },
-                        onFailure = { UploadPostResult.Failed("Upload failed: ${it.message}") }
+                        onFailure = { fail("Upload failed", createPostResult) }
                     )
                 },
-                onFailure = { UploadPostResult.Failed("Upload confirmation failed: ${it.message}") }
+                onFailure = { fail("Upload confirmation failed", confirmUploadResult) }
             )
         }.getOrElse { e ->
             UploadPostResult.Failed(e.message ?: "Unknown error")

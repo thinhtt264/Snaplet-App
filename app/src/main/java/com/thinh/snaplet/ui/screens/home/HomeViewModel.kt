@@ -59,6 +59,7 @@ import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.CrashlyticsLogger
 import com.thinh.snaplet.utils.FileUtils
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.network.ApiErrorCode
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -990,11 +991,28 @@ class HomeViewModel @Inject constructor(
                 }
 
                 is UploadPostResult.Failed -> {
+                    showUploadLimitReachedDialogIfNeeded(result)
                     setUploadStatus(tempPostId, UploadStatus.Failed(result.message))
-//                    _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(result.message)) }
                 }
             }
         }
+    }
+
+    private fun showUploadLimitReachedDialogIfNeeded(result: UploadPostResult.Failed): Boolean {
+        val apiError = result.apiError ?: return false
+        if (apiError.errorCode != ApiErrorCode.POST_CREATE_LIMIT_EXCEEDED) return false
+
+        val hoursRemaining = (apiError.hoursRemaining ?: 24).coerceAtLeast(1)
+        OverlayEventBus.showConfirmDialog(
+            title = UiText.StringResource(R.string.upload_post_limit_title),
+            message = UiText.StringResource(
+                R.string.upload_post_limit_message,
+                listOf(hoursRemaining),
+            ),
+            confirmText = UiText.StringResource(R.string.ok),
+            onConfirm = {},
+        )
+        return true
     }
 
     fun onShowMoreOptions() {

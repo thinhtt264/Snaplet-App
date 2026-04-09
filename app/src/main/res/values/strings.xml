@@ -101,6 +101,8 @@
     <string name="post_deleted">Đã xóa bài viết</string>
     <string name="upload_failed_tap_to_retry">Tải lên thất bại. Chạm để thử lại</string>
     <string name="uploading">Đang tải lên…</string>
+    <string name="upload_post_limit_title">Bạn đã chạm giới hạn đăng hôm nay</string>
+    <string name="upload_post_limit_message">Bạn đã dùng hết lượt đăng trong ngày. Hãy thử lại sau khoảng %1$d giờ nhé.</string>
 
     <string name="spotlight_post_title">Trạng thái</string>
     <string name="error_load_post">Không tải được trạng thái</string>
