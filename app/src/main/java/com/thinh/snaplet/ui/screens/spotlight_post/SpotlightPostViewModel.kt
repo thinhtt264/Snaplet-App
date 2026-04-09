@@ -6,23 +6,24 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.repository.post.PostRepository
+import com.thinh.snaplet.domain.model.FloatDirection
 import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
 import com.thinh.snaplet.navigation.SpotlightPost
 import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.ui.components.EmojiFloatController
-import com.thinh.snaplet.domain.model.FloatDirection
 import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
 import com.thinh.snaplet.ui.screens.home.QuickChatEmojiSlots
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -33,6 +34,7 @@ class SpotlightPostViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     val emojiFloatController: EmojiFloatController by lazy { EmojiFloatController() }
+
     private companion object {
         private const val DEBOUNCE_MS = 500L
     }
@@ -65,6 +67,7 @@ class SpotlightPostViewModel @Inject constructor(
                 it.copy(
                     isLoading = true,
                     error = null,
+                    canRetry = true,
                     postReactionsState = PostReactionsUiState.Loading,
                 )
             }
@@ -82,17 +85,25 @@ class SpotlightPostViewModel @Inject constructor(
                         }
                     }
                 },
-                onFailure = {
+                onFailure = { error ->
                     _uiState.update {
+                        val isPostDeleted = error.isPostDeleted()
                         it.copy(
                             isLoading = false,
-                            error = UiText.StringResource(R.string.error_load_post),
+                            error = if (isPostDeleted) {
+                                UiText.StringResource(R.string.post_deleted)
+                            } else {
+                                UiText.StringResource(R.string.error_load_post)
+                            },
+                            canRetry = !isPostDeleted,
                         )
                     }
                 },
             )
         }
     }
+
+    private fun ApiError.isPostDeleted(): Boolean = httpCode == 500
 
     fun onPostActivityClick() {
         val state = _uiState.value.postReactionsState

@@ -106,6 +106,7 @@
 
     <string name="spotlight_post_title">Trạng thái</string>
     <string name="error_load_post">Không tải được trạng thái</string>
+    <string name="spotlight_back_home">Về trang chủ</string>
     <string name="retry">Thử lại</string>
 
     <string name="post_activity_bar_loading">Hoạt động</string>

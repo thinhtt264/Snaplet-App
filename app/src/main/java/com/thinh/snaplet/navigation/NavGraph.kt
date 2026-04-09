@@ -70,7 +70,10 @@ fun NavGraphBuilder.homeGraph(navController: NavHostController) {
             enterTransition = NavTransitions.Default.enter,
             popExitTransition = NavTransitions.Default.popExit,
         ) {
-            SpotlightPostScreen(onNavigateBack = actions::popBackStack)
+            SpotlightPostScreen(
+                onNavigateBack = actions::popBackStack,
+                onNavigateHome = actions::navigateToHome,
+            )
         }
     }
 }

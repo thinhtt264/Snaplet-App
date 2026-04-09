@@ -9,6 +9,7 @@ data class SpotlightPostUiState(
     val isLoading: Boolean = true,
     val post: Post? = null,
     val error: UiText? = null,
+    val canRetry: Boolean = true,
     val postReactionsState: PostReactionsUiState = PostReactionsUiState.Loading,
     val showReactionsSheet: Boolean = false,
     val quickChatEmojiSlots: List<String> = QuickChatEmojiSlots.mergeForDisplay(emptyList()),

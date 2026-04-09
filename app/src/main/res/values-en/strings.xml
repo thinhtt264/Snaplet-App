@@ -88,8 +88,7 @@
         <item quantity="other">%d new posts</item>
     </plurals>
 
-    <!-- Empty media (Locket) screen -->
-    <string name="empty_media_title">Send your first Locket</string>
+    <string name="empty_media_title">Send your first Snaplet</string>
     <string name="empty_media_subtitle">Your photos will appear on your friends\' home screens</string>
     <string name="empty_media_add_friend">+ Add new friend</string>
 
@@ -98,6 +97,7 @@
     <string name="post_deleted">Post deleted</string>
     <string name="upload_failed_tap_to_retry">Upload failed. Tap to retry</string>
     <string name="uploading">Uploading…</string>
+    <string name="spotlight_back_home">Back to Home</string>
     <string name="upload_post_limit_title">You hit today\'s posting limit</string>
     <string name="upload_post_limit_message">You\'ve reached your posting limit for today. Please try again in about %1$d hours.</string>
     <string name="history_label">History</string>

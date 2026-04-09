@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -75,6 +78,7 @@ private fun BoxScope.SpotlightQuickChatBar(model: QuickChatBarModel) {
 @Composable
 fun SpotlightPostScreen(
     onNavigateBack: () -> Unit,
+    onNavigateHome: () -> Unit,
     viewModel: SpotlightPostViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -140,8 +144,13 @@ fun SpotlightPostScreen(
                             BaseText(text = uiState.error!!.asString(context))
                             Spacer(modifier = Modifier.height(16.dp))
                             PrimaryButton(
-                                title = stringResource(R.string.retry),
-                                onClick = viewModel::loadPost,
+                                title = stringResource(if (uiState.canRetry) R.string.retry else R.string.spotlight_back_home),
+                                onClick = if (uiState.canRetry) viewModel::loadPost else onNavigateHome,
+                                contentPadding = PaddingValues(
+                                    vertical = 16.dp, horizontal = 18.dp
+                                ),
+                                titleColor = Color.Black,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             )
                         }
                     }
