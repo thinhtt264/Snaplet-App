@@ -549,18 +549,14 @@ private fun HomeScreen(
             )
         }
 
-        AnimatedVisibility(
-            visible = showGlobalBottomContent,
-            enter = fadeIn(animationSpec = tween(durationMillis = MotionTokens.Normal)),
-            exit = fadeOut(animationSpec = tween(durationMillis = MotionTokens.Fast)),
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) {
+        if (showGlobalBottomContent) {
             val postIndex = pagerState.currentPage - 1
             if (postIndex in uiState.posts.indices) {
                 val currentPost = uiState.posts[postIndex]
                 HomeBottomContent(
                     quickChatBar = quickChatBar,
                     bottomAction = bottomAction,
+                    modifier = Modifier.align(Alignment.BottomCenter),
                     isShowActivityBar = currentPost.isOwnPost,
                     postActivityBar = postActivityBar,
                 )
