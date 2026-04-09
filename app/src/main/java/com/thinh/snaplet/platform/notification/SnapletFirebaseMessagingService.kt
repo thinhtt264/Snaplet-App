@@ -2,7 +2,10 @@ package com.thinh.snaplet.platform.notification
 
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.thinh.snaplet.domain.notification.PushNotificationType
 import com.thinh.snaplet.domain.notification.RegisterFcmTokenUseCase
+import com.thinh.snaplet.platform.widget.WidgetUpdateManager
+import com.thinh.snaplet.utils.Logger
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +22,9 @@ class SnapletFirebaseMessagingService : FirebaseMessagingService() {
     @Inject
     lateinit var notificationHelper: NotificationHelper
 
+    @Inject
+    lateinit var widgetUpdateManager: WidgetUpdateManager
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onNewToken(token: String) {
@@ -32,18 +38,34 @@ class SnapletFirebaseMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(message)
         scope.launch {
             val data = message.data
-            val postId = data["postId"] ?: return@launch
-            val actorAvatarUrl = data["actorAvatarUrl"]
+            val pushType = PushNotificationType.from(data[NotificationHelper.KEY_TYPE])
+            when (pushType) {
+                PushNotificationType.POST_REACTION -> {
+                    val postId = data[NotificationHelper.KEY_POST_ID] ?: return@launch
+                    val actorAvatarUrl = data[NotificationHelper.KEY_ACTOR_AVATAR_URL]
+                    val title = message.notification?.title ?: data[NotificationHelper.KEY_TITLE]
+                    val body = message.notification?.body ?: data[NotificationHelper.KEY_BODY]
 
-            val title = message.notification?.title ?: data["title"] ?: return@launch
-            val body = message.notification?.body ?: data["body"] ?: return@launch
+                    if (!title.isNullOrBlank() && !body.isNullOrBlank()) {
+                        notificationHelper.showReactionNotification(
+                            title = title,
+                            body = body,
+                            postId = postId,
+                            actorAvatarUrl = actorAvatarUrl,
+                        )
+                    }
 
-            notificationHelper.showReactionNotification(
-                title = title,
-                body = body,
-                postId = postId,
-                actorAvatarUrl = actorAvatarUrl,
-            )
+                    widgetUpdateManager.scheduleImmediateUpdate(requireGlanceIds = true)
+                }
+
+                PushNotificationType.WIDGET_REFRESH -> {
+                    widgetUpdateManager.scheduleImmediateUpdate(requireGlanceIds = true)
+                }
+
+                else -> {
+                    Logger.d("FCM type ignored in service: %s", pushType.name)
+                }
+            }
         }
     }
 }

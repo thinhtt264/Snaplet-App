@@ -120,6 +120,12 @@ class NotificationHelper @Inject constructor(
     }
 
     companion object {
+        const val KEY_TYPE = "type"
+        const val KEY_POST_ID = "postId"
+        const val KEY_TITLE = "title"
+        const val KEY_BODY = "body"
+        const val KEY_ACTOR_AVATAR_URL = "actorAvatarUrl"
+
         const val CHANNEL_ID = "reactions_channel"
         private const val CHANNEL_NAME = "Reactions"
         const val EXTRA_POST_ID = "postId"
