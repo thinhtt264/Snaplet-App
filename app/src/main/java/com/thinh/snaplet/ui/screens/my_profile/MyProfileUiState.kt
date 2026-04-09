@@ -1,6 +1,8 @@
 package com.thinh.snaplet.ui.screens.my_profile
 
 import com.thinh.snaplet.data.model.user.AvatarUrls
+import com.thinh.snaplet.ui.common.UiText
+
 
 data class MyProfileUiState(
     val displayName: String = "",
@@ -16,4 +18,6 @@ data class MyProfileUiState(
     val editFirstName: String = "",
     val editLastName: String = "",
     val isUpdatingDisplayName: Boolean = false,
+    val editFirstNameError: UiText? = null,
+    val editLastNameError: UiText? = null,
 )

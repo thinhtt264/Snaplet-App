@@ -215,6 +215,8 @@ fun MyProfile(
         EditDisplayNameBottomSheet(
             firstName = uiState.editFirstName,
             lastName = uiState.editLastName,
+            firstNameError = uiState.editFirstNameError?.asString(context),
+            lastNameError = uiState.editLastNameError?.asString(context),
             isSaving = uiState.isUpdatingDisplayName,
             onFirstNameChange = viewModel::onEditFirstNameChange,
             onLastNameChange = viewModel::onEditLastNameChange,

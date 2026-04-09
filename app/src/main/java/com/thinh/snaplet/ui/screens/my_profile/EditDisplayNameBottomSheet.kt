@@ -2,6 +2,7 @@ package com.thinh.snaplet.ui.screens.my_profile
 
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,14 +37,16 @@ import com.thinh.snaplet.ui.components.PrimaryButton
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditDisplayNameBottomSheet(
+    modifier: Modifier = Modifier,
     firstName: String,
     lastName: String,
+    firstNameError: String? = null,
+    lastNameError: String? = null,
     isSaving: Boolean,
     onFirstNameChange: (String) -> Unit,
     onLastNameChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onSaveClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val focusManager = LocalFocusManager.current
@@ -92,6 +95,7 @@ fun EditDisplayNameBottomSheet(
                 onImeAction = {
                     lastNameFocusRequester.requestFocus()
                 },
+                errorMessage = firstNameError,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -106,27 +110,21 @@ fun EditDisplayNameBottomSheet(
                 onImeAction = {
                     focusManager.clearFocus()
                 },
+                errorMessage = lastNameError,
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
             PrimaryButton(
+                enabled = !isSaving && firstNameError == null && lastNameError == null,
                 onClick = {
                     focusManager.clearFocus()
                     onSaveClick()
                 },
                 title = stringResource(R.string.profile_edit_name_save),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                enabled = !isSaving,
-                isLoading = isSaving,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                ),
+                contentPadding = PaddingValues(vertical = 16.dp, horizontal = 18.dp),
                 titleColor = Color.Black,
-                typography = MaterialTheme.typography.titleMedium,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             )
         }
     }

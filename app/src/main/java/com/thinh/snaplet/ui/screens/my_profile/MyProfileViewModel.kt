@@ -16,6 +16,7 @@ import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
 import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.ValidationConstants
 import com.thinh.snaplet.utils.network.onFailure
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -136,6 +137,8 @@ class MyProfileViewModel @Inject constructor(
                 isEditNameSheetVisible = true,
                 editFirstName = state.firstName,
                 editLastName = state.lastName,
+                editFirstNameError = null,
+                editLastNameError = null,
             )
         }
     }
@@ -145,12 +148,29 @@ class MyProfileViewModel @Inject constructor(
     }
 
     fun onEditFirstNameChange(value: String) {
-        _uiState.update { it.copy(editFirstName = value) }
+        val maxLen = ValidationConstants.NAME_MAX_LENGTH
+        val exceeded = value.length > maxLen
+        _uiState.update {
+            it.copy(
+                editFirstName = value,
+                editFirstNameError = if (exceeded) editNameMaxLengthError(maxLen) else null
+            )
+        }
     }
 
     fun onEditLastNameChange(value: String) {
-        _uiState.update { it.copy(editLastName = value) }
+        val maxLen = ValidationConstants.NAME_MAX_LENGTH
+        val exceeded = value.length > maxLen
+        _uiState.update {
+            it.copy(
+                editLastName = value,
+                editLastNameError = if (exceeded) editNameMaxLengthError(maxLen) else null
+            )
+        }
     }
+
+    private fun editNameMaxLengthError(maxChars: Int): UiText =
+        UiText.StringResource(R.string.register_name_max_length, listOf(maxChars))
 
     fun onSaveDisplayName() {
         val currentState = _uiState.value
@@ -158,6 +178,10 @@ class MyProfileViewModel @Inject constructor(
         val lastName = currentState.editLastName.trim()
 
         if (firstName.isEmpty() && lastName.isEmpty()) {
+            return
+        }
+
+        if (currentState.editFirstNameError != null || currentState.editLastNameError != null) {
             return
         }
 
