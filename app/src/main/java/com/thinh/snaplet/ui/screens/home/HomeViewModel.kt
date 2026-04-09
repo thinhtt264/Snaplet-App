@@ -665,7 +665,6 @@ class HomeViewModel @Inject constructor(
                         isLoadingPosts = false,
                         isLoadingMore = false,
                         error = apiError.message,
-                        snackbarMessage = UiText.DynamicString(apiError.message)
                     )
                 }
             })
