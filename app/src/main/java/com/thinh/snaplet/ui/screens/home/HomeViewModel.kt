@@ -1085,6 +1085,8 @@ class HomeViewModel @Inject constructor(
             return
         }
 
+        if (_uiState.value.isDownloading) return
+
         _uiState.update { it.copy(isDownloading = true) }
 
         viewModelScope.launch {
