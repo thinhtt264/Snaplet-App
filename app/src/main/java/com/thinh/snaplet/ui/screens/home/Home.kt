@@ -96,7 +96,7 @@ fun Home(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            viewModel.onGalleryImagePicked(context, uri)
+            viewModel.onGalleryImagePicked(uri)
         }
     }
 
@@ -128,7 +128,7 @@ fun Home(
             onCapturePhoto = { viewModel.onCapturePhoto(context) },
             onSwitchCamera = viewModel::onSwitchCamera,
             onCancelCapture = viewModel::onCancelCapture,
-            onUploadPost = { viewModel.onUploadPost(context) },
+            onUploadPost = { viewModel.onUploadPost() },
             onCaptionChange = viewModel::updateCurrentCaption,
             onRequestPermission = viewModel::onRequestCameraPermission
         )

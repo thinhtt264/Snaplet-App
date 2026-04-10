@@ -8,6 +8,7 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.R
@@ -522,7 +523,6 @@ class HomeViewModel @Inject constructor(
                 refreshFriendSearchResults()
             }.onFailure { error ->
                 Logger.e("❌ Failed to send friend request: ${error.message}")
-                // _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
             }.also {
                 updateFriendSheetState { state ->
                     state.copy(
@@ -923,26 +923,32 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(currentCaption = null) }
     }
 
-    fun onGalleryImagePicked(context: Context, uri: Uri) {
-        // Instant preview: keep the `content://` Uri and only import to a local file on upload.
-        val oldPath = _uiState.value.cameraState.capturedImagePath
-        FileUtils.deleteFileFromPath(oldPath)
+    fun onGalleryImagePicked(uri: Uri) {
         updateCameraState { it.copy(capturedImagePath = null, pickedImageUri = uri.toString()) }
+        viewModelScope.launch {
+            val oldPath = _uiState.value.cameraState.capturedImagePath
+            FileUtils.deleteFileFromPath(oldPath)
+        }
     }
 
-    fun onUploadPost(context: Context) {
+    fun onUploadPost() {
         viewModelScope.launch {
             val state = _uiState.value
-            if (state.cameraState.capturedImagePath == null && state.cameraState.pickedImageUri != null) {
+            val isPickedFromGallery =
+                state.cameraState.capturedImagePath == null && state.cameraState.pickedImageUri != null
+            if (isPickedFromGallery) {
                 val importedPath = mediaRepository.importPickedImageToCache(
-                    uri = Uri.parse(state.cameraState.pickedImageUri)
+                    uri = state.cameraState.pickedImageUri.toUri()
                 ).getOrElse { e ->
                     Logger.e(e, "Import picked image failed")
-                    _uiState.update { it.copy(snackbarMessage = UiText.DynamicString("Không import được ảnh")) }
                     return@launch
                 }
 
-                updateCameraState { it.copy(capturedImagePath = importedPath, pickedImageUri = null) }
+                updateCameraState {
+                    it.copy(
+                        capturedImagePath = importedPath, pickedImageUri = null
+                    )
+                }
             }
 
             val isUploading = state.uploadStatuses.values.any { it is UploadStatus.Uploading }
@@ -963,9 +969,11 @@ class HomeViewModel @Inject constructor(
 
                     val isFrontCamera =
                         state.cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
+                    val shouldFlipHorizontal = isFrontCamera && !isPickedFromGallery
+
                     val processedPath = withContext(Dispatchers.IO) {
                         FileUtils.flipAndCompressImage(
-                            File(input.imagePath), flipHorizontal = isFrontCamera
+                            File(input.imagePath), flipHorizontal = shouldFlipHorizontal
                         ) ?: input.imagePath
                     }
                     val transform = ImageTransform(rotation = 0, scaleX = 1f, scaleY = 1f)

@@ -86,7 +86,6 @@ data class CameraState(
     val hasCameraPermission: Boolean = false,
     val lensFacing: Int = CameraSelector.LENS_FACING_FRONT,
     val capturedImagePath: String? = null,
-    /** `content://...` from Photo Picker for instant preview before import. */
     val pickedImageUri: String? = null,
 ) {
     val isEditMode: Boolean get() = capturedImagePath != null || pickedImageUri != null

@@ -61,8 +61,8 @@ fun MediaPage(
     quickChatBar: QuickChatBarModel,
     bottomAction: BottomActionModel,
     postActivityBar: PostActivityBarModel = PostActivityBarModel(),
-    onRetryClick: () -> Unit = {},
-    onDeleteClick: () -> Unit = {},
+    onRetryClick: () -> Unit,
+    onDeleteClick: () -> Unit,
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val screenHeight = maxHeight
@@ -142,7 +142,7 @@ private fun PostMediaContent(post: Post) {
                     .padding(bottom = 12.dp)
                     .padding(horizontal = 12.dp)
                     .background(
-                        color = Color.Black.copy(alpha = 0.4f), shape = RoundedCornerShape(16.dp)
+                        color = Color.Black.copy(alpha = 0.5f), shape = RoundedCornerShape(16.dp)
                     )
                     .padding(vertical = 6.dp, horizontal = 12.dp)
                     .widthIn(max = MediaItemDimensions.CAPTION_CONTAINER_MAX_WIDTH)
@@ -207,7 +207,7 @@ private fun PostMetadata(
     modifier: Modifier = Modifier,
     post: Post,
     uploadStatus: UploadStatus?,
-    onDeleteClick: () -> Unit = {}
+    onDeleteClick: () -> Unit
 ) {
     Row(
         modifier = modifier,
