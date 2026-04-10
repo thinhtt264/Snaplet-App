@@ -26,6 +26,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
@@ -44,36 +45,43 @@ class MediaRepositoryImpl @Inject constructor(
         const val DOWNLOAD_BUFFER_SIZE = 64 * 1024
     }
 
+    /**
+     * Opens bytes for an image from a remote URL or local path (`file://` or raw path).
+     * For HTTP(S), the returned stream must be closed to release the connection.
+     */
+    private fun openImageInputStream(imageSource: String): Result<InputStream> {
+        return when {
+            imageSource.startsWith("http://", ignoreCase = true) ||
+                imageSource.startsWith("https://", ignoreCase = true) -> {
+                val response: Response = baseOkHttpClient.newCall(
+                    Request.Builder().url(imageSource).build()
+                ).execute()
+                if (!response.isSuccessful || response.body == null) {
+                    response.close()
+                    return Result.failure(RuntimeException("Download failed: ${response.code}"))
+                }
+                Result.success(response.body!!.byteStream())
+            }
+
+            else -> {
+                val path = imageSource.removePrefix("file://")
+                val file = File(path)
+                if (!file.exists() || !file.canRead()) {
+                    return Result.failure(RuntimeException("File not found or not readable"))
+                }
+                Result.success(file.inputStream())
+            }
+        }
+    }
+
     override suspend fun downloadImage(imageSource: String): Result<String> =
         withContext(Dispatchers.IO) {
             if (imageSource.isBlank()) {
                 return@withContext Result.failure(IllegalArgumentException("Image source is empty"))
             }
             try {
-                val inputStream: InputStream = when {
-                    imageSource.startsWith("http://", ignoreCase = true) ||
-                            imageSource.startsWith("https://", ignoreCase = true) -> {
-                        val response = baseOkHttpClient.newCall(
-                            Request.Builder().url(imageSource).build()
-                        ).execute()
-                        if (!response.isSuccessful || response.body == null) {
-                            return@withContext Result.failure(
-                                RuntimeException("Download failed: ${response.code}")
-                            )
-                        }
-                        response.body!!.byteStream()
-                    }
-
-                    else -> {
-                        val path = imageSource.removePrefix("file://")
-                        val file = File(path)
-                        if (!file.exists() || !file.canRead()) {
-                            return@withContext Result.failure(
-                                RuntimeException("File not found or not readable")
-                            )
-                        }
-                        file.inputStream()
-                    }
+                val inputStream = openImageInputStream(imageSource).getOrElse {
+                    return@withContext Result.failure(it)
                 }
                 val displayName = "Snaplet_${System.currentTimeMillis()}.jpg"
                 val mimeType = "image/jpeg"
@@ -119,30 +127,8 @@ class MediaRepositoryImpl @Inject constructor(
                 return@withContext Result.failure(IllegalArgumentException("Image source is empty"))
             }
             try {
-                val inputStream: InputStream = when {
-                    imageSource.startsWith("http://", ignoreCase = true) ||
-                            imageSource.startsWith("https://", ignoreCase = true) -> {
-                        val response = baseOkHttpClient.newCall(
-                            Request.Builder().url(imageSource).build()
-                        ).execute()
-                        if (!response.isSuccessful || response.body == null) {
-                            return@withContext Result.failure(
-                                RuntimeException("Download failed: ${response.code}")
-                            )
-                        }
-                        response.body!!.byteStream()
-                    }
-
-                    else -> {
-                        val path = imageSource.removePrefix("file://")
-                        val file = File(path)
-                        if (!file.exists() || !file.canRead()) {
-                            return@withContext Result.failure(
-                                RuntimeException("File not found or not readable")
-                            )
-                        }
-                        file.inputStream()
-                    }
+                val inputStream = openImageInputStream(imageSource).getOrElse {
+                    return@withContext Result.failure(it)
                 }
 
                 val cacheDir = File(context.cacheDir, "share").apply { mkdirs() }
