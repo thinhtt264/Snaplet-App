@@ -11,7 +11,7 @@ import com.thinh.snaplet.R
 import com.thinh.snaplet.ui.widget.SnapletWidgetReceiver
 import com.thinh.snaplet.utils.Logger
 
-fun Context.launchSnapletWidgetPicker() {
+fun Context.launchSnapletWidgetPicker(onComplete: (() -> Unit)? = null) {
     val appWidgetManager = AppWidgetManager.getInstance(this)
     val provider = ComponentName(this, SnapletWidgetReceiver::class.java)
 
@@ -32,6 +32,7 @@ fun Context.launchSnapletWidgetPicker() {
             Toast.makeText(this, getString(R.string.profile_how_to_add_widget), Toast.LENGTH_SHORT)
                 .show()
         }
+        onComplete?.invoke()
         return
     }
 
@@ -44,5 +45,7 @@ fun Context.launchSnapletWidgetPicker() {
         startActivity(intent)
     }.onFailure {
         Logger.e("❌ Cannot open widget picker: ${it.message}")
+    }.also {
+        onComplete?.invoke()
     }
 }
