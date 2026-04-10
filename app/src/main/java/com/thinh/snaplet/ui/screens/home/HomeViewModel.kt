@@ -951,10 +951,11 @@ class HomeViewModel @Inject constructor(
                 }
             }
 
-            val isUploading = state.uploadStatuses.values.any { it is UploadStatus.Uploading }
+            val latestState = _uiState.value
+            val isUploading = latestState.uploadStatuses.values.any { it is UploadStatus.Uploading }
             when (val result = validateUploadPostUseCase(
-                capturedImagePath = _uiState.value.cameraState.capturedImagePath,
-                caption = state.currentCaption,
+                capturedImagePath = latestState.cameraState.capturedImagePath,
+                caption = latestState.currentCaption,
                 isUploading = isUploading
             )) {
                 is ValidateUploadPostUseCase.ValidateUploadResult.Success -> {

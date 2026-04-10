@@ -291,6 +291,8 @@ fun SpotlightPostScreen(
                                 quickChatBar = quickChatBar,
                                 bottomAction = bottomAction,
                                 postActivityBar = postActivityBar,
+                                onRetryClick = {},
+                                onDeleteClick = {}
                             )
                             if (post.isOwnPost) {
                                 SpotlightPostActivityBar(model = postActivityBar)

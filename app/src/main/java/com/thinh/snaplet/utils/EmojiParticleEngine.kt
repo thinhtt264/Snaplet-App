@@ -8,10 +8,10 @@ import kotlin.random.Random
 object EmojiParticleEngine {
 
     private const val ACCELERATION = 1.035f
-    private const val PARTICLES_PER_BATCH = 18
+    private const val PARTICLES_PER_BATCH = 20
     private const val BATCH_VARIANCE = 2
-    private const val SIZE_MIN = 92f
-    private const val SIZE_MAX = 160f
+    private const val SIZE_MIN = 112f
+    private const val SIZE_MAX = 168f
     private const val FADE_OUT_HEIGHT_FRAC_MIN = 0.75f
     private const val FADE_OUT_HEIGHT_FRAC_MAX = 0.97f
     private const val FADE_ZONE_HEIGHT_FRAC_MIN = 0.05f
