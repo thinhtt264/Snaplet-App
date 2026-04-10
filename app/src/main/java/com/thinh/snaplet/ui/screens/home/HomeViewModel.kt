@@ -16,6 +16,7 @@ import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.model.post.NewPostUpdate
 import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.domain.feed.FetchNewerFeedUseCase
@@ -25,7 +26,6 @@ import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase.Companion.GRID_LOAD_MORE
 import com.thinh.snaplet.domain.feed.ObserveNewPostEventUseCase
 import com.thinh.snaplet.domain.feed.ShouldMarkLatestPostAsSeenUseCase
 import com.thinh.snaplet.domain.feed.ShouldTriggerLoadMoreUseCase
-import com.thinh.snaplet.domain.media.DownloadPostImageUseCase
 import com.thinh.snaplet.domain.media.ValidateCaptureReadinessUseCase
 import com.thinh.snaplet.domain.model.CaptureReadiness
 import com.thinh.snaplet.domain.model.FloatDirection
@@ -33,6 +33,7 @@ import com.thinh.snaplet.domain.model.NewerFeedResult
 import com.thinh.snaplet.domain.model.PostAction
 import com.thinh.snaplet.domain.model.UploadPostResult
 import com.thinh.snaplet.domain.post.CreateTempPostUseCase
+import com.thinh.snaplet.domain.post.BuildPostShareContentUseCase
 import com.thinh.snaplet.domain.post.DeletePostUseCase
 import com.thinh.snaplet.domain.post.GetAvailablePostActionsUseCase
 import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
@@ -95,12 +96,12 @@ class HomeViewModel @Inject constructor(
     private val shouldTriggerLoadMoreUseCase: ShouldTriggerLoadMoreUseCase,
     private val validateCaptureReadinessUseCase: ValidateCaptureReadinessUseCase,
     private val createTempPostUseCase: CreateTempPostUseCase,
+    private val buildPostShareContentUseCase: BuildPostShareContentUseCase,
     private val validateUploadPostUseCase: ValidateUploadPostUseCase,
     private val uploadPostUseCase: UploadPostUseCase,
     private val validateRetryUploadUseCase: ValidateRetryUploadUseCase,
     private val getAvailablePostActionsUseCase: GetAvailablePostActionsUseCase,
     private val deletePostUseCase: DeletePostUseCase,
-    private val downloadPostImageUseCase: DownloadPostImageUseCase,
     private val getRelationshipsByStatusesUseCase: GetRelationshipsByStatusesUseCase,
     private val getRelationshipActionUseCase: GetRelationshipActionUseCase,
     private val formatFriendSearchResultsUseCase: FormatFriendSearchResultsUseCase,
@@ -115,6 +116,7 @@ class HomeViewModel @Inject constructor(
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
     private val connectivityObserver: ConnectivityObserver,
     private val widgetUpdateManager: WidgetUpdateManager,
+    private val mediaRepository: MediaRepository
 ) : ViewModel() {
     val emojiFloatController: EmojiFloatController by lazy { EmojiFloatController() }
 
@@ -783,8 +785,7 @@ class HomeViewModel @Inject constructor(
             state.copy(
                 posts = state.posts.map { post ->
                     if (post.id == postId) post.copy(isOwnerViewedPost = true) else post
-                }
-            )
+                })
         }
         viewModelScope.launch {
             postRepository.markPostOwnerViewed(postId)
@@ -1033,7 +1034,7 @@ class HomeViewModel @Inject constructor(
                 is PostAction.Share -> SheetOption(
                     id = "share",
                     label = UiText.StringResource(R.string.share),
-                    onClick = { /* TODO: share */ })
+                    onClick = { sharePost(post) })
 
                 is PostAction.Download -> SheetOption(
                     id = "download",
@@ -1067,6 +1068,36 @@ class HomeViewModel @Inject constructor(
             }
         }
         OverlayEventBus.showOptionsSheet(options = options)
+    }
+
+    private fun sharePost(post: Post) {
+        val media = post.media.firstOrNull() ?: run {
+            _uiState.update { it.copy(snackbarMessage = UiText.DynamicString("Không tìm thấy ảnh để share")) }
+            return
+        }
+        val imageSource = media.images.original
+        if (imageSource.isBlank()) {
+            _uiState.update { it.copy(snackbarMessage = UiText.DynamicString("Không tìm thấy ảnh để share")) }
+            return
+        }
+
+        _uiState.update { it.copy(isDownloading = true) }
+
+        viewModelScope.launch {
+            val uriResult = mediaRepository.prepareShareImageUri(imageSource)
+            uriResult.onSuccess { uri ->
+                val content = buildPostShareContentUseCase(post.firstName, post.id)
+                shareManager.openSystemChooser(content = content, imageUri = uri)
+                _uiState.update { it.copy(isDownloading = false) }
+            }.onFailure { e ->
+                _uiState.update {
+                    it.copy(
+                        isDownloading = false,
+                        snackbarMessage = UiText.DynamicString(e.message ?: "Không share được ảnh")
+                    )
+                }
+            }
+        }
     }
 
     fun retryUpload(tempPostId: String) {
@@ -1141,7 +1172,7 @@ class HomeViewModel @Inject constructor(
 
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
-            downloadPostImageUseCase(imageSource).onSuccess {
+            mediaRepository.downloadImage(imageSource).onSuccess {
                 _uiState.update {
                     it.copy(
                         isDownloading = false
@@ -1174,7 +1205,7 @@ class HomeViewModel @Inject constructor(
                 ) ?: imageSource
             }
 
-            downloadPostImageUseCase(processedPath).onSuccess {
+            mediaRepository.downloadImage(processedPath).onSuccess {
                 _uiState.update {
                     it.copy(
                         isDownloading = false

@@ -9,6 +9,8 @@ interface MediaRepository {
 
     suspend fun downloadImage(imageSource: String): Result<String>
 
+    suspend fun prepareShareImageUri(imageSource: String): Result<android.net.Uri>
+
     suspend fun requestUpload(
         items: List<String>,
         transforms: List<com.thinh.snaplet.data.model.media.ImageTransform>? = null
