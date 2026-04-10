@@ -31,9 +31,10 @@ import com.thinh.snaplet.domain.model.CaptureReadiness
 import com.thinh.snaplet.domain.model.FloatDirection
 import com.thinh.snaplet.domain.model.NewerFeedResult
 import com.thinh.snaplet.domain.model.PostAction
+import com.thinh.snaplet.domain.model.RelationshipAction
 import com.thinh.snaplet.domain.model.UploadPostResult
-import com.thinh.snaplet.domain.post.CreateTempPostUseCase
 import com.thinh.snaplet.domain.post.BuildPostShareContentUseCase
+import com.thinh.snaplet.domain.post.CreateTempPostUseCase
 import com.thinh.snaplet.domain.post.DeletePostUseCase
 import com.thinh.snaplet.domain.post.GetAvailablePostActionsUseCase
 import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
@@ -421,7 +422,10 @@ class HomeViewModel @Inject constructor(
                     it.copy(
                         friendList = accepted,
                         pendingList = pendingWithActions,
-                        relationshipCounts = RelationshipCounts(accepted.size, pending.size),
+                        relationshipCounts = RelationshipCounts(
+                            acceptedFriendCount = accepted.size,
+                            pendingRequestCount = incomingPendingCount(pendingWithActions),
+                        ),
                         loading = it.loading.copy(initialFriendList = false),
                         isLoadingFriendList = false
                     )
@@ -494,7 +498,7 @@ class HomeViewModel @Inject constructor(
                         friendList = newFriendList,
                         relationshipCounts = RelationshipCounts(
                             acceptedFriendCount = newFriendList.size,
-                            pendingRequestCount = newPendingList.size
+                            pendingRequestCount = incomingPendingCount(newPendingList),
                         ),
                     )
                 }
@@ -561,7 +565,7 @@ class HomeViewModel @Inject constructor(
                         s.copy(
                             pendingList = newPendingList, relationshipCounts = RelationshipCounts(
                                 acceptedFriendCount = s.friendList.size,
-                                pendingRequestCount = newPendingList.size
+                                pendingRequestCount = incomingPendingCount(newPendingList),
                             )
                         )
                     }
@@ -581,7 +585,7 @@ class HomeViewModel @Inject constructor(
                             feedUserIdFilter = newFilter, friendSheetState = s.copy(
                                 friendList = newFriendList, relationshipCounts = RelationshipCounts(
                                     acceptedFriendCount = newFriendList.size,
-                                    pendingRequestCount = s.pendingList.size
+                                    pendingRequestCount = incomingPendingCount(s.pendingList),
                                 )
                             )
                         )
@@ -1155,7 +1159,6 @@ class HomeViewModel @Inject constructor(
                         uploadStatuses = state.uploadStatuses - postId
                     )
                 }
-                // _uiState.update { it.copy(snackbarMessage = UiText.StringResource(R.string.post_deleted)) }
             }.onFailure { error ->
                 _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
             }
@@ -1221,5 +1224,12 @@ class HomeViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Count for [RelationshipCounts.pendingRequestCount] when built here: incoming requests only
+     * ([RelationshipAction.PendingByOther]), not outgoing [RelationshipAction.PendingByMe].
+     */
+    private fun incomingPendingCount(pending: List<RelationshipActionItemState>): Int =
+        pending.count { it.action is RelationshipAction.PendingByOther }
 
 }
