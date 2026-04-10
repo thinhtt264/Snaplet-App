@@ -324,6 +324,12 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun resetFeedFilterFromGridCapture() {
+        if (_uiState.value.feedUserIdFilter == null) return
+        _uiState.update { it.copy(feedUserIdFilter = null) }
+        loadNewsfeed(isLoadMore = false)
+    }
+
     fun onGridItemClick(index: Int) {
         _uiState.update {
             it.copy(
