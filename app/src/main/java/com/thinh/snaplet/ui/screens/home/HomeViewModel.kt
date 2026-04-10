@@ -2,6 +2,7 @@ package com.thinh.snaplet.ui.screens.home
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -915,18 +916,38 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onCancelCapture() {
-        val imagePath = _uiState.value.cameraState.capturedImagePath
+        val state = _uiState.value.cameraState
+        val imagePath = state.capturedImagePath
         FileUtils.deleteFileFromPath(imagePath)
-        updateCameraState { it.copy(capturedImagePath = null) }
+        updateCameraState { it.copy(capturedImagePath = null, pickedImageUri = null) }
         _uiState.update { it.copy(currentCaption = null) }
     }
 
-    fun onUploadPost() {
-        val state = _uiState.value
+    fun onGalleryImagePicked(context: Context, uri: Uri) {
+        // Instant preview: keep the `content://` Uri and only import to a local file on upload.
+        val oldPath = _uiState.value.cameraState.capturedImagePath
+        FileUtils.deleteFileFromPath(oldPath)
+        updateCameraState { it.copy(capturedImagePath = null, pickedImageUri = uri.toString()) }
+    }
+
+    fun onUploadPost(context: Context) {
         viewModelScope.launch {
+            val state = _uiState.value
+            if (state.cameraState.capturedImagePath == null && state.cameraState.pickedImageUri != null) {
+                val importedPath = mediaRepository.importPickedImageToCache(
+                    uri = Uri.parse(state.cameraState.pickedImageUri)
+                ).getOrElse { e ->
+                    Logger.e(e, "Import picked image failed")
+                    _uiState.update { it.copy(snackbarMessage = UiText.DynamicString("Không import được ảnh")) }
+                    return@launch
+                }
+
+                updateCameraState { it.copy(capturedImagePath = importedPath, pickedImageUri = null) }
+            }
+
             val isUploading = state.uploadStatuses.values.any { it is UploadStatus.Uploading }
             when (val result = validateUploadPostUseCase(
-                capturedImagePath = state.cameraState.capturedImagePath,
+                capturedImagePath = _uiState.value.cameraState.capturedImagePath,
                 caption = state.currentCaption,
                 isUploading = isUploading
             )) {
