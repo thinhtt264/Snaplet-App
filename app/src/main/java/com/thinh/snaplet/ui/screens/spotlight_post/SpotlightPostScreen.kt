@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.LockPerson
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,6 +54,7 @@ import com.thinh.snaplet.ui.screens.home.components.QuickChatBarModel
 import com.thinh.snaplet.ui.screens.home.components.ReactionsBottomSheet
 
 private data class SpotlightStatusContent(
+    val icon: ImageVector,
     val titleRes: Int,
     val descriptionRes: Int,
     val primaryActionRes: Int,
@@ -107,7 +111,7 @@ private fun BoxScope.SpotlightStatusContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.LockPerson,
+                    imageVector = content.icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(44.dp),
@@ -176,15 +180,17 @@ fun SpotlightPostScreen(
     val reactionsState = uiState.postReactionsState
     val statusContent = when (uiState.status) {
         SpotlightPostStatus.Forbidden -> SpotlightStatusContent(
+            icon = Icons.Outlined.LockPerson,
             titleRes = R.string.spotlight_post_private_title,
             descriptionRes = R.string.spotlight_post_private_message,
             primaryActionRes = R.string.spotlight_send_friend_request,
-            primaryAction = onNavigateHome,
+            primaryAction = viewModel::onShareFriendInviteClick,
             secondaryActionRes = R.string.spotlight_back_home,
             secondaryAction = onNavigateHome,
         )
 
         SpotlightPostStatus.NotFound -> SpotlightStatusContent(
+            icon = Icons.Outlined.SearchOff,
             titleRes = R.string.spotlight_post_not_found_title,
             descriptionRes = R.string.spotlight_post_not_found_message,
             primaryActionRes = R.string.spotlight_back_home,
@@ -192,6 +198,7 @@ fun SpotlightPostScreen(
         )
 
         SpotlightPostStatus.LoadFailed -> SpotlightStatusContent(
+            icon = Icons.Outlined.CloudOff,
             titleRes = R.string.spotlight_post_load_failed_title,
             descriptionRes = R.string.spotlight_post_load_failed_message,
             primaryActionRes = R.string.retry,

@@ -6,9 +6,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.repository.post.PostRepository
+import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.domain.model.FloatDirection
 import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
 import com.thinh.snaplet.navigation.SpotlightPost
+import com.thinh.snaplet.platform.share.ShareManager
 import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
 import com.thinh.snaplet.ui.screens.home.QuickChatEmojiSlots
@@ -29,6 +31,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SpotlightPostViewModel @Inject constructor(
     private val postRepository: PostRepository,
+    private val userRepository: UserRepository,
+    private val shareManager: ShareManager,
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -92,6 +96,15 @@ class SpotlightPostViewModel @Inject constructor(
                     }
                 },
             )
+        }
+    }
+
+    fun onShareFriendInviteClick() {
+        viewModelScope.launch {
+            val userName =
+                userRepository.getCurrentUserProfile()?.userName?.takeIf { it.isNotBlank() }
+            val content = shareManager.buildInviteShareContent(userName)
+            shareManager.openSystemChooser(content)
         }
     }
 
