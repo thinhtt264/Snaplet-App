@@ -101,6 +101,13 @@
     <string name="error_load_post">Unable to load status</string>
     <string name="spotlight_back_home">Back to Home</string>
     <string name="retry">Retry</string>
+    <string name="spotlight_post_private_title">Private post</string>
+    <string name="spotlight_post_private_message">Only this person\'s friends can view their post.</string>
+    <string name="spotlight_post_not_found_title">Post not found</string>
+    <string name="spotlight_post_not_found_message">Oops! This moment is already gone.</string>
+    <string name="spotlight_post_load_failed_title">Failed to load content</string>
+    <string name="spotlight_post_load_failed_message">Please check your connection or try loading again.</string>
+    <string name="spotlight_send_friend_request">Send friend request</string>
     <string name="upload_post_limit_title">You hit today\'s posting limit</string>
     <string name="upload_post_limit_message">You\'ve reached your posting limit for today. Please try again in about %1$d hours.</string>
     <string name="history_label">History</string>

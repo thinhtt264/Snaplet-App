@@ -26,7 +26,7 @@ data class ShareApp(
 interface ShareManager {
     fun getTopShareApps(): List<ShareApp>
     fun shareToApp(packageName: String, content: ShareContent)
-    fun openSystemChooser(content: ShareContent)
+    fun openSystemChooser(content: ShareContent, imageUri: Uri? = null)
     fun buildInviteShareContent(userName: String?): ShareContent
 }
 
@@ -112,10 +112,14 @@ class ShareManagerImpl @Inject constructor(
         context.startActivity(intent)
     }
 
-    override fun openSystemChooser(content: ShareContent) {
+    override fun openSystemChooser(content: ShareContent, imageUri: Uri?) {
         val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
+            type = if (imageUri == null) "text/plain" else "image/*"
             putExtra(Intent.EXTRA_TEXT, content.str)
+            imageUri?.let {
+                putExtra(Intent.EXTRA_STREAM, it)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
@@ -132,4 +136,5 @@ class ShareManagerImpl @Inject constructor(
         }
         return ShareContent(str = inviteUrl)
     }
+
 }

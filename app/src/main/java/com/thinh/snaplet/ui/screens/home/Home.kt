@@ -6,7 +6,6 @@ import android.graphics.Bitmap
 import android.os.Build
 import androidx.camera.core.ImageCapture
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -349,6 +348,7 @@ private fun HomeScreen(
             },
             onCaptureClick = {
                 if (uiState.postListViewMode == PostListViewMode.GRID) {
+                    viewModel.resetFeedFilterFromGridCapture()
                     viewModel.onViewModeToggle(PostListViewMode.PAGER)
                 }
                 onNavigateToCameraPage()
@@ -435,7 +435,7 @@ private fun HomeScreen(
                             when {
                                 page == CAMERA_PAGE_INDEX -> "camera"
                                 uiState.posts.isEmpty() -> "empty_media"
-                                else -> uiState.posts[page - 1].id
+                                else -> uiState.posts.getOrNull(page - 1)?.id ?: "page_$page"
                             }
                         }) { page ->
                         when (page) {
@@ -477,6 +477,7 @@ private fun HomeScreen(
                         onLoadMore = viewModel::onGridNearEndReached,
                         canLoadMore = uiState.canLoadMore,
                         onCaptureClick = {
+                            viewModel.resetFeedFilterFromGridCapture()
                             viewModel.onViewModeToggle(PostListViewMode.PAGER)
                             onNavigateToCameraPage()
                         },

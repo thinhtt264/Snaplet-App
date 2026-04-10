@@ -108,6 +108,13 @@
     <string name="error_load_post">Không tải được trạng thái</string>
     <string name="spotlight_back_home">Về trang chủ</string>
     <string name="retry">Thử lại</string>
+    <string name="spotlight_post_private_title">Bài viết riêng tư</string>
+    <string name="spotlight_post_private_message">Chỉ bạn bè của người này mới có thể xem bài viết của họ.</string>
+    <string name="spotlight_post_not_found_title">Bài viết không tồn tại</string>
+    <string name="spotlight_post_not_found_message">Oops! Khoảnh khắc này đã qua mất rồi.</string>
+    <string name="spotlight_post_load_failed_title">Tải nội dung thất bại</string>
+    <string name="spotlight_post_load_failed_message">Vui lòng kiểm tra mạng hoặc thử tải lại</string>
+    <string name="spotlight_send_friend_request">Gửi lời mời kết bạn</string>
 
     <string name="post_activity_bar_loading">Hoạt động</string>
     <string name="post_activity_bar_empty">Chưa có hoạt động nào!</string>

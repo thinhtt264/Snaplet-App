@@ -6,10 +6,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.repository.post.PostRepository
+import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.domain.model.FloatDirection
 import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
 import com.thinh.snaplet.navigation.SpotlightPost
-import com.thinh.snaplet.ui.common.UiText
+import com.thinh.snaplet.platform.share.ShareManager
 import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
 import com.thinh.snaplet.ui.screens.home.QuickChatEmojiSlots
@@ -30,6 +31,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SpotlightPostViewModel @Inject constructor(
     private val postRepository: PostRepository,
+    private val userRepository: UserRepository,
+    private val shareManager: ShareManager,
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -66,8 +69,7 @@ class SpotlightPostViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isLoading = true,
-                    error = null,
-                    canRetry = true,
+                    status = null,
                     postReactionsState = PostReactionsUiState.Loading,
                 )
             }
@@ -75,7 +77,7 @@ class SpotlightPostViewModel @Inject constructor(
             postRepository.getPostById(route.postId).fold(
                 onSuccess = { post ->
                     _uiState.update {
-                        it.copy(isLoading = false, post = post, error = null)
+                        it.copy(isLoading = false, post = post, status = null)
                     }
                     if (post.isOwnPost) {
                         loadPostReactions(postId = post.id, isOwnerViewed = post.isOwnerViewedPost)
@@ -87,15 +89,9 @@ class SpotlightPostViewModel @Inject constructor(
                 },
                 onFailure = { error ->
                     _uiState.update {
-                        val isPostDeleted = error.isPostDeleted()
                         it.copy(
                             isLoading = false,
-                            error = if (isPostDeleted) {
-                                UiText.StringResource(R.string.post_deleted)
-                            } else {
-                                UiText.StringResource(R.string.error_load_post)
-                            },
-                            canRetry = !isPostDeleted,
+                            status = error.toStatus(),
                         )
                     }
                 },
@@ -103,7 +99,20 @@ class SpotlightPostViewModel @Inject constructor(
         }
     }
 
-    private fun ApiError.isPostDeleted(): Boolean = httpCode == 404
+    fun onShareFriendInviteClick() {
+        viewModelScope.launch {
+            val userName =
+                userRepository.getCurrentUserProfile()?.userName?.takeIf { it.isNotBlank() }
+            val content = shareManager.buildInviteShareContent(userName)
+            shareManager.openSystemChooser(content)
+        }
+    }
+
+    private fun ApiError.toStatus(): SpotlightPostStatus = when (httpCode) {
+        403 -> SpotlightPostStatus.Forbidden
+        404 -> SpotlightPostStatus.NotFound
+        else -> SpotlightPostStatus.LoadFailed
+    }
 
     fun onPostActivityClick() {
         val state = _uiState.value.postReactionsState
