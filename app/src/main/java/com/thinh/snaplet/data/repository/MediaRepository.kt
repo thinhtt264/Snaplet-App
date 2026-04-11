@@ -29,7 +29,8 @@ interface MediaRepository {
     suspend fun createPost(
         mediaIds: List<String>,
         caption: String? = null,
-        visibility: String
+        visibility: String,
+        allowedViewerUserIds: List<String>? = null,
     ): ApiResult<Post>
 
     suspend fun deletePost(postId: String): ApiResult<Unit>

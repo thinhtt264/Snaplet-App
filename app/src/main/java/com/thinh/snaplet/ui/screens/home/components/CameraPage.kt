@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -73,6 +74,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import com.thinh.snaplet.R
+import com.thinh.snaplet.data.model.RelationshipWithUser
+import com.thinh.snaplet.data.model.post.PostAudience
 import com.thinh.snaplet.ui.components.AppIconButton
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.components.CameraPreview
@@ -102,8 +105,11 @@ private val SHAKE_KEYFRAMES: List<Pair<Float, Int>> = listOf(
     0f to 430,
 )
 
+private val AUDIENCE_SELECTOR_HEIGHT = 78.dp  // = 52 + 6 + 6 + 14
+
 @Composable
 fun CameraPage(
+    modifier: Modifier = Modifier,
     cameraState: CameraState,
     currentCaption: String?,
     isUploading: Boolean,
@@ -111,7 +117,9 @@ fun CameraPage(
     onDownloadImage: () -> Unit,
     unreadPostsCount: Int,
     onHistoryClick: () -> Unit,
-    modifier: Modifier = Modifier
+    friends: List<RelationshipWithUser>,
+    postAudience: PostAudience,
+    onPostAudienceChange: (PostAudience) -> Unit,
 ) {
     BoxWithConstraints(
         modifier = modifier.fillMaxSize()
@@ -235,15 +243,29 @@ fun CameraPage(
             )
         }
 
-        if (cameraState.capturedImagePath == null) {
-            HistoryButton(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(start = 6.dp, bottom = 28.dp)
-                    .navigationBarsPadding(),
-                unreadPostsCount = unreadPostsCount,
-                onClick = onHistoryClick,
-            )
+        AnimatedContent(
+            targetState = cameraState.capturedImagePath == null,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(start = 6.dp, bottom = 28.dp)
+                .navigationBarsPadding()
+                .height(AUDIENCE_SELECTOR_HEIGHT),
+            contentAlignment = Alignment.Center
+        ) { showHistory ->
+            if (showHistory) {
+                HistoryButton(
+                    unreadPostsCount = unreadPostsCount,
+                    onClick = onHistoryClick,
+                    modifier = Modifier.fillMaxHeight(),
+                )
+            } else {
+                PostAudienceSelector(
+                    friends = friends,
+                    selected = postAudience,
+                    onSelect = onPostAudienceChange,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
         }
     }
 }
@@ -296,7 +318,6 @@ private fun HistoryButton(
         }
     }
 }
-
 
 @Composable
 private fun MediaDisplaySection(

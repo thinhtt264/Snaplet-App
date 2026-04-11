@@ -464,6 +464,9 @@ private fun HomeScreen(
                                 cameraActions = cameraActions,
                                 unreadPostsCount = uiState.unreadPostsCount,
                                 onHistoryClick = onScrollToFirstPost,
+                                friends = uiState.friendSheetState.friendList,
+                                postAudience = uiState.postAudience,
+                                onPostAudienceChange = viewModel::onPostAudienceChange,
                             )
 
                             else -> {
