@@ -49,10 +49,10 @@ import pressScaleClickable
  * @param contentPadding     Padding at both ends of the horizontal list.
  */
 data class AudienceSelectorStyle(
-    val avatarSize: Dp = 50.dp,
+    val avatarSize: Dp = 44.dp,
     val selectedSizeBoost: Dp = 4.dp,
     val borderWidth: Dp = 3.dp,
-    val itemSpacing: Dp = 4.dp,
+    val itemSpacing: Dp = 8.dp,
     val contentPadding: Dp = 0.dp,
 )
 
@@ -197,7 +197,7 @@ private fun AudienceItem(
         label = "labelColor",
     )
 
-    val itemWidth = style.avatarSize + style.selectedSizeBoost + 8.dp
+    val itemWidth = style.avatarSize + style.selectedSizeBoost + 12.dp
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
