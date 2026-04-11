@@ -984,7 +984,7 @@ class HomeViewModel @Inject constructor(
                     }
 
                     val isFrontCamera =
-                        state.cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
+                        latestState.cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
                     val shouldFlipHorizontal = isFrontCamera && !isPickedFromGallery
 
                     val processedPath = withContext(Dispatchers.IO) {
