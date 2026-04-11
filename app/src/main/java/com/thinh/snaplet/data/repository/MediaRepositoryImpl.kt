@@ -164,7 +164,7 @@ class MediaRepositoryImpl @Inject constructor(
             try {
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     val pickedDir = File(context.cacheDir, "picked_posts").apply { mkdirs() }
-                    val rawFile = File(pickedDir, "picked_raw_${System.currentTimeMillis()}.jpg")
+                    val rawFile = File(pickedDir, "picked_raw_${UUID.randomUUID()}.jpg")
                     rawFile.outputStream().use { output -> input.copyTo(output) }
 
                     val compressedPath = FileUtils.flipAndCompressImage(
