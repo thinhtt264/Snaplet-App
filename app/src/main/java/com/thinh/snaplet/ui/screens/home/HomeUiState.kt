@@ -85,9 +85,10 @@ data class CameraState(
     val lastPreviewSnapshot: Bitmap? = null,
     val hasCameraPermission: Boolean = false,
     val lensFacing: Int = CameraSelector.LENS_FACING_FRONT,
-    val capturedImagePath: String? = null
+    val capturedImagePath: String? = null,
+    val pickedImageUri: String? = null,
 ) {
-    val isEditMode: Boolean get() = capturedImagePath != null
+    val isEditMode: Boolean get() = capturedImagePath != null || pickedImageUri != null
 }
 
 data class FriendBottomSheetState(

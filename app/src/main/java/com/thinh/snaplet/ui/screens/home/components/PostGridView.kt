@@ -71,7 +71,7 @@ fun PostGridView(
             verticalArrangement = Arrangement.spacedBy(2.dp),
             contentPadding = PaddingValues(
                 start = 4.dp,
-                top = 72.dp,
+                top = 80.dp,
                 end = 4.dp,
                 // Keep space for the capture button overlay at bottom-center.
                 bottom = 100.dp,

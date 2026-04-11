@@ -2,11 +2,13 @@ package com.thinh.snaplet.ui.screens.home
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.R
@@ -521,7 +523,6 @@ class HomeViewModel @Inject constructor(
                 refreshFriendSearchResults()
             }.onFailure { error ->
                 Logger.e("❌ Failed to send friend request: ${error.message}")
-                // _uiState.update { it.copy(snackbarMessage = UiText.DynamicString(error.message)) }
             }.also {
                 updateFriendSheetState { state ->
                     state.copy(
@@ -915,19 +916,46 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onCancelCapture() {
-        val imagePath = _uiState.value.cameraState.capturedImagePath
+        val state = _uiState.value.cameraState
+        val imagePath = state.capturedImagePath
         FileUtils.deleteFileFromPath(imagePath)
-        updateCameraState { it.copy(capturedImagePath = null) }
+        updateCameraState { it.copy(capturedImagePath = null, pickedImageUri = null) }
         _uiState.update { it.copy(currentCaption = null) }
     }
 
-    fun onUploadPost() {
-        val state = _uiState.value
+    fun onGalleryImagePicked(uri: Uri) {
+        updateCameraState { it.copy(capturedImagePath = null, pickedImageUri = uri.toString()) }
         viewModelScope.launch {
-            val isUploading = state.uploadStatuses.values.any { it is UploadStatus.Uploading }
+            val oldPath = _uiState.value.cameraState.capturedImagePath
+            FileUtils.deleteFileFromPath(oldPath)
+        }
+    }
+
+    fun onUploadPost() {
+        viewModelScope.launch {
+            val state = _uiState.value
+            val isPickedFromGallery =
+                state.cameraState.capturedImagePath == null && state.cameraState.pickedImageUri != null
+            if (isPickedFromGallery) {
+                val importedPath = mediaRepository.importPickedImageToCache(
+                    uri = state.cameraState.pickedImageUri.toUri()
+                ).getOrElse { e ->
+                    Logger.e(e, "Import picked image failed")
+                    return@launch
+                }
+
+                updateCameraState {
+                    it.copy(
+                        capturedImagePath = importedPath, pickedImageUri = null
+                    )
+                }
+            }
+
+            val latestState = _uiState.value
+            val isUploading = latestState.uploadStatuses.values.any { it is UploadStatus.Uploading }
             when (val result = validateUploadPostUseCase(
-                capturedImagePath = state.cameraState.capturedImagePath,
-                caption = state.currentCaption,
+                capturedImagePath = latestState.cameraState.capturedImagePath,
+                caption = latestState.currentCaption,
                 isUploading = isUploading
             )) {
                 is ValidateUploadPostUseCase.ValidateUploadResult.Success -> {
@@ -942,9 +970,11 @@ class HomeViewModel @Inject constructor(
 
                     val isFrontCamera =
                         state.cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
+                    val shouldFlipHorizontal = isFrontCamera && !isPickedFromGallery
+
                     val processedPath = withContext(Dispatchers.IO) {
                         FileUtils.flipAndCompressImage(
-                            File(input.imagePath), flipHorizontal = isFrontCamera
+                            File(input.imagePath), flipHorizontal = shouldFlipHorizontal
                         ) ?: input.imagePath
                     }
                     val transform = ImageTransform(rotation = 0, scaleX = 1f, scaleY = 1f)

@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageCapture
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
@@ -72,6 +75,7 @@ private const val CAMERA_PAGE_INDEX = 0
 data class CameraActions(
     val onImageCaptureReady: (ImageCapture) -> Unit,
     val onSnapshotHandlerReady: (() -> Bitmap?) -> Unit,
+    val onPickFromGallery: () -> Unit,
     val onCapturePhoto: () -> Unit,
     val onSwitchCamera: () -> Unit,
     val onCancelCapture: () -> Unit,
@@ -87,6 +91,14 @@ fun Home(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    val pickMediaLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.onGalleryImagePicked(uri)
+        }
+    }
 
     val pageCount = 1 + if (uiState.posts.isEmpty()) 1 else uiState.posts.size
     val pagerState = rememberPagerState(
@@ -108,10 +120,15 @@ fun Home(
         CameraActions(
             onImageCaptureReady = viewModel::setImageCapture,
             onSnapshotHandlerReady = { snapshotHandler = it },
+            onPickFromGallery = {
+                pickMediaLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
             onCapturePhoto = { viewModel.onCapturePhoto(context) },
             onSwitchCamera = viewModel::onSwitchCamera,
             onCancelCapture = viewModel::onCancelCapture,
-            onUploadPost = viewModel::onUploadPost,
+            onUploadPost = { viewModel.onUploadPost() },
             onCaptionChange = viewModel::updateCurrentCaption,
             onRequestPermission = viewModel::onRequestCameraPermission
         )

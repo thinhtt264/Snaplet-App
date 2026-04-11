@@ -145,7 +145,7 @@ fun CameraPage(
         }
 
         val topActionsAlpha = when {
-            cameraState.capturedImagePath == null -> 0f
+            !cameraState.isEditMode -> 0f
             imeFullHeightPx == 0f -> 1f
             else -> 1f - (imeHeightPx / imeFullHeightPx).coerceIn(0f, 1f)
         }
@@ -224,8 +224,9 @@ fun CameraPage(
 
             CameraAction(
                 modifier = Modifier.navigationBarsPadding(),
-                capturedImagePath = cameraState.capturedImagePath,
+                hasCaptureImage = cameraState.isEditMode,
                 isCapturing = cameraState.isCapturing,
+                onPickFromGallery = cameraActions.onPickFromGallery,
                 onCapturePhoto = cameraActions.onCapturePhoto,
                 onSwitchCamera = cameraActions.onSwitchCamera,
                 onCancelCapture = cameraActions.onCancelCapture,
@@ -325,25 +326,35 @@ private fun MediaDisplaySection(
             )
         }
 
-        cameraState.capturedImagePath?.let { path ->
-            CapturedImageOverlay(
-                imagePath = path,
-                caption = currentCaption ?: "",
-                onCaptionChange = onCaptionChange,
-                isFrontCamera = cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
-            )
+        when {
+            cameraState.capturedImagePath != null -> {
+                CapturedImageOverlay(
+                    imageUri = "file://${cameraState.capturedImagePath}".toUri().toString(),
+                    caption = currentCaption ?: "",
+                    onCaptionChange = onCaptionChange,
+                    isFrontCamera = cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
+                )
+            }
+
+            cameraState.pickedImageUri != null -> {
+                CapturedImageOverlay(
+                    imageUri = cameraState.pickedImageUri,
+                    caption = currentCaption ?: "",
+                    onCaptionChange = onCaptionChange,
+                    isFrontCamera = false,
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun CapturedImageOverlay(
-    imagePath: String,
+    imageUri: String,
     caption: String,
     onCaptionChange: (String) -> Unit,
     isFrontCamera: Boolean = false
 ) {
-    val imageUri = "file://$imagePath".toUri()
     val focusManager = LocalFocusManager.current
 
     Box(
@@ -356,7 +367,7 @@ private fun CapturedImageOverlay(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { scaleX = if (isFrontCamera) -1f else 1f },
-            imageUrl = imageUri.toString(),
+            imageUrl = imageUri,
             contentDescription = "Captured image",
             contentScale = ContentScale.Crop,
             resizeSize = ImageSize.Original,

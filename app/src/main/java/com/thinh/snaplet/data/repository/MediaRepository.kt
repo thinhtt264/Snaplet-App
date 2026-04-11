@@ -11,6 +11,12 @@ interface MediaRepository {
 
     suspend fun prepareShareImageUri(imageSource: String): Result<android.net.Uri>
 
+    /**
+     * Imports a Photo Picker `content://` Uri into app cache and returns the absolute file path.
+     * This keeps the rest of the upload pipeline (which is file-path based) unchanged.
+     */
+    suspend fun importPickedImageToCache(uri: android.net.Uri): Result<String>
+
     suspend fun requestUpload(
         items: List<String>,
         transforms: List<com.thinh.snaplet.data.model.media.ImageTransform>? = null

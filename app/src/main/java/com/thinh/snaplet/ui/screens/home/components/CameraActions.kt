@@ -59,8 +59,9 @@ private const val CAPTURE_BUTTON_MAX_SCALE = 1f
 @Composable
 fun CameraAction(
     modifier: Modifier = Modifier,
-    capturedImagePath: String?,
+    hasCaptureImage: Boolean,
     isCapturing: Boolean = false,
+    onPickFromGallery: () -> Unit,
     onCapturePhoto: () -> Unit,
     onCancelCapture: () -> Unit,
     onSwitchCamera: () -> Unit,
@@ -74,8 +75,6 @@ fun CameraAction(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        val hasCaptureImage = capturedImagePath != null
-
         AnimatedContent(
             targetState = hasCaptureImage,
             transitionSpec = {
@@ -91,7 +90,7 @@ fun CameraAction(
                 tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier
                     .size(ICON_SIZE)
-                    .thenIf(hasCaptureImage) { pressScaleClickable(onClick = onCancelCapture) }
+                    .pressScaleClickable(onClick = if (hasImage) onCancelCapture else onPickFromGallery)
             )
         }
 

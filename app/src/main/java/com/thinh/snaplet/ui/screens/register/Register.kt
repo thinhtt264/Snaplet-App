@@ -96,9 +96,8 @@ fun Register(
             PostRegisterWidgetPromoScreen(
                 modifier = Modifier.animateVisibility(true),
                 onAddWidget = {
-                    scope.launch {
-                        viewModel.finishRegistrationPromo()
-                        context.launchSnapletWidgetPicker()
+                    context.launchSnapletWidgetPicker {
+                        scope.launch { viewModel.finishRegistrationPromo() }
                     }
                 },
                 onSkip = {

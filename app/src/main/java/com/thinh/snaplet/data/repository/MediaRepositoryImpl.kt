@@ -16,6 +16,7 @@ import com.thinh.snaplet.data.model.media.UploadRequestItem
 import com.thinh.snaplet.data.model.post.CreatePostRequest
 import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.di.BaseOkHttpClient
+import com.thinh.snaplet.utils.FileUtils
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.ApiResult
@@ -153,6 +154,33 @@ class MediaRepositoryImpl @Inject constructor(
                 }
             } catch (e: Exception) {
                 Logger.e(e, "prepareShareImageUri failed")
+                Result.failure(e)
+            }
+        }
+
+    override suspend fun importPickedImageToCache(uri: Uri): Result<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    val pickedDir = File(context.cacheDir, "picked_posts").apply { mkdirs() }
+                    val rawFile = File(pickedDir, "picked_raw_${System.currentTimeMillis()}.jpg")
+                    rawFile.outputStream().use { output -> input.copyTo(output) }
+
+                    val compressedPath = FileUtils.flipAndCompressImage(
+                        rawFile,
+                        flipHorizontal = false,
+                    )
+                    if (compressedPath != null) {
+                        if (compressedPath != rawFile.absolutePath) {
+                            FileUtils.deleteFileFromPath(rawFile.absolutePath)
+                        }
+                        Result.success(compressedPath)
+                    } else {
+                        Result.success(rawFile.absolutePath)
+                    }
+                } ?: Result.failure(IllegalStateException("openInputStream returned null"))
+            } catch (e: Exception) {
+                Logger.e(e, "importPickedImageToCache failed")
                 Result.failure(e)
             }
         }
