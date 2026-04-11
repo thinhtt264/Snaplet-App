@@ -974,7 +974,7 @@ class HomeViewModel @Inject constructor(
             )) {
                 is ValidateUploadPostUseCase.ValidateUploadResult.Success -> {
                     val input = result.input
-                    val tempPostId = "temp_${System.currentTimeMillis()}"
+                    val tempPostId = "temp_${java.util.UUID.randomUUID()}"
                     val createAudience = mapPostAudience(latestState.postAudience)
 
                     _uiState.update { s ->
