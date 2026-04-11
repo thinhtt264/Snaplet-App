@@ -29,10 +29,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.thinh.snaplet.R
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.post.PostAudience
 import com.thinh.snaplet.ui.components.Avatar
@@ -62,7 +64,6 @@ data class AudienceSelectorStyle(
  * @param onSelect      Emits the next [PostAudience] (friend multi-select or [PostAudience.FriendOnly] for “everyone”).
  * @param style         Visual overrides — see [AudienceSelectorStyle].
  * @param modifier      Modifier applied to the outer [LazyRow].
- * @param everyoneLabel Text below the default chip (API friend-only; typically “everyone” / Tất cả).
  */
 @Composable
 fun PostAudienceSelector(
@@ -71,7 +72,6 @@ fun PostAudienceSelector(
     onSelect: (PostAudience) -> Unit,
     modifier: Modifier = Modifier,
     style: AudienceSelectorStyle = AudienceSelectorStyle(),
-    everyoneLabel: String = "Tất cả",
 ) {
     LazyRow(
         modifier = modifier,
@@ -81,6 +81,7 @@ fun PostAudienceSelector(
     ) {
         // ── Default chip — clears all friend picks; dimmed while specific friends are selected ───
         item(key = "__friend_only__") {
+            val everyoneLabel = stringResource(id = R.string.audience_everyone)
             val isSelected = selected is PostAudience.FriendOnly
             Column {
                 AudienceItem(
