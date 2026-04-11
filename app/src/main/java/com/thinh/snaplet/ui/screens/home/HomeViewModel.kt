@@ -954,6 +954,7 @@ class HomeViewModel @Inject constructor(
                     uri = state.cameraState.pickedImageUri.toUri()
                 ).getOrElse { e ->
                     Logger.e(e, "Import picked image failed")
+                    _uiState.update { it.copy(snackbarMessage = UiText.DynamicString("Failed to import image")) }
                     return@launch
                 }
 
