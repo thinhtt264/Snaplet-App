@@ -46,6 +46,11 @@ data class Post(
         get() = "$firstName $lastName"
 }
 
+object PostVisibilityApi {
+    const val FRIEND_ONLY = "friend-only"
+    const val SELECTED_USERS = "selected-users"
+}
+
 data class CreatePostRequest(
     @SerializedName("mediaIds")
     val mediaIds: List<String>,
@@ -54,7 +59,10 @@ data class CreatePostRequest(
     val caption: String? = null,
 
     @SerializedName("visibility")
-    val visibility: String
+    val visibility: String,
+
+    @SerializedName("allowedViewerUserIds")
+    val allowedViewerUserIds: List<String>? = null,
 )
 
 typealias PostsFeedData = com.thinh.snaplet.data.model.PaginatedResponse<Post>

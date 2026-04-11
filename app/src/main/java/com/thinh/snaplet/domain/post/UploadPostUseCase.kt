@@ -18,7 +18,8 @@ class UploadPostUseCase @Inject constructor(
     suspend operator fun invoke(
         imagePath: String,
         transform: ImageTransform,
-        caption: String?
+        caption: String?,
+        createAudience: PostCreateAudience = PostCreateAudience.FriendOnly,
     ): UploadPostResult {
         fun fail(step: String, result: ApiResult<*>): UploadPostResult.Failed {
             val error = (result as? ApiResult.Failure)?.error
@@ -56,10 +57,15 @@ class UploadPostUseCase @Inject constructor(
             val confirmUploadResult = mediaRepository.confirmUpload(listOf(uploadItem.mediaId))
             confirmUploadResult.fold(
                 onSuccess = { confirmData ->
+                    val allowedViewerUserIds = when (createAudience) {
+                        is PostCreateAudience.FriendOnly -> null
+                        is PostCreateAudience.SelectedUsers -> createAudience.userIds
+                    }
                     val createPostResult = mediaRepository.createPost(
                         mediaIds = confirmData.media.map { it.id },
                         caption = caption,
-                        visibility = "friend-only"
+                        visibility = createAudience.apiVisibility,
+                        allowedViewerUserIds = allowedViewerUserIds,
                     )
                     createPostResult.fold(
                         onSuccess = { createdPost -> UploadPostResult.Success(createdPost) },

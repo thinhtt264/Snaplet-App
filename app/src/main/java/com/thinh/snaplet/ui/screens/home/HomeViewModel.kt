@@ -38,6 +38,7 @@ import com.thinh.snaplet.domain.model.UploadPostResult
 import com.thinh.snaplet.domain.post.BuildPostShareContentUseCase
 import com.thinh.snaplet.domain.post.CreateTempPostUseCase
 import com.thinh.snaplet.domain.post.DeletePostUseCase
+import com.thinh.snaplet.domain.post.PostCreateAudience
 import com.thinh.snaplet.domain.post.GetAvailablePostActionsUseCase
 import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
 import com.thinh.snaplet.domain.post.UploadPostUseCase
@@ -56,6 +57,7 @@ import com.thinh.snaplet.platform.share.ShareApp
 import com.thinh.snaplet.platform.share.ShareManager
 import com.thinh.snaplet.platform.widget.WidgetUpdateManager
 import com.thinh.snaplet.ui.common.UiText
+import com.thinh.snaplet.data.model.post.PostAudience
 import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
@@ -158,6 +160,10 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(snackbarMessage = null) }
     }
 
+    fun onPostAudienceChange(audience: PostAudience) {
+        _uiState.update { it.copy(postAudience = audience) }
+    }
+
     fun onPermissionRequestHandled() {
         _uiState.update { it.copy(pendingPermission = null) }
     }
@@ -176,6 +182,9 @@ class HomeViewModel @Inject constructor(
 
     /** Temp posts for retry only: lookup by id to get imagePath/transform/caption. Not in UI state. */
     private var tempPosts: List<Post> = emptyList()
+
+    /** Create-post audience keyed by temp post id (for retry after failure). */
+    private val tempPostCreateAudiences = mutableMapOf<String, PostCreateAudience>()
 
     private var socketSeqNum: Int = -1
 
@@ -899,9 +908,13 @@ class HomeViewModel @Inject constructor(
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     viewModelScope.launch {
                         withContext(Dispatchers.Main.immediate) {
-                            updateCameraState {
-                                it.copy(
-                                    isCapturing = false, capturedImagePath = photoFile.absolutePath
+                            _uiState.update { state ->
+                                state.copy(
+                                    cameraState = state.cameraState.copy(
+                                        isCapturing = false,
+                                        capturedImagePath = photoFile.absolutePath,
+                                    ),
+                                    postAudience = PostAudience.FriendOnly,
                                 )
                             }
                         }
@@ -941,6 +954,7 @@ class HomeViewModel @Inject constructor(
                     uri = state.cameraState.pickedImageUri.toUri()
                 ).getOrElse { e ->
                     Logger.e(e, "Import picked image failed")
+                    _uiState.update { it.copy(snackbarMessage = UiText.DynamicString("Failed to import image")) }
                     return@launch
                 }
 
@@ -960,7 +974,8 @@ class HomeViewModel @Inject constructor(
             )) {
                 is ValidateUploadPostUseCase.ValidateUploadResult.Success -> {
                     val input = result.input
-                    val tempPostId = "temp_${System.currentTimeMillis()}"
+                    val tempPostId = "temp_${java.util.UUID.randomUUID()}"
+                    val createAudience = mapPostAudience(latestState.postAudience)
 
                     _uiState.update { s ->
                         s.copy(
@@ -969,7 +984,7 @@ class HomeViewModel @Inject constructor(
                     }
 
                     val isFrontCamera =
-                        state.cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
+                        latestState.cameraState.lensFacing == CameraSelector.LENS_FACING_FRONT
                     val shouldFlipHorizontal = isFrontCamera && !isPickedFromGallery
 
                     val processedPath = withContext(Dispatchers.IO) {
@@ -983,9 +998,11 @@ class HomeViewModel @Inject constructor(
                         imagePath = processedPath,
                         userProfile = input.userProfile,
                         transform = transform,
-                        caption = input.caption
+                        caption = input.caption,
+                        createAudience = createAudience,
                     )
 
+                    tempPostCreateAudiences[tempPostId] = createAudience
                     tempPosts = tempPosts + tempPost
                     _uiState.update { s ->
                         s.copy(
@@ -996,7 +1013,13 @@ class HomeViewModel @Inject constructor(
                     }
 
                     _uiState.update { it.copy(shouldScrollToFirstPost = true) }
-                    runUploadAndUpdateStatus(tempPostId, processedPath, transform, input.caption)
+                    runUploadAndUpdateStatus(
+                        tempPostId,
+                        processedPath,
+                        transform,
+                        input.caption,
+                        createAudience,
+                    )
                 }
 
                 is ValidateUploadPostUseCase.ValidateUploadResult.AlreadyUploading -> { /* no-op, already uploading */
@@ -1014,13 +1037,25 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun runUploadAndUpdateStatus(
-        tempPostId: String, imagePath: String, transform: ImageTransform, caption: String?
+        tempPostId: String,
+        imagePath: String,
+        transform: ImageTransform,
+        caption: String?,
+        createAudience: PostCreateAudience,
     ) {
         viewModelScope.launch {
-            when (val result = uploadPostUseCase(imagePath, transform, caption)) {
+            when (
+                val result = uploadPostUseCase(
+                    imagePath,
+                    transform,
+                    caption,
+                    createAudience,
+                )
+            ) {
                 is UploadPostResult.Success -> {
                     val realPostId = result.post.id
                     tempPosts = tempPosts.filterNot { it.id == tempPostId }
+                    tempPostCreateAudiences.remove(tempPostId)
                     _uiState.update { state ->
                         state.copy(
                             posts = state.posts.map { if (it.id == tempPostId) it.copy(id = realPostId) else it },
@@ -1142,8 +1177,14 @@ class HomeViewModel @Inject constructor(
             is ValidateRetryUploadUseCase.ValidateRetryResult.Success -> {
                 val input = result.input
                 setUploadStatus(input.tempPostId, UploadStatus.Uploading)
+                val createAudience = tempPostCreateAudiences[input.tempPostId]
+                    ?: PostCreateAudience.FriendOnly
                 runUploadAndUpdateStatus(
-                    input.tempPostId, input.imagePath, input.transform, input.caption
+                    input.tempPostId,
+                    input.imagePath,
+                    input.transform,
+                    input.caption,
+                    createAudience,
                 )
             }
 
@@ -1173,6 +1214,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun removeTempPost(tempPostId: String) {
+        tempPostCreateAudiences.remove(tempPostId)
         _uiState.update { state ->
             state.copy(
                 posts = state.posts.filterNot { it.id == tempPostId },
@@ -1263,5 +1305,11 @@ class HomeViewModel @Inject constructor(
      */
     private fun incomingPendingCount(pending: List<RelationshipActionItemState>): Int =
         pending.count { it.action is RelationshipAction.PendingByOther }
+
+    private fun mapPostAudience(audience: PostAudience): PostCreateAudience = when (audience) {
+        PostAudience.FriendOnly -> PostCreateAudience.FriendOnly
+        is PostAudience.SelectedFriends ->
+            PostCreateAudience.SelectedUsers(audience.friends.map { it.userId })
+    }
 
 }

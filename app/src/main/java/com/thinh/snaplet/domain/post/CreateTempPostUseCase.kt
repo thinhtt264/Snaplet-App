@@ -20,7 +20,8 @@ class CreateTempPostUseCase @Inject constructor() {
         imagePath: String,
         userProfile: UserProfile,
         transform: ImageTransform,
-        caption: String? = null
+        caption: String? = null,
+        createAudience: PostCreateAudience = PostCreateAudience.FriendOnly,
     ): Post {
         val file = File(imagePath)
         val fileUri = "file://${file.absolutePath}"
@@ -42,7 +43,7 @@ class CreateTempPostUseCase @Inject constructor() {
             avatarUrls = userProfile.avatarUrls,
             media = listOf(tempMedia),
             caption = caption,
-            visibility = "friend-only",
+            visibility = createAudience.apiVisibility,
             createdAt = Date(),
             isOwnPost = true,
             isOwnerViewedPost = true

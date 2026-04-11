@@ -5,6 +5,7 @@ import androidx.camera.core.CameraSelector
 import com.thinh.snaplet.data.model.RelationshipCounts
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.model.post.PostAudience
 import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.domain.model.FriendSearchActionItem
 import com.thinh.snaplet.domain.model.ReactionUserUi
@@ -23,6 +24,7 @@ data class RelationshipActionItemState(
 data class HomeUiState(
     val cameraState: CameraState,
     val currentCaption: String? = null,
+    val postAudience: PostAudience = PostAudience.FriendOnly,
 
     val posts: List<Post> = emptyList(),
     val isLoadingPosts: Boolean = false,

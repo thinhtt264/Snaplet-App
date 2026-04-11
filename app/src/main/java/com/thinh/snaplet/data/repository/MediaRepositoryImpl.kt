@@ -15,6 +15,7 @@ import com.thinh.snaplet.data.model.media.UploadRequestData
 import com.thinh.snaplet.data.model.media.UploadRequestItem
 import com.thinh.snaplet.data.model.post.CreatePostRequest
 import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.model.post.PostVisibilityApi
 import com.thinh.snaplet.di.BaseOkHttpClient
 import com.thinh.snaplet.utils.FileUtils
 import com.thinh.snaplet.utils.Logger
@@ -163,7 +164,7 @@ class MediaRepositoryImpl @Inject constructor(
             try {
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     val pickedDir = File(context.cacheDir, "picked_posts").apply { mkdirs() }
-                    val rawFile = File(pickedDir, "picked_raw_${System.currentTimeMillis()}.jpg")
+                    val rawFile = File(pickedDir, "picked_raw_${UUID.randomUUID()}.jpg")
                     rawFile.outputStream().use { output -> input.copyTo(output) }
 
                     val compressedPath = FileUtils.flipAndCompressImage(
@@ -329,7 +330,8 @@ class MediaRepositoryImpl @Inject constructor(
     override suspend fun createPost(
         mediaIds: List<String>,
         caption: String?,
-        visibility: String
+        visibility: String,
+        allowedViewerUserIds: List<String>?,
     ): ApiResult<Post> {
         if (mediaIds.isEmpty()) {
             return ApiResult.Failure(
@@ -349,13 +351,23 @@ class MediaRepositoryImpl @Inject constructor(
             )
         }
 
+        if (visibility == PostVisibilityApi.SELECTED_USERS && allowedViewerUserIds.isNullOrEmpty()) {
+            return ApiResult.Failure(
+                ApiError(
+                    httpCode = 400,
+                    message = "At least one allowed viewer is required for selected-users visibility"
+                )
+            )
+        }
+
         return safeApiCall(
             apiCall = {
                 apiService.createPost(
                     CreatePostRequest(
                         mediaIds = mediaIds,
                         caption = caption,
-                        visibility = visibility
+                        visibility = visibility,
+                        allowedViewerUserIds = allowedViewerUserIds,
                     )
                 )
             }

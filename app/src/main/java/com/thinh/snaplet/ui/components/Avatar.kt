@@ -61,6 +61,7 @@ fun Avatar(
     modifier: Modifier = Modifier,
     size: Dp = 48.dp,
     borderWidth: Dp = DEFAULT_AVATAR_BORDER_WIDTH,
+    contentPadding: Dp = borderWidth * 2,
 ) {
     val borderColor = if (isConnectedUser) {
         MaterialTheme.colorScheme.primary
@@ -73,7 +74,7 @@ fun Avatar(
         firstName = firstName,
         modifier = modifier
             .border(width = borderWidth, color = borderColor, shape = CircleShape)
-            .padding(borderWidth * 2),
+            .padding(contentPadding),
         size = size,
     )
 }
@@ -88,6 +89,7 @@ fun Avatar(
     modifier: Modifier = Modifier,
     size: Dp = 48.dp,
     borderWidth: Dp = DEFAULT_AVATAR_BORDER_WIDTH,
+    contentPadding: Dp = borderWidth * 2,
 ) {
     Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
         Avatar(
@@ -96,6 +98,7 @@ fun Avatar(
             isConnectedUser = isConnectedUser,
             size = size,
             borderWidth = borderWidth,
+            contentPadding = contentPadding
         )
 
         if (isUploading) {
