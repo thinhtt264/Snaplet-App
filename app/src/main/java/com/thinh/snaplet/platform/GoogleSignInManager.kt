@@ -5,6 +5,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.thinh.snaplet.BuildConfig
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,7 +17,7 @@ class GoogleSignInManager @Inject constructor(
         val request = GetCredentialRequest.Builder()
             .addCredentialOption(
                 GetGoogleIdOption.Builder()
-                    .setServerClientId(WEB_CLIENT_ID)
+                    .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
                     .setFilterByAuthorizedAccounts(false)
                     .build()
             )
@@ -26,8 +27,4 @@ class GoogleSignInManager @Inject constructor(
         return GoogleIdTokenCredential.createFrom(result.credential.data).idToken
     }
 
-    companion object {
-        private const val WEB_CLIENT_ID =
-            "335034422759-fbn4dc4m8ok6iqtv7aunbdvt7l0v6nr7.apps.googleusercontent.com"
-    }
 }

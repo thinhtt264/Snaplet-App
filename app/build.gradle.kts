@@ -49,10 +49,12 @@ android {
             dimension = "environment"
             // isDefault = true
             buildConfigField("boolean", "IS_DEVELOPMENT", "true")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"335034422759-fbn4dc4m8ok6iqtv7aunbdvt7l0v6nr7.apps.googleusercontent.com\"")
         }
         create("production") {
             dimension = "environment"
             buildConfigField("boolean", "IS_DEVELOPMENT", "false")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"335034422759-fbn4dc4m8ok6iqtv7aunbdvt7l0v6nr7.apps.googleusercontent.com\"")
         }
     }
 
