@@ -27,4 +27,4 @@ data class SpotlightPost(val postId: String)
 object Login
 
 @Serializable
-object Register
+data class Register(val firstName: String? = null, val lastName: String? = null)

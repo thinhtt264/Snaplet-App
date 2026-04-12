@@ -1,7 +1,6 @@
 package com.thinh.snaplet.navigation
 
 import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraphBuilder
@@ -14,8 +13,8 @@ import com.thinh.snaplet.ui.screens.image_crop.ImageCrop
 import com.thinh.snaplet.ui.screens.login.Login
 import com.thinh.snaplet.ui.screens.my_profile.MyProfile
 import com.thinh.snaplet.ui.screens.onboarding.Onboarding
-import com.thinh.snaplet.ui.screens.spotlight_post.SpotlightPostScreen
 import com.thinh.snaplet.ui.screens.register.Register
+import com.thinh.snaplet.ui.screens.spotlight_post.SpotlightPostScreen
 import com.thinh.snaplet.navigation.ImageCrop as ImageCropRoute
 
 @Composable
@@ -60,8 +59,7 @@ fun NavGraphBuilder.homeGraph(navController: NavHostController) {
         composable<ImageCropRoute> {
             ImageCrop(onCropDone = { croppedUri ->
                 actions.sendResultToPreviousScreen(
-                    NavResultKeys.CroppedUri,
-                    croppedUri.toString()
+                    NavResultKeys.CroppedUri, croppedUri.toString()
                 )
                 actions.popBackStack()
             }, onBack = actions::popBackStack)
@@ -84,13 +82,13 @@ fun NavGraphBuilder.authGraph(navController: NavHostController) {
         composable<Onboarding> {
             Onboarding(
                 onNavigateToLogin = actions::navigateToLoginReplacingOnboarding,
-                onNavigateToRegister = actions::navigateToRegisterReplacingOnboarding
+                onNavigateToRegister = actions::navigateToRegister
             )
         }
         composable<Login> {
             Login(onRegisterClick = actions::navigateToRegister)
         }
-        composable<Register> {
+        composable<Register> { backStackEntry ->
             Register(onLoginClick = actions::navigateToLogin)
         }
     }

@@ -7,9 +7,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.thinh.snaplet.navigation.AuthGraph
 import com.thinh.snaplet.navigation.HomeGraph
@@ -26,7 +26,7 @@ fun MainScreen(
     appViewModel: AppViewModel
 ) {
     SnapletTheme {
-        val appUiState by appViewModel.uiState.collectAsState()
+        val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()
 
         val navController = rememberNavController()
 

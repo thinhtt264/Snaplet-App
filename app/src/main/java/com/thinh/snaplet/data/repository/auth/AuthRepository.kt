@@ -1,6 +1,7 @@
 package com.thinh.snaplet.data.repository.auth
 
 import AuthState
+import com.thinh.snaplet.data.model.LoginResponse
 import com.thinh.snaplet.data.model.TokenResponse
 import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.utils.network.ApiResult
@@ -10,6 +11,14 @@ interface AuthRepository {
     val authState: StateFlow<AuthState>
 
     suspend fun login(email: String, password: String): ApiResult<UserProfile>
+
+    suspend fun loginWithGoogle(idToken: String): ApiResult<LoginResponse>
+
+    suspend fun completeOnboarding(
+        username: String,
+        firstName: String,
+        lastName: String
+    ): ApiResult<UserProfile>
 
     suspend fun register(
         email: String,

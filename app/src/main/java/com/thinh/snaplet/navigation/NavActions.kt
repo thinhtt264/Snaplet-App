@@ -39,8 +39,8 @@ class NavActions(
         }
     }
 
-    fun navigateToRegister() {
-        nav.navigate(Register)
+    fun navigateToRegister(firstName: String? = null, lastName: String? = null) {
+        nav.navigate(Register(firstName = firstName, lastName = lastName))
     }
 
     fun navigateToLogin() {

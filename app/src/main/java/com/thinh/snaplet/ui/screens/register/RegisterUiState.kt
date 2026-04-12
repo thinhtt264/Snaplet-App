@@ -24,4 +24,5 @@ data class RegisterUiState(
     val passwordError: UiText? = null,
     val isPasswordVisible: Boolean = false,
     val showPostRegisterWidgetPromo: Boolean = false,
+    val isGoogleLogin: Boolean = false,
 )

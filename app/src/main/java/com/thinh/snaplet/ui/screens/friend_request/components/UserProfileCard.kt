@@ -107,7 +107,6 @@ internal fun UserProfileCard(
                                 imageVector = Icons.Filled.Check,
                                 contentDescription = null,
                                 modifier = Modifier.size(28.dp),
-                                tint = Color.Black
                             )
                         })
                 }

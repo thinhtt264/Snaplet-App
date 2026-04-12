@@ -39,6 +39,9 @@ class DataStoreManager @Inject constructor(
     private val accessTokenKey = stringPreferencesKey(DataStoreKeys.SessionKeys.ACCESS_TOKEN)
     private val refreshTokenKey = stringPreferencesKey(DataStoreKeys.SessionKeys.REFRESH_TOKEN)
 
+    private val isCompleteOnboardingKey =
+        stringPreferencesKey(DataStoreKeys.SessionKeys.IS_COMPLETE_ONBOARDING)
+
     private val userProfileKey = stringPreferencesKey(DataStoreKeys.UserProfileKeys.PROFILE)
     private val fingerprintKey = stringPreferencesKey(DataStoreKeys.DeviceKeys.FINGERPRINT)
 
@@ -61,6 +64,12 @@ class DataStoreManager @Inject constructor(
 
     fun getRefreshToken(): String? {
         return currentRefreshToken.get()
+    }
+
+    suspend fun saveCompleteOnboarding(isCompleteOnboarding: Boolean) {
+        sessionStore.edit { preferences ->
+            preferences[isCompleteOnboardingKey] = isCompleteOnboarding.toString()
+        }
     }
 
     suspend fun saveTokens(accessToken: String, refreshToken: String) {
@@ -140,6 +149,15 @@ class DataStoreManager @Inject constructor(
                 currentAccessToken.set(token)
             }
             token
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    suspend fun loadCompleteOnboarding(): Boolean? {
+        return try {
+            val preferences = sessionStore.data.first()
+            preferences[isCompleteOnboardingKey]?.toBoolean()
         } catch (_: Exception) {
             null
         }

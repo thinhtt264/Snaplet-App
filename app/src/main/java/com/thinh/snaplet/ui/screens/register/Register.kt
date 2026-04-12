@@ -24,7 +24,6 @@ import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +36,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import animateVisibility
 import com.thinh.snaplet.R
 import com.thinh.snaplet.platform.widget.launchSnapletWidgetPicker
@@ -46,15 +46,15 @@ import com.thinh.snaplet.ui.screens.post_register_widget.PostRegisterWidgetPromo
 import com.thinh.snaplet.ui.screens.register.components.RegisterEmailPage
 import com.thinh.snaplet.ui.screens.register.components.RegisterPasswordPage
 import com.thinh.snaplet.ui.screens.register.components.RegisterUsernamePage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Register(
-    onLoginClick: () -> Unit,
-    viewModel: RegisterViewModel = hiltViewModel()
+    onLoginClick: () -> Unit, viewModel: RegisterViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -90,14 +90,16 @@ fun Register(
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
                 })
-            }
-    ) {
+            }) {
         if (uiState.showPostRegisterWidgetPromo) {
             PostRegisterWidgetPromoScreen(
                 modifier = Modifier.animateVisibility(true),
                 onAddWidget = {
                     context.launchSnapletWidgetPicker {
-                        scope.launch { viewModel.finishRegistrationPromo() }
+                        scope.launch {
+                            delay(500L)
+                            viewModel.finishRegistrationPromo()
+                        }
                     }
                 },
                 onSkip = {
@@ -162,6 +164,7 @@ fun Register(
                             firstNameError = uiState.firstNameError?.asString(context),
                             lastNameError = uiState.lastNameError?.asString(context),
                             isLoading = uiState.isLoading,
+                            isGoogleLogin = uiState.isGoogleLogin,
                             onUsernameChange = viewModel::onUsernameChange,
                             onFirstNameChange = viewModel::onFirstNameChange,
                             onLastNameChange = viewModel::onLastNameChange,
@@ -185,31 +188,26 @@ fun Register(
     }
 
     errorDialogMessage?.let { message ->
-        AlertDialog(
-            onDismissRequest = { errorDialogMessage = null },
-            title = {
+        AlertDialog(onDismissRequest = { errorDialogMessage = null }, title = {
+            BaseText(
+                text = stringResource(R.string.error),
+                typography = typography.titleLarge,
+                color = colorScheme.onBackground
+            )
+        }, text = {
+            BaseText(
+                text = message,
+                typography = typography.bodyMedium,
+                color = colorScheme.onBackground
+            )
+        }, confirmButton = {
+            TextButton(onClick = { errorDialogMessage = null }) {
                 BaseText(
-                    text = stringResource(R.string.error),
-                    typography = typography.titleLarge,
-                    color = colorScheme.onBackground
+                    text = stringResource(R.string.close),
+                    typography = typography.labelLarge,
+                    color = colorScheme.primary
                 )
-            },
-            text = {
-                BaseText(
-                    text = message,
-                    typography = typography.bodyMedium,
-                    color = colorScheme.onBackground
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { errorDialogMessage = null }) {
-                    BaseText(
-                        text = stringResource(R.string.close),
-                        typography = typography.labelLarge,
-                        color = colorScheme.primary
-                    )
-                }
             }
-        )
+        })
     }
 }
