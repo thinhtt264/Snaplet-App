@@ -26,5 +26,4 @@ class GoogleSignInManager @Inject constructor(
         val result = credentialManager.getCredential(context, request)
         return GoogleIdTokenCredential.createFrom(result.credential.data).idToken
     }
-
 }
