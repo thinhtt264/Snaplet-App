@@ -16,6 +16,7 @@
 
     <string name="onboarding_subtitle">Ảnh trực tiếp từ bạn bè,\nngay trên màn hình chính</string>
     <string name="create_account">Tạo một tài khoản</string>
+    <string name="continue_with_google">Continue with Google</string>
     <string name="login">Đăng nhập</string>
     <string name="camera_unavailable">Máy ảnh không khả dụng</string>
     <string name="capture_no_friends_dialog_title">Hãy thêm một người bạn trước đã</string>

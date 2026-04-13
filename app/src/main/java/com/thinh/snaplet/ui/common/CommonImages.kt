@@ -6,6 +6,7 @@ object CommonImages {
     val PhotoPlaceholder = R.drawable.photo_placeholder
     val ProfilePlaceholder = R.drawable.profile_placeholder
     val ChatIcon = R.drawable.chat_icon
+    val GoogleLogo = R.drawable.google_logo
     val SparkleIcon = R.drawable.sparkle_icon
     val WidgetGuide1 = R.drawable.widget_guide_1
     val WidgetGuide2 = R.drawable.widget_guide_2

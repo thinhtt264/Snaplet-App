@@ -1,6 +1,7 @@
 package com.thinh.snaplet.di
 
 import android.content.Context
+import androidx.credentials.CredentialManager
 import com.chuckerteam.chucker.api.ChuckerCollector
 import com.chuckerteam.chucker.api.ChuckerInterceptor
 import com.chuckerteam.chucker.api.RetentionManager
@@ -42,6 +43,11 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideSocketConfig(): SocketConfig = SocketConfig(baseUrl = SOCKET_BASE_URL)
+
+    @Provides
+    @Singleton
+    fun provideCredentialManager(@ApplicationContext context: Context): CredentialManager =
+        CredentialManager.create(context)
 
     @Provides
     @Singleton

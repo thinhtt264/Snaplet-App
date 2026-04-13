@@ -47,12 +47,13 @@ android {
     productFlavors {
         create("development") {
             dimension = "environment"
-            // isDefault = true
             buildConfigField("boolean", "IS_DEVELOPMENT", "true")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"335034422759-fbn4dc4m8ok6iqtv7aunbdvt7l0v6nr7.apps.googleusercontent.com\"")
         }
         create("production") {
             dimension = "environment"
             buildConfigField("boolean", "IS_DEVELOPMENT", "false")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"335034422759-fbn4dc4m8ok6iqtv7aunbdvt7l0v6nr7.apps.googleusercontent.com\"")
         }
     }
 
@@ -105,6 +106,9 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.messaging)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)

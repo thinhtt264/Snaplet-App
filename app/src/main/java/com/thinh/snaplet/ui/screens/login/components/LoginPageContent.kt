@@ -74,7 +74,7 @@ fun LoginPageContent(
             onClick = onButtonClick,
             title = buttonText,
             modifier = Modifier.width(220.dp),
-            contentPadding = PaddingValues(vertical = 16.dp),
+            contentPadding = PaddingValues(vertical = 12.dp),
             enabled = buttonEnabled,
             isLoading = isLoading,
             colors = ButtonDefaults.buttonColors(

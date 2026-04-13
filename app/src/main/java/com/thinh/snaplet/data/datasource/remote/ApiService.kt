@@ -1,9 +1,11 @@
 package com.thinh.snaplet.data.datasource.remote
 
 import com.thinh.snaplet.data.model.BaseResponse
+import com.thinh.snaplet.data.model.CompleteOnboardRequest
 import com.thinh.snaplet.data.model.EmailAvailabilityData
 import com.thinh.snaplet.data.model.LoginRequest
 import com.thinh.snaplet.data.model.LoginResponse
+import com.thinh.snaplet.data.model.LoginWithGoogleRequest
 import com.thinh.snaplet.data.model.RefreshTokenRequest
 import com.thinh.snaplet.data.model.RegisterRequest
 import com.thinh.snaplet.data.model.Relationship
@@ -49,6 +51,11 @@ interface ApiService {
         @Body body: LoginRequest
     ): Response<BaseResponse<LoginResponse>>
 
+    @POST("auth/google")
+    suspend fun loginWithGoogle(
+        @Body body: LoginWithGoogleRequest
+    ): Response<BaseResponse<LoginResponse>>
+
     @POST("auth/register")
     suspend fun register(
         @Body body: RegisterRequest
@@ -73,6 +80,11 @@ interface ApiService {
     @GET("users/profile/{username}")
     suspend fun getUserProfile(
         @Path("username") username: String
+    ): Response<BaseResponse<UserProfile>>
+
+    @PATCH("users/me/complete-onboarding")
+    suspend fun completeOnboarding(
+        @Body body: CompleteOnboardRequest
     ): Response<BaseResponse<UserProfile>>
 
     @GET("users/search")

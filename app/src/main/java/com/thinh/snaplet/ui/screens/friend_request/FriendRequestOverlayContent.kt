@@ -15,12 +15,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thinh.snaplet.ui.screens.friend_request.components.ActionButtons
 import com.thinh.snaplet.ui.screens.friend_request.components.UserProfileCard
 
@@ -30,7 +30,7 @@ fun FriendRequestOverlayContent(
     modifier: Modifier = Modifier,
     viewModel: FriendRequestViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.userProfile) {
         viewModel.loadUser(state.userProfile)

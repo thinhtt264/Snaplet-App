@@ -1,10 +1,13 @@
 package com.thinh.snaplet.ui.screens.register
 
 import android.util.Patterns
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.repository.auth.AuthRepository
+import com.thinh.snaplet.navigation.Register
 import com.thinh.snaplet.platform.notification.FcmTokenRegistrar
 import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.utils.ValidationConstants
@@ -24,10 +27,28 @@ import javax.inject.Inject
 class RegisterViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val fcmTokenRegistrar: FcmTokenRegistrar,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
+
+    init {
+        val registerRoute = savedStateHandle.toRoute<Register>()
+        val isGoogleLogin = registerRoute.firstName != null || registerRoute.lastName != null
+        _uiState.update {
+            it.copy(
+                firstName = registerRoute.firstName ?: "",
+                lastName = registerRoute.lastName ?: "",
+                isGoogleLogin = isGoogleLogin,
+                currentStep = if (isGoogleLogin) {
+                    RegisterStep.USERNAME
+                } else {
+                    RegisterStep.EMAIL
+                }
+            )
+        }
+    }
 
     private val _uiEvent = MutableSharedFlow<RegisterUIEvent>(
         replay = 0,
@@ -244,11 +265,15 @@ class RegisterViewModel @Inject constructor(
                         return@launch
                     }
 
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            currentStep = RegisterStep.PASSWORD
-                        )
+                    if (currentState.isGoogleLogin) {
+                        onCompleteOnboarding()
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                currentStep = RegisterStep.PASSWORD
+                            )
+                        }
                     }
                 },
                 onFailure = { error ->
@@ -258,6 +283,34 @@ class RegisterViewModel @Inject constructor(
                             usernameError = UiText.DynamicString(error.message)
                         )
                     }
+                }
+            )
+        }
+    }
+
+    private fun onCompleteOnboarding() {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+
+            val result = authRepository.completeOnboarding(
+                username = currentState.username,
+                firstName = currentState.firstName,
+                lastName = currentState.lastName
+            )
+
+            result.fold(
+                onSuccess = {
+                    fcmTokenRegistrar.syncCurrentTokenToBackend()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            showPostRegisterWidgetPromo = true,
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _uiState.update { it.copy(isLoading = false) }
+                    _uiEvent.emit(RegisterUIEvent.ShowErrorPopup(error.message))
                 }
             )
         }
@@ -322,8 +375,10 @@ class RegisterViewModel @Inject constructor(
             username.length < ValidationConstants.USERNAME_MIN_LENGTH -> UiText.StringResource(R.string.username_requirement1)
             username.length > ValidationConstants.USERNAME_MAX_LENGTH ->
                 registerMaxLengthError(ValidationConstants.USERNAME_MAX_LENGTH)
+
             username.any { it.isWhitespace() } ->
                 UiText.StringResource(R.string.username_no_spaces)
+
             !username.matches(ValidationConstants.USERNAME_PATTERN) -> UiText.StringResource(R.string.username_invalid_characters)
             else -> null
         }

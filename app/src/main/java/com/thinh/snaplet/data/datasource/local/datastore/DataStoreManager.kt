@@ -3,6 +3,7 @@ package com.thinh.snaplet.data.datasource.local.datastore
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -39,6 +40,9 @@ class DataStoreManager @Inject constructor(
     private val accessTokenKey = stringPreferencesKey(DataStoreKeys.SessionKeys.ACCESS_TOKEN)
     private val refreshTokenKey = stringPreferencesKey(DataStoreKeys.SessionKeys.REFRESH_TOKEN)
 
+    private val isCompleteOnboardingKey =
+        booleanPreferencesKey(DataStoreKeys.SessionKeys.IS_COMPLETE_ONBOARDING)
+
     private val userProfileKey = stringPreferencesKey(DataStoreKeys.UserProfileKeys.PROFILE)
     private val fingerprintKey = stringPreferencesKey(DataStoreKeys.DeviceKeys.FINGERPRINT)
 
@@ -61,6 +65,12 @@ class DataStoreManager @Inject constructor(
 
     fun getRefreshToken(): String? {
         return currentRefreshToken.get()
+    }
+
+    suspend fun saveCompleteOnboarding(isCompleteOnboarding: Boolean) {
+        sessionStore.edit { preferences ->
+            preferences[isCompleteOnboardingKey] = isCompleteOnboarding
+        }
     }
 
     suspend fun saveTokens(accessToken: String, refreshToken: String) {
@@ -140,6 +150,15 @@ class DataStoreManager @Inject constructor(
                 currentAccessToken.set(token)
             }
             token
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    suspend fun loadCompleteOnboarding(): Boolean? {
+        return try {
+            val preferences = sessionStore.data.first()
+            preferences[isCompleteOnboardingKey]
         } catch (_: Exception) {
             null
         }

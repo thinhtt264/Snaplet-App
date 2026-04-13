@@ -3,7 +3,10 @@ package com.thinh.snaplet.data.repository.auth
 import AuthState
 import com.thinh.snaplet.data.datasource.local.datastore.DataStoreManager
 import com.thinh.snaplet.data.datasource.remote.ApiService
+import com.thinh.snaplet.data.model.CompleteOnboardRequest
 import com.thinh.snaplet.data.model.LoginRequest
+import com.thinh.snaplet.data.model.LoginResponse
+import com.thinh.snaplet.data.model.LoginWithGoogleRequest
 import com.thinh.snaplet.data.model.RefreshTokenRequest
 import com.thinh.snaplet.data.model.RegisterRequest
 import com.thinh.snaplet.data.model.TokenResponse
@@ -42,6 +45,47 @@ class AuthRepositoryImpl @Inject constructor(
             _authState.value = AuthState.Authenticated
             sessionController.onNewAuthenticatedSession()
         }, transform = { response -> response.user })
+    }
+
+    override suspend fun loginWithGoogle(
+        idToken: String,
+    ): ApiResult<LoginResponse> {
+        return safeApiCall(apiCall = {
+            apiService.loginWithGoogle(
+                body = LoginWithGoogleRequest(
+                    idToken,
+                )
+            )
+        }, onSuccess = { result ->
+            dataStoreManager.saveTokens(
+                result.token.accessToken, result.token.refreshToken
+            )
+            dataStoreManager.saveUserProfile(result.user)
+            dataStoreManager.saveCompleteOnboarding(!result.requiresOnboarding)
+
+            if (!result.requiresOnboarding) {
+                _authState.value = AuthState.Authenticated
+                sessionController.onNewAuthenticatedSession()
+            }
+        })
+    }
+
+    override suspend fun completeOnboarding(
+        username: String,
+        firstName: String,
+        lastName: String
+    ): ApiResult<UserProfile> {
+        return safeApiCall(apiCall = {
+            apiService.completeOnboarding(
+                body = CompleteOnboardRequest(
+                    username,
+                    firstName,
+                    lastName
+                )
+            )
+        }, onSuccess = { result ->
+            dataStoreManager.saveUserProfile(result)
+        })
     }
 
     override suspend fun register(
@@ -89,6 +133,14 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun isAuthenticated(): Boolean {
+        val isCompleteOnboarding = dataStoreManager.loadCompleteOnboarding()
+
+        if (isCompleteOnboarding != true) {
+            dataStoreManager.clearSession()
+            _authState.value = AuthState.Unauthenticated
+            return false
+        }
+
         val authenticated =
             dataStoreManager.loadAccessToken() != null && dataStoreManager.loadRefreshToken() != null && dataStoreManager.loadUserProfile() != null
 

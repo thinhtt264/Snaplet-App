@@ -36,6 +36,7 @@ fun RegisterUsernamePage(
     firstNameError: String?,
     lastNameError: String?,
     isLoading: Boolean,
+    isGoogleLogin: Boolean = false,
     onUsernameChange: (String) -> Unit,
     onFirstNameChange: (String) -> Unit,
     onLastNameChange: (String) -> Unit,
@@ -59,7 +60,7 @@ fun RegisterUsernamePage(
         title = stringResource(R.string.register_username_title),
         subtitle = email,
         subtitleColor = colorScheme.primary,
-        buttonText = stringResource(R.string.continue_text),
+        buttonText = if (isGoogleLogin) stringResource(R.string.create_account) else stringResource(R.string.continue_text),
         buttonEnabled = !isLoading &&
             usernameError == null &&
             firstNameError == null &&
