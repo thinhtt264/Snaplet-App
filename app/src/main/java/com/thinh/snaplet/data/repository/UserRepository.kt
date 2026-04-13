@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface UserRepository {
 
+    val friendRequestReceivedEvents: Flow<Unit>
+
     suspend fun getUserProfile(userName: String): ApiResult<UserProfile>
 
     suspend fun searchUsersByUsernamePrefix(

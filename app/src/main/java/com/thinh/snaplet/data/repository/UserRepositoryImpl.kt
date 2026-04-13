@@ -17,12 +17,16 @@ import com.thinh.snaplet.data.model.user.UpdateFcmTokenRequest
 import com.thinh.snaplet.data.model.user.UserProfile
 import com.thinh.snaplet.data.model.user.UserSearchResult
 import com.thinh.snaplet.di.BaseOkHttpClient
+import com.thinh.snaplet.platform.socket.SocketEvent
+import com.thinh.snaplet.platform.socket.SocketManager
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.ApiResult
 import com.thinh.snaplet.utils.network.safeApiCall
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -34,10 +38,16 @@ import javax.inject.Singleton
 
 @Singleton
 class UserRepositoryImpl @Inject constructor(
+    socketManager: SocketManager,
     private val apiService: ApiService,
     private val dataStoreManager: DataStoreManager,
     @BaseOkHttpClient private val baseOkHttpClient: OkHttpClient,
 ) : UserRepository {
+
+    override val friendRequestReceivedEvents: Flow<Unit> =
+        socketManager.messages
+            .filter { it.event == SocketEvent.FRIEND_REQUEST_RECEIVED }
+            .map { Unit }
 
     override suspend fun getUserProfile(userName: String): ApiResult<UserProfile> {
         return safeApiCall(

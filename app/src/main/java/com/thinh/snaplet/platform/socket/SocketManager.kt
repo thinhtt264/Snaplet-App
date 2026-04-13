@@ -152,14 +152,10 @@ class SocketManager @Inject constructor(
                 s.on(event.eventName) { args ->
                     val raw = args.getOrNull(0)
                     val payload = when (raw) {
+                        null -> null // some events are signal-only (no payload)
                         is String -> raw
                         is JSONObject -> raw.toString()
-                        else -> null
-                    }
-
-                    if (payload == null) {
-                        Logger.w("$LOG_TAG: ignore event=${event.eventName} because payload is not String/JSONObject. raw=$raw")
-                        return@on
+                        else -> raw.toString()
                     }
 
                     Logger.d("$LOG_TAG: event=${event.eventName} payload=$payload")

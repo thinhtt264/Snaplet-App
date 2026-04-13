@@ -46,6 +46,7 @@ import com.thinh.snaplet.domain.post.ValidateRetryUploadUseCase
 import com.thinh.snaplet.domain.post.ValidateUploadPostUseCase
 import com.thinh.snaplet.domain.relationship.AcceptFriendRequestUseCase
 import com.thinh.snaplet.domain.relationship.FormatFriendSearchResultsUseCase
+import com.thinh.snaplet.domain.relationship.ObserveFriendRequestReceivedUseCase
 import com.thinh.snaplet.domain.relationship.GetRelationshipActionUseCase
 import com.thinh.snaplet.domain.relationship.GetRelationshipsByStatusesUseCase
 import com.thinh.snaplet.domain.relationship.RemoveFriendUseCase
@@ -121,7 +122,8 @@ class HomeViewModel @Inject constructor(
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
     private val connectivityObserver: ConnectivityObserver,
     private val widgetUpdateManager: WidgetUpdateManager,
-    private val mediaRepository: MediaRepository
+    private val mediaRepository: MediaRepository,
+    private val observeFriendRequestReceivedUseCase: ObserveFriendRequestReceivedUseCase,
 ) : ViewModel() {
     val emojiFloatController: EmojiFloatController by lazy { EmojiFloatController() }
 
@@ -197,6 +199,7 @@ class HomeViewModel @Inject constructor(
         loadMyFriendList()
         loadUnreadPostsCount()
         observeUnreadPostsUpdates()
+        observeFriendRequestUpdates()
         loadQuickChatEmojiSlots()
         observeNetworkReconnect()
     }
@@ -224,6 +227,12 @@ class HomeViewModel @Inject constructor(
 
     private fun observeUnreadPostsUpdates() {
         observeNewPostEvent().onEach(::handleNewPostUpdate).launchIn(viewModelScope)
+    }
+
+    private fun observeFriendRequestUpdates() {
+        observeFriendRequestReceivedUseCase()
+            .onEach { loadMyFriendList() }
+            .launchIn(viewModelScope)
     }
 
     private fun handleNewPostUpdate(event: NewPostUpdate) {
