@@ -472,12 +472,9 @@ private fun HomeScreen(
                             else -> {
                                 val post = uiState.posts.getOrNull(page - 1)
                                 if (post == null) {
-                                    val filteredFirstName = uiState.feedUserIdFilter?.let { filterId ->
-                                        uiState.friendSheetState.friendList.find { it.userId == filterId }?.firstName
-                                    }
                                     EmptyMediaPage(
                                         onAddFriendClick = viewModel::showFriendSheet,
-                                        firstName = filteredFirstName,
+                                        firstName = uiState.feedFilterFirstName,
                                     )
                                 } else {
                                     MediaPage(
