@@ -35,6 +35,7 @@ class AuthRepositoryImpl @Inject constructor(
     override val authState: StateFlow<AuthState> = _authState
 
     override suspend fun login(email: String, password: String): ApiResult<UserProfile> {
+        dataStoreManager.clearSession()
         return safeApiCall(apiCall = {
             apiService.login(body = LoginRequest(email, password))
         }, onSuccess = { result ->
@@ -91,6 +92,8 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun register(
         email: String, username: String, firstName: String, lastName: String, password: String
     ): ApiResult<UserProfile> {
+        dataStoreManager.clearSession()
+
         val request = RegisterRequest(
             email = email,
             username = username,
@@ -135,7 +138,7 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun isAuthenticated(): Boolean {
         val isCompleteOnboarding = dataStoreManager.loadCompleteOnboarding()
 
-        if (isCompleteOnboarding != true) {
+        if (isCompleteOnboarding == false) {
             dataStoreManager.clearSession()
             _authState.value = AuthState.Unauthenticated
             return false

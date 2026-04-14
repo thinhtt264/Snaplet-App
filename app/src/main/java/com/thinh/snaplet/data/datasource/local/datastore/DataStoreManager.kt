@@ -90,6 +90,7 @@ class DataStoreManager @Inject constructor(
         sessionStore.edit { preferences ->
             preferences.remove(accessTokenKey)
             preferences.remove(refreshTokenKey)
+            preferences.remove(isCompleteOnboardingKey)
         }
     }
 
