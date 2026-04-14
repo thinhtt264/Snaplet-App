@@ -2,6 +2,7 @@ package com.thinh.snaplet.platform.deeplink
 
 import android.content.Intent
 import android.net.Uri
+import androidx.core.net.toUri
 import com.thinh.snaplet.platform.notification.NotificationHelper
 import com.thinh.snaplet.utils.Logger
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -33,7 +34,7 @@ class DeepLinkManager @Inject constructor() {
 
         val deepLinkString = intent.getStringExtra(NotificationHelper.EXTRA_DEEP_LINK_URI)
             ?: intent.extras?.getString(NotificationHelper.EXTRA_DEEP_LINK_URI)
-        if (!deepLinkString.isNullOrBlank() && handleUri(Uri.parse(deepLinkString))) return
+        if (!deepLinkString.isNullOrBlank() && handleUri(deepLinkString.toUri())) return
     }
 
     private suspend fun handleUri(uri: Uri?): Boolean {
