@@ -154,13 +154,17 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    private suspend fun handleLoginError(error: ApiError) {
+    fun onErrorDismissed() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    private fun handleLoginError(error: ApiError) {
         val message =
             if (error.errorCode == ApiErrorCode.INVALID_CREDENTIALS) {
                 UiText.StringResource(R.string.invalid_credentials)
             } else {
                 UiText.DynamicString(error.message)
             }
-        _uiEvent.emit(LoginUIEvent.ShowErrorPopup(message))
+        _uiState.update { it.copy(errorMessage = message) }
     }
 }

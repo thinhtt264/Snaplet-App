@@ -39,8 +39,12 @@ class NavActions(
         }
     }
 
-    fun navigateToRegister(firstName: String? = null, lastName: String? = null) {
-        nav.navigate(Register(firstName = firstName, lastName = lastName))
+    fun navigateToRegister(
+        firstName: String? = null,
+        lastName: String? = null,
+        isFromGoogleLogin: Boolean = false
+    ) {
+        nav.navigate(Register(firstName = firstName, lastName = lastName, isFromGoogleLogin))
     }
 
     fun navigateToLogin() {

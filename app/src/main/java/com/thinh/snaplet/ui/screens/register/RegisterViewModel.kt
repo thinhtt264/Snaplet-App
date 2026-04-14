@@ -35,13 +35,13 @@ class RegisterViewModel @Inject constructor(
 
     init {
         val registerRoute = savedStateHandle.toRoute<Register>()
-        val isGoogleLogin = registerRoute.firstName != null || registerRoute.lastName != null
+        val isFromGoogleLogin = registerRoute.isFromGoogleLogin
         _uiState.update {
             it.copy(
+                isFromGoogleLogin = isFromGoogleLogin,
                 firstName = registerRoute.firstName ?: "",
                 lastName = registerRoute.lastName ?: "",
-                isGoogleLogin = isGoogleLogin,
-                currentStep = if (isGoogleLogin) {
+                currentStep = if (isFromGoogleLogin) {
                     RegisterStep.USERNAME
                 } else {
                     RegisterStep.EMAIL
@@ -203,7 +203,8 @@ class RegisterViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            currentStep = RegisterStep.USERNAME
+                            currentStep = RegisterStep.USERNAME,
+                            isFromGoogleLogin = false
                         )
                     }
                 },
@@ -265,7 +266,7 @@ class RegisterViewModel @Inject constructor(
                         return@launch
                     }
 
-                    if (currentState.isGoogleLogin) {
+                    if (currentState.isFromGoogleLogin) {
                         onCompleteOnboarding()
                     } else {
                         _uiState.update {

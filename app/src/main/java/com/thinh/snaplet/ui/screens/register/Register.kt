@@ -164,7 +164,7 @@ fun Register(
                             firstNameError = uiState.firstNameError?.asString(context),
                             lastNameError = uiState.lastNameError?.asString(context),
                             isLoading = uiState.isLoading,
-                            isGoogleLogin = uiState.isGoogleLogin,
+                            isGoogleLogin = uiState.isFromGoogleLogin,
                             onUsernameChange = viewModel::onUsernameChange,
                             onFirstNameChange = viewModel::onFirstNameChange,
                             onLastNameChange = viewModel::onLastNameChange,

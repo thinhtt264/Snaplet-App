@@ -45,7 +45,7 @@ fun Onboarding(
     modifier: Modifier = Modifier,
     viewModel: OnboardingViewModel = hiltViewModel(),
     onNavigateToLogin: () -> Unit,
-    onNavigateToRegister: (String?, String?) -> Unit,
+    onNavigateToRegister: (String?, String?, Boolean) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -54,7 +54,7 @@ fun Onboarding(
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is OnboardingUiEvent.NavigateToRegister -> {
-                    onNavigateToRegister(event.firstName, event.lastName)
+                    onNavigateToRegister(event.firstName, event.lastName, true)
                 }
             }
         }
@@ -95,7 +95,7 @@ fun Onboarding(
             ) {
                 PrimaryButton(
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { onNavigateToRegister(null, null) },
+                    onClick = { onNavigateToRegister(null, null, false) },
                     enabled = !uiState.isLoading,
                     title = stringResource(R.string.create_account),
                     contentPadding = PaddingValues(vertical = 16.dp, horizontal = 18.dp),
