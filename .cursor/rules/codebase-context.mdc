@@ -15,62 +15,71 @@ Android app with Kotlin + Jetpack Compose + Hilt. Main flow: `ApiService` -> `Re
 | **ui/app/** | App-level state and auth bootstrap | app startup, auth state, splash |
 | **ui/screens/MainScreen.kt** | Main host and bottom navigation | main layout, tabs |
 | **ui/screens/home/** | Home screen + state + events | home, feed, reactions, unread posts |
-| **ui/screens/home/components/** | Home UI parts (`FriendBottomSheet`, `ReactionsBottomSheet`, `QuickChatBar`, `MediaPage`, etc.) | camera/media/friend UI, bottom sheets |
-| **ui/screens/login/** | Login screen + ViewModel | login, đăng nhập |
-| **ui/screens/login/components/** | LoginEmailPage, LoginPasswordPage, LoginPageContent | login UI |
-| **ui/screens/register/** | Register screen + ViewModel | register, đăng ký |
-| **ui/screens/register/components/** | RegisterEmailPage, RegisterUsernamePage, RegisterPasswordPage, RegisterPageContent | register UI |
-| **ui/screens/my_profile/** | MyProfile, EditDisplayNameBottomSheet | profile, tên hiển thị, avatar |
+| **ui/screens/home/components/** | `FriendBottomSheet`, `ReactionsBottomSheet`, `QuickChatBar`, `MediaPage`, `PostGridView`, `PostAudienceSelector`, `PostActivityBar`, `NewPostsBanner`, `CameraPage`, `CameraActions`, `HomeBottomContent`, `TopAction`, `BottomAction`, `EmptyMediaPage`, `CameraPermissionDenied`, `MediaItemDimensions` | camera/media/friend UI, bottom sheets |
+| **ui/screens/login/** | Login screen + ViewModel + UIEvent | login, đăng nhập |
+| **ui/screens/login/components/** | `LoginEmailPage`, `LoginPasswordPage`, `LoginPageContent` | login UI |
+| **ui/screens/register/** | Register screen + ViewModel + UIEvent | register, đăng ký |
+| **ui/screens/register/components/** | `RegisterEmailPage`, `RegisterUsernamePage`, `RegisterPasswordPage`, `RegisterPageContent` | register UI |
+| **ui/screens/my_profile/** | `MyProfile`, `EditDisplayNameBottomSheet`, `WidgetGuideBottomSheet` | profile, tên hiển thị, avatar, widget guide |
 | **ui/screens/image_crop/** | ImageCrop screen | crop, cắt ảnh |
-| **ui/screens/onboarding/** | Onboarding | onboarding |
-| **ui/screens/friend_request/** | Friend request overlay | friend request, lời mời kết bạn |
-| **ui/screens/friend_request/components/** | UserProfileCard, ActionButtons | friend request UI |
-| **ui/components/** | BaseText, BaseTextField, Avatar, PrimaryButton, FormTextField, CameraPreview, PermissionHandler, AppIconButton, StepAnimatedContent | UI components, form, camera preview, permission UI |
-| **ui/components/image/** | AsyncImage, AsyncImageConfig | load ảnh, Coil |
+| **ui/screens/onboarding/** | Onboarding + OnboardingViewModel | onboarding |
+| **ui/screens/friend_request/** | Friend request overlay + ViewModel + UiState | friend request, lời mời kết bạn |
+| **ui/screens/friend_request/components/** | `UserProfileCard`, `ActionButtons` | friend request UI |
+| **ui/screens/spotlight_post/** | SpotlightPost screen + ViewModel + UiState | spotlight detail, open post from deeplink/notification |
+| **ui/screens/post_register_widget/** | `PostRegisterWidgetPromoScreen` | post-register widget promo/upsell |
+| **ui/components/** | `BaseText`, `BaseTextField`, `Avatar`, `AvatarGroup`, `PrimaryButton`, `FormTextField`, `CameraPreview`, `PermissionHandler`, `AppIconButton`, `StepAnimatedContent`, `CappedCountBadge`, `EmojiFloatCanvas`, `EmojiFloatController` | UI components, form, camera preview, permission UI, emoji float animation |
+| **ui/components/image/** | `AsyncImage`, `AsyncImageConfig` | load ảnh, Coil |
 | **ui/theme/** | Theme, Color, Typo, MotionTokens | theme, màu, typography, animation duration tokens |
-| **ui/overlay/** | OverlayHost, OverlayViewModel, OverlayState, OverlayEvent, OverlayEventBus | overlay, dialog, bottom sheet |
-| **ui/overlay/modal/** | GlobalModal, ConfirmDialog, ForceLogoutModal | modal, dialog |
-| **ui/overlay/bottom_sheet/** | GlobalBottomSheet, OptionsSheet | bottom sheet |
-| **ui/common/** | UiText, CommonImages, ComposableExt | UI common, string resources, images |
-| **ui/widget/** | App Widget UI and state mapping | widget render/state/UI |
-| **navigation/** | NavGraph, NavScreen, NavParam, NavActions, NavTransitions | navigation, route, deep link |
-| **di/** | Hilt modules (Network, Repository, Overlay, Permission, ImageLoading, PhotoPicker, Share, WorkManager) | DI, inject, module |
-| **data/datasource/remote/** | ApiService | API, endpoint, Retrofit |
-| **data/datasource/local/datastore/** | DataStoreManager, DataStoreKeys | DataStore, local storage |
-| **data/repository/** | MediaRepository(Impl), UserRepository(Impl) | media/user remote repositories |
-| **data/repository/auth/** | AuthRepository, AuthRepositoryImpl | auth, login state, token refresh |
-| **data/repository/device/** | DeviceRepository, DeviceRepositoryImpl | device identifiers/fingerprint |
-| **data/repository/post/** | PostRepository, PostRepositoryImpl | posts, feed, unread/new post events, reactions |
+| **ui/overlay/** | `OverlayHost`, `OverlayViewModel`, `OverlayState`, `OverlayEvent`, `OverlayEventBus` | overlay, dialog, bottom sheet |
+| **ui/overlay/modal/** | `GlobalModal`, `ConfirmDialog`, `ForceLogoutModal`, `FriendRequestModal` | modal, dialog, friend request modal |
+| **ui/overlay/bottom_sheet/** | `GlobalBottomSheet`, `OptionsSheet` | bottom sheet |
+| **ui/common/** | `UiText`, `CommonImages`, `ComposableExt` | UI common, string resources, images |
+| **ui/widget/** | `SnapletWidget`, `SnapletWidgetContent`, `SnapletWidgetReceiver`, `SnapletWidgetStateKeys`, `WidgetDisplayData`, `WidgetImageLoader` | widget render/state/UI |
+| **navigation/** | `NavGraph`, `NavScreen`, `NavParam`, `NavActions`, `NavTransitions` | navigation, route, deep link |
+| **di/** | Hilt modules (Network, Repository, Overlay, Permission, ImageLoading, PhotoPicker, Share, WorkManager, WidgetUpdateEntryPoint) | DI, inject, module |
+| **data/datasource/remote/** | `ApiService` | API, endpoint, Retrofit |
+| **data/datasource/local/datastore/** | `DataStoreManager`, `DataStoreKeys` | DataStore, local storage |
+| **data/repository/** | `MediaRepository(Impl)`, `UserRepository(Impl)` | media/user remote repositories |
+| **data/repository/auth/** | `AuthRepository`, `AuthRepositoryImpl`, `AuthState` | auth, login state, token refresh |
+| **data/repository/device/** | `DeviceRepository`, `DeviceRepositoryImpl`, `DeviceInfo` | device identifiers/fingerprint |
+| **data/repository/post/** | `PostRepository`, `PostRepositoryImpl` | posts, feed, unread/new post events, reactions |
 | **data/model/** | `BaseResponse`, auth/request DTOs, `Relationship` | API contracts, shared DTOs |
-| **data/model/user/** | `UserProfile`, `UserSearchResult`, avatar/display name models | user profile/search payloads |
-| **data/model/media/** | Media upload/transform models | media payloads |
-| **data/model/post/** | post/feed/reaction/update payloads | newsfeed, post activity, reactions, unread counts |
-| **data/model/emoji/** | emoji list models/loader | emoji-related features |
-| **domain/post/** | UploadPost, ValidateUploadPost, DeletePost, CreateTempPost, GetAvailablePostActions, ValidateRetryUpload | post, upload, delete post |
-| **domain/relationship/** | RemoveFriend, RemoveRelationship, GetRelationshipsByStatuses, AcceptFriendRequest, ResolveRelationshipAction, FormatFriendSearchResults | friend graph, search result actions, relationship flows |
-| **domain/media/** | media-centric use cases (capture/download if present) | capture/media domain logic |
-| **domain/feed/** | ShouldTriggerLoadMoreUseCase, GetNewsfeedUseCase, FetchNewerFeedUseCase, ObserveNewPostEventUseCase, ShouldMarkLatestPostAsSeenUseCase | feed, load more, unread/new post notification |
-| **domain/model/** | UI/domain mappers like `PostAction`, `RelationshipAction`, `NewerFeedResult`, `FriendSearchActionItem` | feature-agnostic domain model |
-| **platform/photo_picker/** | PhotoPickerManager | photo picker, chọn ảnh |
-| **platform/permission/** | PermissionManager, PermissionState | permission |
-| **platform/share/** | ShareManager | share |
-| **platform/deeplink/** | DeepLinkManager, DeepLinkEvent | deep link |
-| **platform/notification/** | NotificationHelper, FcmTokenRegistrar, SnapletFirebaseMessagingService | push notification, FCM token sync, notification tap routing |
-| **platform/network/** | ConnectivityObserver | internet connectivity observation |
-| **platform/socket/** | SocketManager, SocketEvent, message/state models | realtime socket events |
-| **platform/widget/** | widget scheduling/update helpers | widget workers, pinned widgets |
-| **network/** | TokenAuthenticator, TokenRefreshCoordinator, SessionController, FingerprintInterceptor | token/auth header/refresh/session lifecycle |
-| **utils/** | Logger, CrashlyticsLogger, FileUtils, CommonExtensions, ValidationConstants, InviteConstants | utils, validation, logging, crash reporting bridge |
-| **utils/network/** | ApiResult, ApiError, ApiErrorCode, NetworkExtensions, GsonHolder | ApiResult, safeApiCall, API error mapping |
-| **ui/screens/spotlight_post/** | SpotlightPost screen + ViewModel + ui state | spotlight detail, open post from deeplink/notification |
-| **domain/notification/** | RegisterFcmTokenUseCase | FCM token registration flow |
+| **data/model/user/** | `UserProfile`, `UserSearchResult`, `AvatarUpload`, `AvatarUrls`, `DisplayName`, `UpdateFcmTokenRequest` | user profile/search payloads |
+| **data/model/media/** | `Media`, `MediaUpload`, `ImageTransform` | media payloads |
+| **data/model/post/** | `Post`, `PostActivity`, `PostAudience`, `PostReactionUser`, `ReactToPostRequest`, `ReactToPostResponse`, `NewPostUpdate` | newsfeed, post activity, reactions, unread counts |
+| **data/model/emoji/** | `EmojiEntry`, `EmojiLoader` | emoji-related features |
+| **domain/post/** | `UploadPostUseCase`, `ValidateUploadPostUseCase`, `DeletePostUseCase`, `CreateTempPostUseCase`, `GetAvailablePostActionsUseCase`, `ValidateRetryUploadUseCase`, `BuildPostShareContentUseCase`, `MapPostReactionUsersUseCase`, `PostCreateAudience` | post, upload, delete, share, reaction mapping |
+| **domain/relationship/** | `RemoveFriendUseCase`, `RemoveRelationshipUseCase`, `GetRelationshipsByStatusesUseCase`, `AcceptFriendRequestUseCase`, `ResolveRelationshipActionUseCase`, `GetRelationshipActionUseCase`, `FormatFriendSearchResultsUseCase`, `ObserveFriendRequestReceivedUseCase` | friend graph, search result actions, relationship flows, realtime friend requests |
+| **domain/media/** | `ValidateCaptureReadinessUseCase` | capture readiness/media domain logic |
+| **domain/feed/** | `ShouldTriggerLoadMoreUseCase`, `GetNewsfeedUseCase`, `FetchNewerFeedUseCase`, `ObserveNewPostEventUseCase` | feed, load more, unread/new post notification |
+| **domain/user/** | `UploadAvatarUseCase` | avatar upload domain logic |
+| **domain/notification/** | `RegisterFcmTokenUseCase`, `PushNotificationType` | FCM token registration, notification type classification |
+| **domain/model/** | `PostAction`, `RelationshipAction`, `NewerFeedResult`, `FriendSearchActionItem`, `CaptureReadiness`, `EmojiParticle`, `ReactionUserUi`, `UploadAvatarResult`, `UploadPostResult` | feature-agnostic domain models, UI mappers |
+| **platform/GoogleSignInManager.kt** | Google Sign-In integration | Google login, OAuth |
+| **platform/photo_picker/** | `PhotoPickerManager` | photo picker, chọn ảnh |
+| **platform/permission/** | `PermissionManager`, `PermissionState` | permission |
+| **platform/share/** | `ShareManager` | share |
+| **platform/deeplink/** | `DeepLinkManager`, `DeepLinkEvent`, `DeepLinkUtils` | deep link |
+| **platform/notification/** | `NotificationHelper`, `FcmTokenRegistrar`, `SnapletFirebaseMessagingService` | push notification, FCM token sync, notification tap routing |
+| **platform/network/** | `ConnectivityObserver` | internet connectivity observation |
+| **platform/socket/** | `SocketManager`, `SocketEvent`, `SocketMessage`, `SocketConfig`, `SocketConnectionState` | realtime socket events |
+| **platform/widget/** | `WidgetAddLauncher`, `WidgetPinnedReceiver`, `WidgetUpdateManager`, `WidgetUpdateWorker`, `WidgetWork` | widget scheduling/update helpers |
+| **network/** | `TokenAuthenticator`, `TokenRefreshCoordinator`, `SessionController`, `FingerprintInterceptor` | token/auth header/refresh/session lifecycle |
+| **utils/** | `Logger`, `CrashlyticsLogger`, `FileUtils`, `CommonExtensions`, `ValidationConstants`, `InviteConstants`, `EmojiParticleEngine`, `MinLoadingTime`, `UtcDateDeserializer` | utils, validation, logging, crash reporting, emoji particle animation engine, date deserialization |
+| **utils/network/** | `ApiResult`, `ApiError`, `ApiErrorCode`, `NetworkExtensions`, `JsonHolder` | ApiResult, safeApiCall, API error mapping |
 
 ## Practical routing hints
 
 - Prompt mentions **friend search/result action/accept/remove friend** -> start at `domain/relationship/`, then `data/repository/UserRepository(Impl)` and `ui/screens/home/components/FriendBottomSheet.kt`.
+- Prompt mentions **friend request received (realtime)** -> start at `domain/relationship/ObserveFriendRequestReceivedUseCase`, `platform/socket/`, `ui/overlay/modal/FriendRequestModal.kt`.
 - Prompt mentions **reactions/unread/new posts** -> start at `data/repository/post/`, `domain/feed/`, `ui/screens/home/` and related components.
 - Prompt mentions **token/session/logout** -> inspect `data/repository/auth/`, `network/`, `data/datasource/local/datastore/`.
 - Prompt mentions **widget** -> inspect both `ui/widget/` and `platform/widget/`, plus `di/WorkManagerModule.kt`.
 - Prompt mentions **notification/FCM** -> inspect `platform/notification/`, `domain/notification/`, `data/repository/UserRepository(Impl)`, and `AndroidManifest.xml`.
 - Prompt mentions **deeplink to spotlight post** -> inspect `platform/deeplink/`, `navigation/NavScreen.kt`, `navigation/NavGraph.kt`, and `ui/screens/spotlight_post/`.
+- Prompt mentions **Google Sign-In / OAuth** -> inspect `platform/GoogleSignInManager.kt`, `ui/screens/login/`, `data/repository/auth/`.
+- Prompt mentions **emoji float / quick chat animation** -> inspect `ui/components/EmojiFloatCanvas.kt`, `EmojiFloatController.kt`, `utils/EmojiParticleEngine.kt`, `domain/model/EmojiParticle.kt`.
+- Prompt mentions **avatar upload** -> inspect `domain/user/UploadAvatarUseCase.kt`, `data/repository/MediaRepository(Impl)`, `ui/screens/my_profile/`.
 - Prompt mentions **Crashlytics/release logging** -> inspect `HiltApplication.kt`, `utils/CrashlyticsLogger.kt`, and Gradle Firebase dependencies/config.
+- Prompt mentions **post share** -> inspect `domain/post/BuildPostShareContentUseCase.kt`, `platform/share/ShareManager.kt`.
+- Prompt mentions **post-register widget promo** -> inspect `ui/screens/post_register_widget/PostRegisterWidgetPromoScreen.kt`.

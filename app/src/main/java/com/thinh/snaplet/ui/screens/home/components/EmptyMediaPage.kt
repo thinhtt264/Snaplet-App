@@ -31,7 +31,19 @@ import com.thinh.snaplet.ui.components.PrimaryButton
 @Composable
 fun EmptyMediaPage(
     onAddFriendClick: () -> Unit = {},
+    firstName: String? = null,
 ) {
+    val title = if (firstName != null) {
+        stringResource(R.string.empty_media_filter_title)
+    } else {
+        stringResource(R.string.empty_media_title)
+    }
+    val subtitle = if (firstName != null) {
+        stringResource(R.string.empty_media_filter_subtitle, firstName)
+    } else {
+        stringResource(R.string.empty_media_subtitle)
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -50,7 +62,7 @@ fun EmptyMediaPage(
             Spacer(modifier = Modifier.height(24.dp))
 
             BaseText(
-                text = stringResource(R.string.empty_media_title),
+                text = title,
                 typography = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
@@ -59,25 +71,27 @@ fun EmptyMediaPage(
             Spacer(modifier = Modifier.height(12.dp))
 
             BaseText(
-                text = stringResource(R.string.empty_media_subtitle),
+                text = subtitle,
                 typography = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
             )
         }
 
-        PrimaryButton(
-            onClick = onAddFriendClick,
-            title = stringResource(R.string.empty_media_add_friend),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(bottom = 28.dp),
-            contentPadding = PaddingValues(all = 16.dp),
-            titleColor = Color.Black,
-            typography = MaterialTheme.typography.titleMedium,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-            shape = CircleShape,
-        )
+        if (firstName == null) {
+            PrimaryButton(
+                onClick = onAddFriendClick,
+                title = stringResource(R.string.empty_media_add_friend),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 28.dp),
+                contentPadding = PaddingValues(all = 16.dp),
+                titleColor = Color.Black,
+                typography = MaterialTheme.typography.titleMedium,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = CircleShape,
+            )
+        }
     }
 }

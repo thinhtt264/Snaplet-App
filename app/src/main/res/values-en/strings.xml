@@ -93,6 +93,8 @@
     <string name="empty_media_title">Send your first Snaplet</string>
     <string name="empty_media_subtitle">Your photos will appear on your friends\' home screens</string>
     <string name="empty_media_add_friend">+ Add new friend</string>
+    <string name="empty_media_filter_title">No photos sent yet</string>
+    <string name="empty_media_filter_subtitle">%1$s hasn\'t sent any photos yet.\nTry sending them a Snaplet.</string>
 
     <string name="no_pics_yet">No pics yet</string>
 

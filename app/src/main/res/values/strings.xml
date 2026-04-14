@@ -98,6 +98,8 @@
     <string name="empty_media_title">Gửi Snaplet đầu tiên của bạn</string>
     <string name="empty_media_subtitle">Ảnh của bạn sẽ xuất hiện trên màn hình chính của bạn bè</string>
     <string name="empty_media_add_friend">+ Thêm bạn mới</string>
+    <string name="empty_media_filter_title">Chưa có ảnh nào</string>
+    <string name="empty_media_filter_subtitle">%1$s chưa gửi ảnh nào.\nHãy gửi cho họ một Snaplet nhé!</string>
     <string name="no_pics_yet">Chưa có ảnh</string>
 
     <string name="post_deleted">Đã xóa bài viết</string>
