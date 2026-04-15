@@ -33,21 +33,26 @@ class NavActions(
         }
     }
 
-    fun navigateToRegisterReplacingOnboarding() {
-        nav.navigate(Register) {
-            popUpTo<Onboarding> { inclusive = true }
-        }
-    }
-
     fun navigateToRegister(
         firstName: String? = null,
         lastName: String? = null,
         isFromGoogleLogin: Boolean = false
     ) {
-        nav.navigate(Register(firstName = firstName, lastName = lastName, isFromGoogleLogin))
+        nav.navigate(Register(firstName = firstName, lastName = lastName, isFromGoogleLogin)) {
+            popUpTo<Login> { inclusive = true }
+        }
     }
 
     fun navigateToLogin() {
-        nav.navigate(Login)
+        nav.navigate(Login) {
+            popUpTo<Register> { inclusive = true }
+        }
+    }
+
+    fun navigateToOnboarding() {
+        nav.navigate(Onboarding) {
+            popUpTo<AuthGraph> { inclusive = false }
+            launchSingleTop = true
+        }
     }
 }

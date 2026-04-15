@@ -42,7 +42,9 @@ import com.thinh.snaplet.ui.screens.login.components.LoginPasswordPage
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Login(
-    viewModel: LoginViewModel = hiltViewModel(), onRegisterClick: () -> Unit
+    onNavigateToOnboarding: () -> Unit,
+    onRegisterClick: () -> Unit,
+    viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
@@ -75,12 +77,14 @@ fun Login(
                 .height(80.dp)
         ) {
             IconButton(
-                onClick = viewModel::onBackToEmailStep,
+                onClick = {
+                    if (uiState.currentStep == LoginStep.EMAIL) onNavigateToOnboarding()
+                    else viewModel.onBackToEmailStep()
+                },
                 enabled = !uiState.isLoading,
                 modifier = Modifier
                     .padding(16.dp)
                     .size(48.dp)
-                    .animateVisibility(uiState.currentStep == LoginStep.PASSWORD)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
