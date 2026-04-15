@@ -472,7 +472,10 @@ private fun HomeScreen(
                             else -> {
                                 val post = uiState.posts.getOrNull(page - 1)
                                 if (post == null) {
-                                    EmptyMediaPage(onAddFriendClick = viewModel::showFriendSheet)
+                                    EmptyMediaPage(
+                                        onAddFriendClick = viewModel::showFriendSheet,
+                                        firstName = uiState.feedFilterFirstName,
+                                    )
                                 } else {
                                     MediaPage(
                                         post = post,

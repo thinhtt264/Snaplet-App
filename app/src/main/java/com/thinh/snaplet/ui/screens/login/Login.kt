@@ -24,9 +24,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -45,24 +42,19 @@ import com.thinh.snaplet.ui.screens.login.components.LoginPasswordPage
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Login(
-    viewModel: LoginViewModel = hiltViewModel(), onRegisterClick: () -> Unit
+    onNavigateToOnboarding: () -> Unit,
+    onRegisterClick: () -> Unit,
+    viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
-
-    var errorDialogMessage by rememberSaveable {
-        mutableStateOf<String?>(null)
-    }
 
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is LoginUIEvent.LoginSuccess -> {}
                 is LoginUIEvent.NavigateToRegister -> onRegisterClick()
-                is LoginUIEvent.ShowErrorPopup -> {
-                    errorDialogMessage = event.message.asString(context)
-                }
             }
         }
     }
@@ -85,12 +77,14 @@ fun Login(
                 .height(80.dp)
         ) {
             IconButton(
-                onClick = viewModel::onBackToEmailStep,
+                onClick = {
+                    if (uiState.currentStep == LoginStep.EMAIL) onNavigateToOnboarding()
+                    else viewModel.onBackToEmailStep()
+                },
                 enabled = !uiState.isLoading,
                 modifier = Modifier
                     .padding(16.dp)
                     .size(48.dp)
-                    .animateVisibility(uiState.currentStep == LoginStep.PASSWORD)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -138,9 +132,8 @@ fun Login(
         }
     }
 
-    // Error Alert Dialog
-    errorDialogMessage?.let { message ->
-        AlertDialog(onDismissRequest = { errorDialogMessage = null }, title = {
+    uiState.errorMessage?.asString(context)?.let { message ->
+        AlertDialog(onDismissRequest = viewModel::onErrorDismissed, title = {
             BaseText(
                 text = stringResource(R.string.error),
                 typography = typography.titleLarge,
@@ -153,7 +146,7 @@ fun Login(
                 color = colorScheme.onBackground
             )
         }, confirmButton = {
-            TextButton(onClick = { errorDialogMessage = null }) {
+            TextButton(onClick = viewModel::onErrorDismissed) {
                 BaseText(
                     text = stringResource(R.string.close),
                     typography = typography.labelLarge,

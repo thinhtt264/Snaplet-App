@@ -67,6 +67,12 @@ data class HomeUiState(
 ) {
     /** Returns true if more data can be loaded (nextCursor is not null and not currently loading) */
     val canLoadMore: Boolean get() = nextCursor != null && !isLoadingMore && !isLoadingPosts
+
+    /** First name of the currently filtered friend, null when no filter is active */
+    val feedFilterFirstName: String?
+        get() = feedUserIdFilter?.let { filterId ->
+            friendSheetState.friendList.find { it.userId == filterId }?.firstName
+        }
 }
 
 sealed class PostReactionsUiState {

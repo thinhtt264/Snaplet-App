@@ -39,12 +39,13 @@ class NotificationHelper @Inject constructor(
         actorAvatarUrl: String?,
     ) {
         val deepLinkUri = DeepLinkUtils.buildSpotlightDeepLink(postId)
-        val tapIntent = Intent(Intent.ACTION_VIEW, deepLinkUri, context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(EXTRA_POST_ID, postId)
-            putExtra(EXTRA_DEEP_LINK_URI, deepLinkUri.toString())
-            putExtra(EXTRA_NOTIFICATION_TYPE, TYPE_POST_REACTION)
-        }
+        val tapIntent =
+            Intent(Intent.ACTION_VIEW, deepLinkUri, context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra(EXTRA_POST_ID, postId)
+                putExtra(EXTRA_DEEP_LINK_URI, deepLinkUri.toString())
+                putExtra(EXTRA_NOTIFICATION_TYPE, TYPE_POST_REACTION)
+            }
 
         val pendingIntent = PendingIntent.getActivity(
             context,
@@ -132,6 +133,5 @@ class NotificationHelper @Inject constructor(
         const val EXTRA_DEEP_LINK_URI = "deepLinkUri"
         const val EXTRA_NOTIFICATION_TYPE = "notificationType"
         const val TYPE_POST_REACTION = "post_reaction"
-
     }
 }

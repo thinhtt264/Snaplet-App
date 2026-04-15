@@ -54,6 +54,8 @@
     <string name="username">Tên người dùng</string>
     <string name="already_have_account">Đã có tài khoản?</string>
     <string name="email_already_taken">Email này đã được sử dụng</string>
+    <string name="email_registered_with_google_title">Đăng nhập với Google?</string>
+    <string name="email_registered_with_google_message">Email này đã được đăng ký bằng Google. Bạn có muốn tiếp tục bằng Google không?</string>
     <string name="email_check_failed">Không thể kiểm tra email</string>
     <string name="username_already_taken">Tên người dùng này đã được sử dụng</string>
     <string name="username_check_failed">Không thể kiểm tra tên người dùng</string>
@@ -98,6 +100,8 @@
     <string name="empty_media_title">Gửi Snaplet đầu tiên của bạn</string>
     <string name="empty_media_subtitle">Ảnh của bạn sẽ xuất hiện trên màn hình chính của bạn bè</string>
     <string name="empty_media_add_friend">+ Thêm bạn mới</string>
+    <string name="empty_media_filter_title">Chưa có ảnh nào</string>
+    <string name="empty_media_filter_subtitle">%1$s chưa gửi ảnh nào.\nHãy gửi cho họ một Snaplet nhé!</string>
     <string name="no_pics_yet">Chưa có ảnh</string>
 
     <string name="post_deleted">Đã xóa bài viết</string>

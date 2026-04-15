@@ -86,10 +86,16 @@ fun NavGraphBuilder.authGraph(navController: NavHostController) {
             )
         }
         composable<Login> {
-            Login(onRegisterClick = actions::navigateToRegister)
+            Login(
+                onNavigateToOnboarding = actions::navigateToOnboarding,
+                onRegisterClick = actions::navigateToRegister
+            )
         }
-        composable<Register> { backStackEntry ->
-            Register(onLoginClick = actions::navigateToLogin)
+        composable<Register> {
+            Register(
+                onLoginClick = actions::navigateToLogin,
+                onNavigateToOnboarding = actions::navigateToOnboarding
+            )
         }
     }
 }

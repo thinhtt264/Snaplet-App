@@ -11,6 +11,7 @@ import com.thinh.snaplet.navigation.Register
 import com.thinh.snaplet.platform.notification.FcmTokenRegistrar
 import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.utils.ValidationConstants
+import com.thinh.snaplet.utils.network.ApiErrorCode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -35,13 +36,13 @@ class RegisterViewModel @Inject constructor(
 
     init {
         val registerRoute = savedStateHandle.toRoute<Register>()
-        val isGoogleLogin = registerRoute.firstName != null || registerRoute.lastName != null
+        val isFromGoogleLogin = registerRoute.isFromGoogleLogin
         _uiState.update {
             it.copy(
+                isFromGoogleLogin = isFromGoogleLogin,
                 firstName = registerRoute.firstName ?: "",
                 lastName = registerRoute.lastName ?: "",
-                isGoogleLogin = isGoogleLogin,
-                currentStep = if (isGoogleLogin) {
+                currentStep = if (isFromGoogleLogin) {
                     RegisterStep.USERNAME
                 } else {
                     RegisterStep.EMAIL
@@ -203,16 +204,26 @@ class RegisterViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            currentStep = RegisterStep.USERNAME
+                            currentStep = RegisterStep.USERNAME,
+                            isFromGoogleLogin = false
                         )
                     }
                 },
                 onFailure = { error ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            emailError = UiText.DynamicString(error.message)
-                        )
+                    if (error.errorCode == ApiErrorCode.EMAIL_REGISTERED_WITH_GOOGLE) {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                showGoogleRegisteredDialog = true
+                            )
+                        }
+                    } else {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                emailError = UiText.DynamicString(error.message)
+                            )
+                        }
                     }
                 }
             )
@@ -265,7 +276,7 @@ class RegisterViewModel @Inject constructor(
                         return@launch
                     }
 
-                    if (currentState.isGoogleLogin) {
+                    if (currentState.isFromGoogleLogin) {
                         onCompleteOnboarding()
                     } else {
                         _uiState.update {
@@ -309,8 +320,9 @@ class RegisterViewModel @Inject constructor(
                     }
                 },
                 onFailure = { error ->
-                    _uiState.update { it.copy(isLoading = false) }
-                    _uiEvent.emit(RegisterUIEvent.ShowErrorPopup(error.message))
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = UiText.DynamicString(error.message))
+                    }
                 }
             )
         }
@@ -341,10 +353,26 @@ class RegisterViewModel @Inject constructor(
                     }
                 },
                 onFailure = { error ->
-                    _uiState.update { it.copy(isLoading = false) }
-                    _uiEvent.emit(RegisterUIEvent.ShowErrorPopup(error.message))
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = UiText.DynamicString(error.message))
+                    }
                 }
             )
+        }
+    }
+
+    fun onErrorDismissed() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    fun onGoogleLoginDialogDismiss() {
+        _uiState.update { it.copy(showGoogleRegisteredDialog = false) }
+    }
+
+    fun onGoogleLoginDialogConfirm() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(showGoogleRegisteredDialog = false) }
+            _uiEvent.emit(RegisterUIEvent.NavigateToOnboarding)
         }
     }
 

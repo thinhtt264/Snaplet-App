@@ -25,8 +25,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -52,31 +50,29 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Register(
-    onLoginClick: () -> Unit, viewModel: RegisterViewModel = hiltViewModel()
+    onLoginClick: () -> Unit,
+    onNavigateToOnboarding: () -> Unit,
+    viewModel: RegisterViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var errorDialogMessage by remember { mutableStateOf<String?>(null) }
-
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is RegisterUIEvent.NavigateToLogin -> onLoginClick()
-                is RegisterUIEvent.ShowErrorPopup -> {
-                    errorDialogMessage = event.message
-                }
+                is RegisterUIEvent.NavigateToOnboarding -> onNavigateToOnboarding()
             }
         }
     }
 
     fun onGoBack() {
         when (uiState.currentStep) {
+            RegisterStep.EMAIL -> onNavigateToOnboarding()
             RegisterStep.USERNAME -> viewModel.onScrollToPage(RegisterStep.EMAIL)
             RegisterStep.PASSWORD -> viewModel.onScrollToPage(RegisterStep.USERNAME)
-            RegisterStep.EMAIL -> {}
         }
     }
 
@@ -119,7 +115,7 @@ fun Register(
                         modifier = Modifier
                             .padding(16.dp)
                             .size(48.dp)
-                            .animateVisibility(uiState.currentStep != RegisterStep.EMAIL)
+                            .animateVisibility(true)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -164,7 +160,7 @@ fun Register(
                             firstNameError = uiState.firstNameError?.asString(context),
                             lastNameError = uiState.lastNameError?.asString(context),
                             isLoading = uiState.isLoading,
-                            isGoogleLogin = uiState.isGoogleLogin,
+                            isGoogleLogin = uiState.isFromGoogleLogin,
                             onUsernameChange = viewModel::onUsernameChange,
                             onFirstNameChange = viewModel::onFirstNameChange,
                             onLastNameChange = viewModel::onLastNameChange,
@@ -187,8 +183,8 @@ fun Register(
         }
     }
 
-    errorDialogMessage?.let { message ->
-        AlertDialog(onDismissRequest = { errorDialogMessage = null }, title = {
+    uiState.errorMessage?.asString(context)?.let { message ->
+        AlertDialog(onDismissRequest = viewModel::onErrorDismissed, title = {
             BaseText(
                 text = stringResource(R.string.error),
                 typography = typography.titleLarge,
@@ -201,11 +197,43 @@ fun Register(
                 color = colorScheme.onBackground
             )
         }, confirmButton = {
-            TextButton(onClick = { errorDialogMessage = null }) {
+            TextButton(onClick = viewModel::onErrorDismissed) {
                 BaseText(
                     text = stringResource(R.string.close),
                     typography = typography.labelLarge,
                     color = colorScheme.primary
+                )
+            }
+        })
+    }
+
+    if (uiState.showGoogleRegisteredDialog) {
+        AlertDialog(onDismissRequest = viewModel::onGoogleLoginDialogDismiss, title = {
+            BaseText(
+                text = stringResource(R.string.email_registered_with_google_title),
+                typography = typography.titleLarge,
+                color = colorScheme.onBackground
+            )
+        }, text = {
+            BaseText(
+                text = stringResource(R.string.email_registered_with_google_message),
+                typography = typography.bodyMedium,
+                color = colorScheme.onBackground
+            )
+        }, confirmButton = {
+            TextButton(onClick = viewModel::onGoogleLoginDialogConfirm) {
+                BaseText(
+                    text = stringResource(R.string.ok),
+                    typography = typography.labelLarge,
+                    color = colorScheme.primary
+                )
+            }
+        }, dismissButton = {
+            TextButton(onClick = viewModel::onGoogleLoginDialogDismiss) {
+                BaseText(
+                    text = stringResource(R.string.cancel),
+                    typography = typography.labelLarge,
+                    color = colorScheme.onSurface
                 )
             }
         })

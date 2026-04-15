@@ -27,4 +27,8 @@ data class SpotlightPost(val postId: String)
 object Login
 
 @Serializable
-data class Register(val firstName: String? = null, val lastName: String? = null)
+data class Register(
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val isFromGoogleLogin: Boolean = false
+)

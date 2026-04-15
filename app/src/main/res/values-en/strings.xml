@@ -53,6 +53,8 @@
     <string name="username">Username</string>
     <string name="already_have_account">Already have an account?</string>
     <string name="email_already_taken">This email is already in use</string>
+    <string name="email_registered_with_google_title">Login in with Google?</string>
+    <string name="email_registered_with_google_message">This email address has already been registered with Google. Do you want to continue using Google??</string>
     <string name="email_check_failed">Unable to check email</string>
     <string name="username_already_taken">This username is already taken</string>
     <string name="username_check_failed">Unable to check username</string>
@@ -93,6 +95,8 @@
     <string name="empty_media_title">Send your first Snaplet</string>
     <string name="empty_media_subtitle">Your photos will appear on your friends\' home screens</string>
     <string name="empty_media_add_friend">+ Add new friend</string>
+    <string name="empty_media_filter_title">No photos sent yet</string>
+    <string name="empty_media_filter_subtitle">%1$s hasn\'t sent any photos yet.\nTry sending them a Snaplet.</string>
 
     <string name="no_pics_yet">No pics yet</string>
 
