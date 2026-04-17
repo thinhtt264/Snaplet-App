@@ -52,8 +52,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideGson(): Gson {
-        return GsonBuilder().serializeNulls() // Include null fields in JSON
-            .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX") // ISO 8601 with timezone offset/Z
+        return GsonBuilder()
+            .serializeNulls()
             .registerTypeAdapter(Date::class.java, UtcDateDeserializer())
             .create()
     }

@@ -181,4 +181,13 @@
     <string name="force_logout_title">Your login session has expired</string>
     <string name="force_logout_message">Your account was just signed in on another device. This session has ended.</string>
     <string name="force_logout_button">Log out</string>
+
+    <!-- Conversation list -->
+    <string name="conversation_list_title">Messages</string>
+    <string name="conversation_list_empty">No conversations yet</string>
+    <string name="conversation_list_load_failed">Failed to load conversations</string>
+    <string name="conversation_deleted_message">Message deleted</string>
+    <string name="conversation_message_photo">Photo</string>
+    <string name="conversation_search_hint">Search…</string>
+    <string name="chat_input_placeholder">Message…</string>
 </resources>

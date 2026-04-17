@@ -24,6 +24,16 @@ data class ImageCrop(val sourceUri: String)
 data class SpotlightPost(val postId: String)
 
 @Serializable
+object ConversationList
+
+@Serializable
+data class ChatConversation(
+    val conversationId: String,
+    val partnerName: String,
+    val partnerAvatarUrl: String? = null,
+)
+
+@Serializable
 object Login
 
 @Serializable

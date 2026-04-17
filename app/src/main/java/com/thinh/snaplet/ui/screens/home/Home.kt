@@ -86,7 +86,9 @@ data class CameraActions(
 
 @Composable
 fun Home(
-    onProfileClick: () -> Unit = {}, viewModel: HomeViewModel = hiltViewModel()
+    onProfileClick: () -> Unit = {},
+    onChatClick: () -> Unit = {},
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -203,6 +205,7 @@ fun Home(
             onItemVisible = viewModel::onItemVisible,
             onMoreClick = viewModel::onShowMoreOptions,
             onProfileClick = onProfileClick,
+            onChatClick = onChatClick,
             onEmojiReaction = viewModel::onEmojiReaction,
         )
 
@@ -319,6 +322,7 @@ private fun HomeScreen(
     onItemVisible: (currentIndex: Int) -> Unit,
     onMoreClick: () -> Unit,
     onProfileClick: () -> Unit = {},
+    onChatClick: () -> Unit = {},
     onEmojiReaction: (String) -> Unit = {},
 ) {
     var friendSearchQuery by remember { mutableStateOf("") }
@@ -526,7 +530,7 @@ private fun HomeScreen(
             hasCaptureImage = uiState.cameraState.capturedImagePath != null,
             onProfileClick = onProfileClick,
             onFriendsClick = viewModel::showFriendSheet,
-            onChatClick = { /* TODO */ },
+            onChatClick = onChatClick,
             relationshipCounts = uiState.friendSheetState.relationshipCounts,
             avatarUrl = uiState.userProfile?.avatarUrls?.forThumbnail().orEmpty(),
             isCameraPage = isCameraPage,

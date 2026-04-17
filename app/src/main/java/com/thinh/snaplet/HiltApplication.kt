@@ -20,7 +20,7 @@ class HiltApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
+        FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = !BuildConfig.DEBUG
         FirebaseCrashlytics.getInstance().setCustomKey("is_development", BuildConfig.IS_DEVELOPMENT)
         WorkManager.initialize(this, workManagerConfiguration)
         initializeTimber()

@@ -14,6 +14,24 @@ class NavActions(
         nav.navigate(MyProfile)
     }
 
+    fun navigateToConversationList() {
+        nav.navigate(ConversationList)
+    }
+
+    fun navigateToChatConversation(
+        conversationId: String,
+        partnerName: String,
+        partnerAvatarUrl: String?,
+    ) {
+        nav.navigate(
+            ChatConversation(
+                conversationId = conversationId,
+                partnerName = partnerName,
+                partnerAvatarUrl = partnerAvatarUrl,
+            )
+        )
+    }
+
     fun navigateToHome() {
         nav.navigate(Home) {
             popUpTo<HomeGraph> { inclusive = false }

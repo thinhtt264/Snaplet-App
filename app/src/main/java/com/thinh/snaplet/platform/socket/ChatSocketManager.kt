@@ -17,35 +17,35 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val LOG_TAG = "SocketManager"
-private val NO_RETRY_DISCONNECT_REASONS = setOf(
-    "io client disconnect"
+private const val LOG_TAG = "ChatSocketManager"
+private val NO_RETRY_DISCONNECT_REASONS = setOf("io client disconnect")
+
+private val CHAT_SOCKET_EVENTS = listOf(
+    SocketEvent.CHAT_MESSAGE_NEW,
+    SocketEvent.CHAT_MESSAGE_DELETED,
+    SocketEvent.CHAT_TYPING_START,
+    SocketEvent.CHAT_TYPING_STOP,
+    SocketEvent.CHAT_MESSAGE_READ,
 )
 
-interface SocketConnector {
-    suspend fun connect()
-}
-
 @Singleton
-class SocketManager @Inject constructor(
+class ChatSocketManager @Inject constructor(
     private val tokenRefreshCoordinator: TokenRefreshCoordinator,
     private val authRepository: Lazy<AuthRepository>,
-    private val socketConfig: SocketConfig
+    private val socketConfig: SocketConfig,
 ) : SocketConnector {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private val sessionId: String = generateSessionId()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val _connectionState = MutableStateFlow(SocketConnectionState.DISCONNECTED)
     val connectionState: StateFlow<SocketConnectionState> = _connectionState.asStateFlow()
 
     private val _messages = MutableSharedFlow<SocketMessage>(
         replay = 0,
-        extraBufferCapacity = 64
+        extraBufferCapacity = 64,
     )
     val messages: SharedFlow<SocketMessage> = _messages.asSharedFlow()
 
@@ -56,21 +56,29 @@ class SocketManager @Inject constructor(
         scope = scope,
     )
 
-    override suspend fun connect() {
+    private var pendingConversationId: String? = null
+
+    suspend fun connect(conversationId: String) {
+        pendingConversationId = conversationId
         if (socket?.connected() == true) return
         val token = authRepository.get().getAccessToken() ?: return
-        connectWithToken(token)
+        connectWithToken(token, conversationId)
+    }
+
+    override suspend fun connect() {
+        connect(pendingConversationId ?: return)
     }
 
     fun disconnect() {
         if (_connectionState.value == SocketConnectionState.DISCONNECTED) return
+        pendingConversationId = null
+        reconnectController.cancel()
         socket?.disconnect()
-//        socket?.off()
         socket = null
         _connectionState.value = SocketConnectionState.DISCONNECTED
     }
 
-    private fun connectWithToken(token: String) {
+    private fun connectWithToken(token: String, conversationId: String) {
         socket?.off()
         socket?.disconnect()
         socket = null
@@ -80,14 +88,14 @@ class SocketManager @Inject constructor(
         val options = IO.Options().apply {
             auth = mutableMapOf(
                 "token" to token,
-                "sessionId" to sessionId
+                "conversationId" to conversationId,
             )
             forceNew = true
             reconnection = false
         }
 
         try {
-            val s = IO.socket(socketConfig.baseUrl, options)
+            val s = IO.socket("${socketConfig.baseUrl}/chat", options)
             socket = s
             attachListeners(s)
             s.connect()
@@ -110,9 +118,10 @@ class SocketManager @Inject constructor(
 
             if (message.contains("Unauthorized", ignoreCase = true)) {
                 scope.launch {
+                    val convId = pendingConversationId ?: return@launch
                     val newToken = tokenRefreshCoordinator.getNewAccessToken()
                     if (newToken != null) {
-                        connectWithToken(newToken)
+                        connectWithToken(newToken, convId)
                     } else {
                         reconnectController.onConnectError(errorKey = "Unauthorized")
                         _connectionState.value = SocketConnectionState.ERROR
@@ -145,44 +154,30 @@ class SocketManager @Inject constructor(
             }
         }
 
-        SocketEvent.entries
-            .forEach { event ->
-                s.on(event.eventName) { args ->
-                    val raw = args.getOrNull(0)
-                    val payload = when (raw) {
-                        null -> null // some events are signal-only (no payload)
-                        is String -> raw
-                        is JSONObject -> raw.toString()
-                        else -> raw.toString()
-                    }
-
-                    Logger.d("$LOG_TAG: event=${event.eventName} payload=$payload")
-                    scope.launch {
-                        _messages.emit(
-                            SocketMessage(
-                                event = event,
-                                args = payload
-                            )
-                        )
-                    }
+        CHAT_SOCKET_EVENTS.forEach { event ->
+            s.on(event.eventName) { args ->
+                val raw = args.getOrNull(0)
+                val payload = when (raw) {
+                    null -> null
+                    is String -> raw
+                    is JSONObject -> raw.toString()
+                    else -> raw.toString()
+                }
+                Logger.d("$LOG_TAG: event=${event.eventName} payload=$payload")
+                scope.launch {
+                    _messages.emit(SocketMessage(event = event, args = payload))
                 }
             }
+        }
     }
 
-    fun emit(eventName: String, data: org.json.JSONObject? = null) {
+    fun emit(eventName: String, data: JSONObject? = null) {
         val s = socket
         if (s == null || !s.connected()) {
             Logger.w("$LOG_TAG: emit skipped (not connected) event=$eventName")
             return
         }
-        if (data != null) {
-            s.emit(eventName, data)
-        } else {
-            s.emit(eventName)
-        }
+        if (data != null) s.emit(eventName, data) else s.emit(eventName)
         Logger.d("$LOG_TAG: emit event=$eventName data=$data")
     }
-
-    private fun generateSessionId(): String = UUID.randomUUID().toString()
-
 }

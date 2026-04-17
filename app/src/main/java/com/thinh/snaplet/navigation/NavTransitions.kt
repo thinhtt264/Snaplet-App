@@ -15,8 +15,7 @@ import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import com.thinh.snaplet.ui.theme.MotionTokens
 
-private const val FADE_DURATION_DIVISOR = 1
-private const val ENTER_OFFSET_PERCENT = 0.3f
+private const val ENTER_OFFSET_PERCENT = 0.1f
 private const val EXIT_OFFSET_PERCENT = 0.15f
 
 @SuppressLint("RestrictedApi")
@@ -71,7 +70,7 @@ object NavTransitions {
                 )
             ) + fadeIn(
                 animationSpec = tween(
-                    durationMillis = MotionTokens.Emphasized / FADE_DURATION_DIVISOR,
+                    durationMillis = MotionTokens.Normal,
                     easing = FastOutSlowInEasing
                 )
             )
@@ -85,7 +84,7 @@ object NavTransitions {
                 )
             ) + fadeOut(
                 animationSpec = tween(
-                    durationMillis = MotionTokens.Emphasized / FADE_DURATION_DIVISOR,
+                    durationMillis = MotionTokens.Normal,
                     easing = FastOutSlowInEasing
                 )
             )
@@ -103,7 +102,7 @@ object NavTransitions {
                 )
             ) + fadeIn(
                 animationSpec = tween(
-                    durationMillis = MotionTokens.Emphasized / FADE_DURATION_DIVISOR,
+                    durationMillis = MotionTokens.Normal,
                     easing = FastOutSlowInEasing
                 )
             )
@@ -117,7 +116,7 @@ object NavTransitions {
                 )
             ) + fadeOut(
                 animationSpec = tween(
-                    durationMillis = MotionTokens.Emphasized / FADE_DURATION_DIVISOR,
+                    durationMillis = MotionTokens.Normal,
                     easing = FastOutSlowInEasing
                 )
             )
