@@ -1,8 +1,9 @@
 package com.thinh.snaplet.ui.screens.chat
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -15,10 +16,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,8 +41,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +73,7 @@ import com.thinh.snaplet.ui.components.IconDecoration
 import com.thinh.snaplet.ui.components.IconSpec
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.to24HourTime
+import kotlinx.coroutines.launch
 import pressScaleClickable
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -95,13 +99,47 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
 
+    val coroutineScope = rememberCoroutineScope()
+
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val totalItems = listState.layoutInfo.totalItemsCount
+            val lastVisibleItemIndex =
+                listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            totalItems > 0 && lastVisibleItemIndex >= (totalItems * 0.8f).toInt()
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore) {
+            viewModel.loadMore()
+        }
+    }
+
+    // derivedStateOf makes messageCount a Compose State so snapshotFlow can track it.
+    // This is key: snapshotFlow reads count + scroll position in the same snapshot frame,
+    val messageCountState = remember { derivedStateOf { uiState.messages.size } }
+    LaunchedEffect(listState) {
+        var prevMessageCount = 0
+        snapshotFlow {
+            val count = messageCountState.value
+            val idx = listState.firstVisibleItemIndex
+            val offset = listState.firstVisibleItemScrollOffset
+            val viewport =
+                listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
+            count to (idx == 0 && (viewport == 0 || offset <= viewport * 0.25f))
+        }.collect { (count, nearBottom) ->
+            if (count > prevMessageCount && nearBottom) {
+                listState.scrollToItem(0)
+            }
+            prevMessageCount = count
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(ChatBg)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .imePadding()
             .pointerInput(Unit) { detectTapGestures(onTap = { focusManager.clearFocus() }) },
     ) {
         ChatHeader(
@@ -156,7 +194,9 @@ fun ChatScreen(
                     LazyColumn(
                         state = listState,
                         reverseLayout = true,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .animateContentSize(),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
@@ -221,7 +261,7 @@ fun ChatScreen(
         AnimatedVisibility(
             visible = uiState.isPartnerTyping,
             enter = fadeIn(),
-            exit = fadeOut(),
+            exit = ExitTransition.None,
         ) {
             Row(
                 modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 4.dp),
@@ -233,7 +273,10 @@ fun ChatScreen(
         ChatInputBar(
             value = uiState.draftMessage.orEmpty(),
             onValueChange = viewModel::onChangeDraftMessage,
-            onSendMessage = viewModel::onSendMessage,
+            onSendMessage = { text ->
+                viewModel.onSendMessage(text)
+                coroutineScope.launch { listState.scrollToItem(0) }
+            },
             onAttach = { /* TODO */ },
         )
     }
@@ -365,9 +408,8 @@ private fun MessageBubble(
 
     val bubbleColor = if (isMine) cs.onBackground else BubbleTheirs
     val textColor = if (isMine) Color(0xFF0D0D0D) else Color.White
-    val metaColor =
-        if (isMine) cs.background.copy(alpha = 0.6f)
-        else cs.onBackground.copy(alpha = 0.6f)
+    val metaColor = if (isMine) cs.background.copy(alpha = 0.6f)
+    else cs.onBackground.copy(alpha = 0.6f)
 
     val shape = if (isMine) mineShape(position) else theirShape(position)
 
@@ -500,7 +542,8 @@ private fun ChatInputBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(ChatBg)
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .padding(all = 8.dp)
+            .imePadding(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
