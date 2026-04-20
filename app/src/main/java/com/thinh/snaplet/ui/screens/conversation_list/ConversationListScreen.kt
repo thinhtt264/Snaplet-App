@@ -25,6 +25,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.PersonSearch
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -494,25 +496,55 @@ private fun NewMessageBottomSheet(
                         modifier = Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(
-                            16.dp,
+                            12.dp,
                             Alignment.CenterVertically
                         ),
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.PersonAdd,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.size(36.dp),
+                            )
+                        }
+                        Spacer(modifier = Modifier.size(4.dp))
                         BaseText(
                             text = stringResource(R.string.new_message_friends_empty),
-                            color = MaterialTheme.colorScheme.outline,
-                            typography = Typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            typography = Typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
                         )
+                        BaseText(
+                            text = stringResource(R.string.new_message_friends_empty_subtitle),
+                            color = MaterialTheme.colorScheme.outline,
+                            typography = Typography.bodySmall,
+                        )
+                        Spacer(modifier = Modifier.size(4.dp))
                         PrimaryButton(
                             onClick = onAddFriendClick,
-                            title = stringResource(R.string.spotlight_send_friend_request),
+                            title = stringResource(R.string.new_message_find_friends),
                             titleColor = Color.Black,
                             typography = Typography.titleSmall,
-                            contentPadding = PaddingValues(vertical = 12.dp, horizontal = 16.dp),
+                            contentPadding = PaddingValues(vertical = 12.dp, horizontal = 20.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 disabledContainerColor = MaterialTheme.colorScheme.primary.copy(0.6f)
                             ),
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.PersonSearch,
+                                    contentDescription = null,
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            },
                         )
                     }
                 }
