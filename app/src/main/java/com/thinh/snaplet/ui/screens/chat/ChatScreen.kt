@@ -202,7 +202,7 @@ fun ChatScreen(
                     ) {
                         itemsIndexed(
                             items = uiState.messages,
-                            key = { _, item -> item.id },
+                            key = { _, item -> item.clientUuid },
                         ) { index, message ->
                             val isMine = message.senderId == uiState.currentUserId
                             val isPending = message.clientUuid in uiState.pendingClientUuids
