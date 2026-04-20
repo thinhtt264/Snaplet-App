@@ -18,18 +18,8 @@ class NavActions(
         nav.navigate(ConversationList)
     }
 
-    fun navigateToChatConversation(
-        conversationId: String,
-        partnerName: String,
-        partnerAvatarUrl: String?,
-    ) {
-        nav.navigate(
-            ChatConversation(
-                conversationId = conversationId,
-                partnerName = partnerName,
-                partnerAvatarUrl = partnerAvatarUrl,
-            )
-        )
+    fun navigateToChatConversation(dest: ChatConversation) {
+        nav.navigate(dest)
     }
 
     fun navigateToHome() {

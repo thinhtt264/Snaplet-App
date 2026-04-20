@@ -28,7 +28,8 @@ object ConversationList
 
 @Serializable
 data class ChatConversation(
-    val conversationId: String,
+    val conversationId: String? = null,
+    val recipientId: String? = null,
     val partnerName: String,
     val partnerAvatarUrl: String? = null,
 )

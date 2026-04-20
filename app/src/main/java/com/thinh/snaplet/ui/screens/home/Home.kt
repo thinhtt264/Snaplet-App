@@ -55,6 +55,8 @@ import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.components.MultiplePermissionsHandler
 import com.thinh.snaplet.ui.screens.home.components.BottomActionModel
 import com.thinh.snaplet.ui.screens.home.components.CameraPage
+import com.thinh.snaplet.navigation.CollectNavResult
+import com.thinh.snaplet.navigation.NavResultKeys
 import com.thinh.snaplet.ui.screens.home.components.EmptyMediaPage
 import com.thinh.snaplet.ui.screens.home.components.FriendBottomSheet
 import com.thinh.snaplet.ui.screens.home.components.HomeBottomContent
@@ -93,6 +95,8 @@ fun Home(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    CollectNavResult(NavResultKeys.OpenFriendSheet) { viewModel.showFriendSheet() }
 
     val pickMediaLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()

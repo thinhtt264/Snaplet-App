@@ -83,10 +83,17 @@ fun NavGraphBuilder.homeGraph(navController: NavHostController) {
                 onNavigateBack = actions::popBackStack,
                 onConversationClick = { conversation ->
                     actions.navigateToChatConversation(
-                        conversationId = conversation.id,
-                        partnerName = conversation.partner.displayName,
-                        partnerAvatarUrl = conversation.partner.avatarUrl,
+                        ChatConversation(
+                            conversationId = conversation.id,
+                            partnerName = conversation.partner.displayName,
+                            partnerAvatarUrl = conversation.partner.avatarUrl,
+                        )
                     )
+                },
+                onNavigateToNewChat = actions::navigateToChatConversation,
+                onAddFriendClick = {
+                    actions.sendResultToPreviousScreen(NavResultKeys.OpenFriendSheet, true)
+                    actions.popBackStack()
                 },
             )
         }

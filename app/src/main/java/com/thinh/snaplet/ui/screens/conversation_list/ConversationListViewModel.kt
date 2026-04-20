@@ -77,6 +77,21 @@ class ConversationListViewModel @Inject constructor(
         }
     }
 
+    fun loadFriendList() {
+        if (_uiState.value.isFriendListLoading) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isFriendListLoading = true, friendListError = null) }
+            userRepository.getMyFriendList()
+                .onSuccess { friends ->
+                    _uiState.update { it.copy(isFriendListLoading = false, friendList = friends) }
+                }
+                .onFailure { error ->
+                    Logger.e("$LOG_TAG: loadFriendList failed: ${error.message}")
+                    _uiState.update { it.copy(isFriendListLoading = false, friendListError = error.message) }
+                }
+        }
+    }
+
     // ── Private ───────────────────────────────────────────────────────────
 
     private fun observeConversationUpdates() {

@@ -38,9 +38,11 @@ class ChatViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ChatConversation>()
-    val conversationId: String = route.conversationId
     val partnerName: String = route.partnerName
     val partnerAvatarUrl: String? = route.partnerAvatarUrl
+
+    // Set immediately for an existing conversation, deferred for a new chat (recipientId flow)
+    private var conversationId: String = route.conversationId ?: ""
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
@@ -49,12 +51,18 @@ class ChatViewModel @Inject constructor(
     private val typingThrottler = Throttler(OUT_GOING_TYPING_TIMEOUT_MS)
 
     init {
-        connectSocket()
         loadCurrentUser()
-        loadMessages()
         observeIncomingMessages()
         observeIncomingTypingEvents()
         observeReadReceipts()
+
+        val recipientId = route.recipientId
+        if (recipientId != null) {
+            createOrFindConversationAndInit(recipientId)
+        } else {
+            connectSocket()
+            loadMessages()
+        }
     }
 
     override fun onCleared() {
@@ -166,6 +174,26 @@ class ChatViewModel @Inject constructor(
                 .onFailure { error ->
                     Logger.e("loadMore failed: ${error.message}")
                     _uiState.update { it.copy(isLoadingMore = false) }
+                }
+        }
+    }
+
+    private fun createOrFindConversationAndInit(recipientId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            chatRepository.createOrFindConversation(recipientId)
+                .onSuccess { data ->
+                    conversationId = data.id
+                    connectSocket()
+                    if (data.isNew) {
+                        _uiState.update { it.copy(isLoading = false) }
+                    } else {
+                        loadMessages()
+                    }
+                }
+                .onFailure { error ->
+                    Logger.e("createOrFindConversation failed: ${error.message}")
+                    _uiState.update { it.copy(isLoading = false, error = error.message) }
                 }
         }
     }

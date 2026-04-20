@@ -9,24 +9,32 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.Create
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,13 +54,16 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thinh.snaplet.R
+import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.chat.Conversation
 import com.thinh.snaplet.data.model.chat.LastMessage
+import com.thinh.snaplet.navigation.ChatConversation
 import com.thinh.snaplet.ui.components.AppIconButton
 import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.components.IconDecoration
 import com.thinh.snaplet.ui.components.IconSpec
+import com.thinh.snaplet.ui.components.PrimaryButton
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.toLocalTimeAgo
 import pressScaleClickable
@@ -61,10 +72,13 @@ import pressScaleClickable
 fun ConversationListScreen(
     onNavigateBack: () -> Unit,
     onConversationClick: (Conversation) -> Unit = {},
+    onNavigateToNewChat: (ChatConversation) -> Unit = {},
+    onAddFriendClick: () -> Unit = {},
     viewModel: ConversationListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
+    var showNewMessageSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -72,7 +86,13 @@ fun ConversationListScreen(
             .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 16.dp),
     ) {
-        ConversationHeader(onNavigateBack = onNavigateBack)
+        ConversationHeader(
+            onNavigateBack = onNavigateBack,
+            onOpenNewMessage = {
+                showNewMessageSheet = true
+                viewModel.loadFriendList()
+            },
+        )
         ConversationSearchBar(
             query = searchQuery,
             onQueryChange = { searchQuery = it },
@@ -88,6 +108,27 @@ fun ConversationListScreen(
             onLoadMore = viewModel::loadMore,
         )
     }
+
+    if (showNewMessageSheet) {
+        NewMessageBottomSheet(
+            uiState = uiState,
+            onDismiss = { showNewMessageSheet = false },
+            onFriendClick = { friend ->
+                showNewMessageSheet = false
+                onNavigateToNewChat(
+                    ChatConversation(
+                        recipientId = friend.userId,
+                        partnerName = friend.displayName,
+                        partnerAvatarUrl = friend.avatarUrls.forThumbnail(),
+                    )
+                )
+            },
+            onAddFriendClick = {
+                showNewMessageSheet = false
+                onAddFriendClick()
+            },
+        )
+    }
 }
 
 // ─── Header ──────────────────────────────────────────────────────────────────
@@ -95,6 +136,7 @@ fun ConversationListScreen(
 @Composable
 private fun ConversationHeader(
     onNavigateBack: () -> Unit,
+    onOpenNewMessage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -131,11 +173,11 @@ private fun ConversationHeader(
         Spacer(Modifier.width(8.dp))
         AppIconButton(
             icon = IconSpec.Vector(
-                imageVector = Icons.Outlined.Create,
+                imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
                 tint = Color.White,
             ),
             iconSize = 28.dp,
-            onClick = {},
+            onClick = onOpenNewMessage,
             iconDecoration = IconDecoration(padding = 8.dp),
         )
         Spacer(Modifier.width(8.dp))
@@ -367,5 +409,224 @@ private fun lastMessagePreview(msg: LastMessage): String {
         msg.isDeleted -> stringResource(R.string.conversation_deleted_message)
         msg.type == "image" -> stringResource(R.string.conversation_message_photo)
         else -> msg.content.orEmpty()
+    }
+}
+
+// ─── New message bottom sheet ─────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NewMessageBottomSheet(
+    uiState: ConversationListUiState,
+    onDismiss: () -> Unit,
+    onFriendClick: (RelationshipWithUser) -> Unit,
+    onAddFriendClick: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredFriends = remember(uiState.friendList, searchQuery) {
+        if (searchQuery.isBlank()) {
+            uiState.friendList
+        } else {
+            val query = searchQuery.trim().lowercase()
+            uiState.friendList.filter {
+                it.displayName.lowercase().contains(query) || it.username.lowercase()
+                    .contains(query)
+            }
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+        modifier = Modifier.statusBarsPadding(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 620.dp)
+                .padding(horizontal = 16.dp),
+        ) {
+            BaseText(
+                text = stringResource(R.string.new_message_title),
+                typography = Typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp),
+            )
+
+            NewMessageSearchBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+            )
+
+            when {
+                uiState.isFriendListLoading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
+                uiState.friendListError != null -> {
+                    BaseText(
+                        text = stringResource(R.string.new_message_friends_load_failed),
+                        color = MaterialTheme.colorScheme.outline,
+                        typography = Typography.bodyMedium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                    )
+                }
+
+                filteredFriends.isEmpty() -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(
+                            16.dp,
+                            Alignment.CenterVertically
+                        ),
+                    ) {
+                        BaseText(
+                            text = stringResource(R.string.new_message_friends_empty),
+                            color = MaterialTheme.colorScheme.outline,
+                            typography = Typography.bodyMedium,
+                        )
+                        PrimaryButton(
+                            onClick = onAddFriendClick,
+                            title = stringResource(R.string.spotlight_send_friend_request),
+                            titleColor = Color.Black,
+                            typography = Typography.titleSmall,
+                            contentPadding = PaddingValues(vertical = 12.dp, horizontal = 16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(0.6f)
+                            ),
+                        )
+                    }
+                }
+
+                else -> {
+                    BaseText(
+                        text = stringResource(R.string.friends),
+                        typography = Typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(bottom = 8.dp),
+                    ) {
+                        items(filteredFriends, key = { it.userId }) { friend ->
+                            FriendRow(
+                                friend = friend,
+                                onClick = { onFriendClick(friend) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NewMessageSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val cs = MaterialTheme.colorScheme
+    BasicTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        singleLine = true,
+        cursorBrush = SolidColor(cs.primary),
+        textStyle = Typography.bodyMedium.copy(cs.onBackground),
+        modifier = modifier,
+        decorationBox = { innerTextField ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(CircleShape)
+                    .background(cs.surfaceContainer)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = null,
+                    tint = cs.onSurface,
+                    modifier = Modifier.size(20.dp),
+                )
+                Box(modifier = Modifier.weight(1f)) {
+                    if (query.isEmpty()) {
+                        BaseText(
+                            text = stringResource(R.string.new_message_search_hint),
+                            typography = Typography.bodyMedium,
+                            color = cs.onSurface,
+                        )
+                    }
+                    innerTextField()
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun FriendRow(
+    friend: RelationshipWithUser,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pressScaleClickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Avatar(
+            avatarUrl = friend.avatarUrls.forThumbnail(),
+            firstName = friend.firstName.ifBlank { friend.username },
+            size = 48.dp,
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            BaseText(
+                text = friend.displayName,
+                color = MaterialTheme.colorScheme.onBackground,
+                typography = Typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            BaseText(
+                text = "@${friend.username}",
+                color = MaterialTheme.colorScheme.onSurface,
+                typography = Typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Icon(
+            imageVector = Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(20.dp),
+        )
     }
 }

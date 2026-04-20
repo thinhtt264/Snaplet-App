@@ -14,6 +14,10 @@ object NavResultKeys {
     object CroppedUri : NavResultKey<String> {
         override val key = "cropped_uri"
     }
+
+    object OpenFriendSheet : NavResultKey<Boolean> {
+        override val key = "open_friend_sheet"
+    }
 }
 
 @Composable
