@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
@@ -32,7 +33,7 @@ import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.to24HourTime
 
 private val BubbleTheirs = Color(0xFF1E2020)
-private const val BUBBLE_MAX_WIDTH_FRACTION = 0.72f
+private const val BUBBLE_MAX_WIDTH_FRACTION = 0.75f
 private val BUBBLE_CORNER = 16.dp
 private val BUBBLE_CORNER_SMALL = 4.dp
 
@@ -49,8 +50,13 @@ fun MessageBubble(
     partnerName: String,
     position: BubblePosition,
 ) {
-    val screenWidthDp = LocalWindowInfo.current.containerSize.width.dp
     val cs = MaterialTheme.colorScheme
+    val windowSize = LocalWindowInfo.current.containerSize
+    val density = LocalDensity.current
+
+    val screenWidthDp = with(density) {
+        windowSize.width.toDp()
+    }
 
     val bubbleColor = if (isMine) cs.onBackground else BubbleTheirs
     val textColor = if (isMine) Color(0xFF0D0D0D) else Color.White
@@ -65,7 +71,7 @@ fun MessageBubble(
     ) {
         Column(
             modifier = Modifier
-                .widthIn(max = (screenWidthDp * BUBBLE_MAX_WIDTH_FRACTION))
+                .widthIn(max = screenWidthDp * BUBBLE_MAX_WIDTH_FRACTION)
                 .clip(shape)
                 .background(bubbleColor)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
