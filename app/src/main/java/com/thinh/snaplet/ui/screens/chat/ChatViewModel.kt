@@ -9,6 +9,7 @@ import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.domain.chat.LoadInitialMessagesUseCase
 import com.thinh.snaplet.domain.chat.SendMessageUseCase
 import com.thinh.snaplet.navigation.ChatConversation
+import com.thinh.snaplet.platform.network.ConnectivityObserver
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.Throttler
 import com.thinh.snaplet.utils.network.onFailure
@@ -19,7 +20,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -34,6 +37,7 @@ class ChatViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val loadInitialMessagesUseCase: LoadInitialMessagesUseCase,
     private val sendMessageUseCase: SendMessageUseCase,
+    private val connectivityObserver: ConnectivityObserver,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -50,11 +54,16 @@ class ChatViewModel @Inject constructor(
     private var typingTimeoutJob: Job? = null
     private val typingThrottler = Throttler(OUT_GOING_TYPING_TIMEOUT_MS)
 
+    // Tracks whether the screen is currently in the foreground.
+    // Used to gate reconnection attempts from the connectivity observer.
+    private var isInForeground = false
+
     init {
         loadCurrentUser()
         observeIncomingMessages()
         observeIncomingTypingEvents()
         observeReadReceipts()
+        observeConnectivity()
 
         val recipientId = route.recipientId
         if (recipientId != null) {
@@ -67,6 +76,20 @@ class ChatViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        chatRepository.disconnectChatSocket()
+    }
+
+    fun onResume() {
+        isInForeground = true
+        if (conversationId.isNotEmpty() && connectivityObserver.isInternetAvailable.value) {
+            connectSocket()
+        }
+    }
+
+    fun onPause() {
+        isInForeground = false
+        typingThrottler.reset()
+        viewModelScope.launch { chatRepository.sendTypingStop(conversationId) }
         chatRepository.disconnectChatSocket()
     }
 
@@ -201,6 +224,18 @@ class ChatViewModel @Inject constructor(
     private fun connectSocket() {
         viewModelScope.launch {
             chatRepository.connectChatSocket(conversationId)
+        }
+    }
+
+    private fun observeConnectivity() {
+        viewModelScope.launch {
+            connectivityObserver.isInternetAvailable
+                .onEach { isAvailable ->
+                    if (isAvailable && isInForeground && conversationId.isNotEmpty()) {
+                        connectSocket()
+                    }
+                }
+                .collect()
         }
     }
 
