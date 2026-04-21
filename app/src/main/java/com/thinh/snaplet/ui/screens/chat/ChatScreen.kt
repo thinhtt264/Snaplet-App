@@ -3,6 +3,12 @@ package com.thinh.snaplet.ui.screens.chat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -52,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -75,6 +82,7 @@ import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.to24HourTime
 import kotlinx.coroutines.launch
 import pressScaleClickable
+import kotlin.math.sin
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -364,6 +372,18 @@ private fun ChatHeader(
 
 @Composable
 private fun TypingIndicator(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "typing")
+
+    val progress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "wave",
+    )
+
     Row(
         modifier = modifier
             .clip(
@@ -376,15 +396,28 @@ private fun TypingIndicator(modifier: Modifier = Modifier) {
             )
             .background(BubbleTheirs)
             .padding(horizontal = 14.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        repeat(3) {
+        val bounceHeight = 4f
+        val phaseOffset = 1f / 3f
+
+        repeat(3) { index ->
+            // Continuous sine wave — dot i samples the wave at its own phase offset
+            val phase = (progress - index * phaseOffset) * 2f * Math.PI.toFloat()
+            val sineValue = -sin(phase)            // negative so positive = up
+            val offsetY = sineValue * bounceHeight
+
             Box(
                 modifier = Modifier
                     .size(6.dp)
+                    .graphicsLayer {
+                        translationY = offsetY
+                        scaleX = 1f + if (sineValue > 0f) sineValue * 0.08f else 0f
+                        scaleY = scaleX
+                    }
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.35f))
+                    .background(Color.White.copy(alpha = 0.5f))
             )
         }
     }

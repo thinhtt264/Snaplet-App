@@ -26,7 +26,7 @@ import javax.inject.Inject
 
 private const val PAGE_LIMIT = 15
 private const val OUT_GOING_TYPING_TIMEOUT_MS = 1_500L
-private const val IN_COMING_TYPING_TIMEOUT_MS = 5_000L
+private const val IN_COMING_TYPING_TIMEOUT_MS = 3_000L
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
