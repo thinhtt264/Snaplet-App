@@ -59,8 +59,9 @@ class ChatSocketManager @Inject constructor(
     private var pendingConversationId: String? = null
 
     suspend fun connect(conversationId: String) {
+        val isSameConversation = pendingConversationId == conversationId
         pendingConversationId = conversationId
-        if (socket?.connected() == true) return
+        if (socket?.connected() == true && isSameConversation) return
         val token = authRepository.get().getAccessToken() ?: return
         connectWithToken(token, conversationId)
     }
