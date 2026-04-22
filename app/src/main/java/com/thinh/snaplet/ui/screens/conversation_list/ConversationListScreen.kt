@@ -291,10 +291,11 @@ private fun ConversationContent(
                         .navigationBarsPadding(),
                     contentPadding = PaddingValues(vertical = 8.dp),
                 ) {
-                    items(displayList, key = { it.id }) { conversation ->
+                    items(displayList, key = { it.conversation.id }) { item ->
                         ConversationCard(
-                            conversation = conversation,
-                            onClick = { onConversationClick(conversation) },
+                            conversation = item.conversation,
+                            isUnread = item.isUnread,
+                            onClick = { onConversationClick(item.conversation) },
                         )
                         HorizontalDivider(
                             color = Color(0xFF161818),
@@ -331,14 +332,14 @@ private fun ConversationContent(
 @Composable
 private fun ConversationCard(
     conversation: Conversation,
+    isUnread: Boolean,
     onClick: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
-    val unread = conversation.hasUnread
 
-    val nameColor = if (unread) cs.onBackground else cs.onSurface
-    val previewColor = if (unread) cs.onBackground else cs.onSurface
-    val metaColor = if (unread) cs.primary else cs.onSurface
+    val nameColor = if (isUnread) cs.onBackground else cs.onSurface
+    val previewColor = if (isUnread) cs.onBackground else cs.onSurface
+    val metaColor = if (isUnread) cs.primary else cs.onSurface
 
     Row(
         modifier = Modifier
@@ -351,7 +352,7 @@ private fun ConversationCard(
             avatarUrl = conversation.partner.avatarUrl,
             firstName = conversation.partner.displayName,
             size = 48.dp,
-            modifier = Modifier.alpha(if (unread) 1f else 0.7f),
+            modifier = Modifier.alpha(if (isUnread) 1f else 0.7f),
         )
 
         Spacer(Modifier.width(12.dp))
@@ -361,7 +362,7 @@ private fun ConversationCard(
                 text = conversation.partner.displayName,
                 color = nameColor,
                 typography = Typography.bodyMedium,
-                fontWeight = if (unread) FontWeight.Bold else FontWeight.Medium,
+                fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -369,7 +370,7 @@ private fun ConversationCard(
                 BaseText(
                     text = lastMessagePreview(conversation.lastMessage),
                     color = previewColor,
-                    fontWeight = if (unread) FontWeight.SemiBold else FontWeight.Normal,
+                    fontWeight = if (isUnread) FontWeight.SemiBold else FontWeight.Normal,
                     typography = Typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -383,15 +384,15 @@ private fun ConversationCard(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            conversation.lastMessageAt?.let { time ->
+            conversation.lastMessage?.createdAt?.let { time ->
                 BaseText(
                     text = time.toLocalTimeAgo(),
                     color = metaColor,
                     typography = Typography.labelSmall,
-                    fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal,
                 )
             }
-            if (unread) {
+            if (isUnread) {
                 Box(
                     modifier = Modifier
                         .size(10.dp)

@@ -1,5 +1,6 @@
 package com.thinh.snaplet.data.model.chat
 
+import androidx.annotation.Keep
 import com.google.gson.annotations.SerializedName
 import java.util.Date
 
@@ -57,11 +58,14 @@ object MessageType {
     const val IMAGE = "image"
 }
 
+@Keep
 data class MessageReadEvent(
     @SerializedName("userId")
     val userId: String,
     @SerializedName("messageId")
     val messageId: String,
+    @SerializedName("messageCreatedAt")
+    val messageCreatedAt: Date,
     @SerializedName("readAt")
     val readAt: Date,
 )

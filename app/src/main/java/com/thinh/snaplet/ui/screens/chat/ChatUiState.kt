@@ -1,21 +1,46 @@
 package com.thinh.snaplet.ui.screens.chat
 
 import com.thinh.snaplet.data.model.chat.Message
+import com.thinh.snaplet.data.model.chat.MessageReadEvent
 
-data class ChatUiState(
+data class IncomingUnreadState(
+    val count: Int = 0,
+    val newestMessageId: String? = null,
+) {
+    val displayCount: String get() = if (count > 9) "9+" else count.toString()
+    val isVisible: Boolean get() = count > 0
+}
+
+data class MessageListState(
     val isLoading: Boolean = true,
-    val messages: List<Message> = emptyList(), // newest-first (API order), displayed bottom-up via reverseLayout = true
-    val nextCursor: String? = null,
     val isLoadingMore: Boolean = false,
+    val messages: List<Message> = emptyList(),
+    val nextCursor: String? = null,
     val error: String? = null,
-    val currentUserId: String? = null,
-    val draftMessage: String? = null,
-    /** clientUuids of messages shown optimistically but not yet confirmed by the server. */
-    val pendingClientUuids: Set<String> = emptySet(),
-    /** True while the conversation partner is typing. Auto-cleared after a timeout. */
-    val isPartnerTyping: Boolean = false,
-    /** ID of the last message the partner has confirmed as read (from chat:message.read). */
-    val partnerLastReadMessageId: String? = null,
 ) {
     val canLoadMore: Boolean get() = nextCursor != null && !isLoadingMore && !isLoading
 }
+
+data class PartnerState(
+    val isTyping: Boolean = false,
+    val lastReadEvent: MessageReadEvent? = null,
+    val lastReadAtMsFallback: Long? = null,
+) {
+    val readHorizonMs: Long? get() = lastReadEvent?.messageCreatedAt?.time ?: lastReadAtMsFallback
+}
+
+data class ReadTrackingState(
+    val isUserAtBottom: Boolean = false,
+    val incomingUnread: IncomingUnreadState = IncomingUnreadState(),
+    val myLastReadCreatedAtMs: Long? = null,
+)
+
+data class ChatUiState(
+    val currentUserId: String? = null,
+    val draftMessage: String? = null,
+    val pendingClientUuids: Set<String> = emptySet(),
+    val errorClientUuids: Set<String> = emptySet(),
+    val messageList: MessageListState = MessageListState(),
+    val partner: PartnerState = PartnerState(),
+    val readTracking: ReadTrackingState = ReadTrackingState(),
+)

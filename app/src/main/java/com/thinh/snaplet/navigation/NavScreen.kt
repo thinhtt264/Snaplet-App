@@ -32,6 +32,8 @@ data class ChatConversation(
     val recipientId: String? = null,
     val partnerName: String,
     val partnerAvatarUrl: String? = null,
+    val partnerLastReadAtMs: Long? = null,
+    val myLastReadAtMs: Long? = null,
 )
 
 @Serializable

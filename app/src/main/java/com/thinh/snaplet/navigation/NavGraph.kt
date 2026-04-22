@@ -87,6 +87,8 @@ fun NavGraphBuilder.homeGraph(navController: NavHostController) {
                             conversationId = conversation.id,
                             partnerName = conversation.partner.displayName,
                             partnerAvatarUrl = conversation.partner.avatarUrl,
+                            partnerLastReadAtMs = conversation.partnerLastReadAt?.time,
+                            myLastReadAtMs = conversation.myLastReadAt?.time,
                         )
                     )
                 },

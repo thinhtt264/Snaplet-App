@@ -1,5 +1,10 @@
 package com.thinh.snaplet.ui.screens.chat.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,12 +17,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -27,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.model.chat.Message
 import com.thinh.snaplet.data.model.chat.MessageType
-import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.to24HourTime
@@ -37,6 +45,8 @@ private const val BUBBLE_MAX_WIDTH_FRACTION = 0.75f
 private val BUBBLE_CORNER = 16.dp
 private val BUBBLE_CORNER_SMALL = 4.dp
 
+private val ICON_SIZE = 14.dp
+
 enum class BubblePosition { FIRST, MIDDLE, LAST, SINGLE }
 
 @Composable
@@ -44,10 +54,9 @@ fun MessageBubble(
     message: Message,
     isMine: Boolean,
     isPending: Boolean,
+    isError: Boolean,
     showTick: Boolean,
-    showReadAvatar: Boolean,
-    partnerAvatarUrl: String?,
-    partnerName: String,
+    showSeenTick: Boolean,
     position: BubblePosition,
 ) {
     val cs = MaterialTheme.colorScheme
@@ -115,25 +124,50 @@ fun MessageBubble(
                     typography = Typography.labelSmall,
                 )
 
-                if (isMine) {
-                    val tickAlpha = if (isPending) 0.3f else 0.5f
-                    when {
-                        showReadAvatar -> {
-                            Avatar(
-                                avatarUrl = partnerAvatarUrl,
-                                firstName = partnerName,
-                                size = 14.dp,
-                            )
-                        }
+                val infiniteTransition = rememberInfiniteTransition(label = "loading")
+                val rotation by infiniteTransition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 360f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(
+                            durationMillis = 1000,
+                            easing = LinearEasing
+                        )
+                    ),
+                    label = "rotation"
+                )
 
-                        showTick -> {
-                            Icon(
-                                imageVector = if (isPending) Icons.Filled.Done else Icons.Filled.DoneAll,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = Color(0xFF0D0D0D).copy(alpha = tickAlpha),
-                            )
-                        }
+                if (isMine) {
+                    when {
+                        isPending -> Icon(
+                            imageVector = Icons.Filled.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(ICON_SIZE)
+                                .rotate(rotation),
+                            tint = Color(0xFF0D0D0D),
+                        )
+
+                        isError -> Icon(
+                            imageVector = Icons.Filled.Error,
+                            contentDescription = null,
+                            modifier = Modifier.size(ICON_SIZE),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+
+                        showSeenTick -> Icon(
+                            imageVector = Icons.Filled.DoneAll,
+                            contentDescription = null,
+                            modifier = Modifier.size(ICON_SIZE),
+                            tint = Color(0xFF0D0D0D),
+                        )
+
+                        showTick -> Icon(
+                            imageVector = Icons.Filled.Done,
+                            contentDescription = null,
+                            modifier = Modifier.size(ICON_SIZE),
+                            tint = Color(0xFF0D0D0D),
+                        )
                     }
                 }
             }

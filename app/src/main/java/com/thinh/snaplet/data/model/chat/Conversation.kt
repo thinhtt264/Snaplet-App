@@ -48,10 +48,10 @@ data class Conversation(
     val partner: ConversationPartner,
     @SerializedName("lastMessage")
     val lastMessage: LastMessage?,
-    @SerializedName("hasUnread")
-    val hasUnread: Boolean,
-    @SerializedName("lastMessageAt")
-    val lastMessageAt: Date?,
+    @SerializedName("partnerLastReadAt")
+    val partnerLastReadAt: Date?,
+    @SerializedName("myLastReadAt")
+    val myLastReadAt: Date?,
     @SerializedName("createdAt")
     val createdAt: Date
 )
@@ -61,5 +61,8 @@ data class ConversationUpdatedEvent(
     val conversationId: String,
     @SerializedName("lastMessage")
     val lastMessage: LastMessage?,
+    @SerializedName("partnerLastReadAt")
+    val partnerLastReadAt: Date?,
+    @SerializedName("myLastReadAt")
+    val myLastReadAt: Date?,
 )
-

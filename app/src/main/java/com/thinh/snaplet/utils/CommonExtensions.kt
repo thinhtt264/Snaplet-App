@@ -4,8 +4,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 
-private val TIME_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("HH:mm")
+private val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
 fun formatTimeAgo(createdAt: Date): String = createdAt.toLocalTimeAgo()
 
@@ -30,7 +29,9 @@ fun Date.toLocalTimeAgo(): String {
 }
 
 fun Date.to24HourTime(): String {
-    return this.toInstant()
-        .atZone(ZoneId.systemDefault())
-        .format(TIME_FORMATTER)
+    return this.toInstant().atZone(ZoneId.systemDefault()).format(TIME_FORMATTER)
+}
+
+fun <T : Comparable<T>> isGreaterWithFallback(a: T?, b: T?, fallback: Boolean): Boolean {
+    return if (a != null && b != null) a > b else fallback
 }

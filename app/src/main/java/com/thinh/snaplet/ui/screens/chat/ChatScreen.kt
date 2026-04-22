@@ -80,15 +80,15 @@ fun ChatScreen(
         }
     }
 
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
+    LaunchedEffect(shouldLoadMore, uiState.messageList.canLoadMore) {
+        if (shouldLoadMore && uiState.messageList.canLoadMore) {
             viewModel.loadMore()
         }
     }
 
     // derivedStateOf makes messageCount a Compose State so snapshotFlow can track it.
     // This is key: snapshotFlow reads count + scroll position in the same snapshot frame,
-    val messageCountState = remember { derivedStateOf { uiState.messages.size } }
+    val messageCountState = remember { derivedStateOf { uiState.messageList.messages.size } }
     LaunchedEffect(listState) {
         var prevMessageCount = 0
         snapshotFlow {
@@ -103,8 +103,22 @@ fun ChatScreen(
                 listState.scrollToItem(0)
             }
             prevMessageCount = count
+            viewModel.onIsAtBottomChanged(nearBottom)
         }
     }
+
+    // Track visible messages for mark-seen; debounce is handled in the ViewModel.
+    val visibleMessages by remember {
+        derivedStateOf {
+            listState.layoutInfo.visibleItemsInfo
+                .mapNotNull { info -> uiState.messageList.messages.getOrNull(info.index) }
+        }
+    }
+    LaunchedEffect(Unit) {
+        snapshotFlow { visibleMessages }
+            .collect { visible -> viewModel.onVisibleMessagesChanged(visible) }
+    }
+    // TODO: NewMessagesBanner UI — logic is ready via uiState.readTracking.incomingUnread
 
     Column(
         modifier = Modifier
@@ -115,7 +129,7 @@ fun ChatScreen(
         ChatHeader(
             name = viewModel.partnerName,
             avatarUrl = viewModel.partnerAvatarUrl,
-            isOnline = true, // TODO: wire from uiState / socket presence event
+            isOnline = true,
             onNavigateBack = onNavigateBack,
             onMore = { /* TODO */ },
         )
@@ -128,21 +142,21 @@ fun ChatScreen(
                 .fillMaxWidth()
         ) {
             when {
-                uiState.isLoading -> {
+                uiState.messageList.isLoading -> {
                     CircularProgressIndicator(
                         modifier = Modifier.align(Alignment.Center),
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
 
-                uiState.error != null -> {
+                uiState.messageList.error != null -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         BaseText(
-                            text = uiState.error ?: "",
+                            text = uiState.messageList.error ?: "",
                             color = Color.White.copy(alpha = 0.6f),
                             typography = Typography.bodyMedium,
                         )
@@ -157,9 +171,23 @@ fun ChatScreen(
                 }
 
                 else -> {
-                    val lastSentByMeId = remember(uiState.messages, uiState.currentUserId) {
-                        uiState.messages.firstOrNull { it.senderId == uiState.currentUserId }?.id
-                    }
+                    val partnerReadHorizonMs = uiState.partner.readHorizonMs
+                    val lastSentByMeId =
+                        remember(uiState.messageList.messages, uiState.currentUserId) {
+                            uiState.messageList.messages.firstOrNull { it.senderId == uiState.currentUserId }?.id
+                        }
+                    val lastReadByPartnerMessageId =
+                        remember(
+                            uiState.messageList.messages,
+                            uiState.currentUserId,
+                            partnerReadHorizonMs
+                        ) {
+                            if (partnerReadHorizonMs == null) null
+                            else uiState.messageList.messages.firstOrNull {
+                                it.senderId == uiState.currentUserId &&
+                                        it.createdAt.time <= partnerReadHorizonMs
+                            }?.id
+                        }
 
                     LazyColumn(
                         state = listState,
@@ -171,21 +199,21 @@ fun ChatScreen(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         itemsIndexed(
-                            items = uiState.messages,
+                            items = uiState.messageList.messages,
                             key = { _, item -> item.clientUuid },
                         ) { index, message ->
                             val isMine = message.senderId == uiState.currentUserId
                             val isPending = message.clientUuid in uiState.pendingClientUuids
-                            val isReadByPartner = message.id == uiState.partnerLastReadMessageId
+                            val isError = message.clientUuid in uiState.errorClientUuids
                             val showTick =
-                                isMine && message.id == lastSentByMeId && !isReadByPartner
+                                isMine && message.id == lastSentByMeId && message.id != lastReadByPartnerMessageId
 
                             // reverseLayout=true: index+1 = older (visually above),
                             //                     index-1 = newer (visually below)
                             val prevSenderSame =
-                                uiState.messages.getOrNull(index + 1)?.senderId == message.senderId
+                                uiState.messageList.messages.getOrNull(index + 1)?.senderId == message.senderId
                             val nextSenderSame =
-                                uiState.messages.getOrNull(index - 1)?.senderId == message.senderId
+                                uiState.messageList.messages.getOrNull(index - 1)?.senderId == message.senderId
                             val position = when {
                                 prevSenderSame && nextSenderSame -> BubblePosition.MIDDLE
                                 prevSenderSame && !nextSenderSame -> BubblePosition.LAST
@@ -197,16 +225,15 @@ fun ChatScreen(
                                 message = message,
                                 isMine = isMine,
                                 isPending = isPending,
+                                isError = isError,
                                 showTick = showTick,
-                                showReadAvatar = isReadByPartner && isMine,
-                                partnerAvatarUrl = viewModel.partnerAvatarUrl,
-                                partnerName = viewModel.partnerName,
+                                showSeenTick = isMine && message.id == lastReadByPartnerMessageId,
                                 position = position,
                             )
                         }
 
                         // Older-messages loading spinner at the visual top
-                        if (uiState.isLoadingMore) {
+                        if (uiState.messageList.isLoadingMore) {
                             item(key = "loading_more") {
                                 Box(
                                     modifier = Modifier
@@ -229,7 +256,7 @@ fun ChatScreen(
 
         // Typing indicator sits between the message list and the input bar
         AnimatedVisibility(
-            visible = uiState.isPartnerTyping,
+            visible = uiState.partner.isTyping,
             enter = fadeIn(),
             exit = ExitTransition.None,
         ) {
