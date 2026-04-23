@@ -49,14 +49,14 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
+import com.thinh.snaplet.navigation.CollectNavResult
+import com.thinh.snaplet.navigation.NavResultKeys
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.ui.components.EmojiFloatCanvas
 import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.components.MultiplePermissionsHandler
 import com.thinh.snaplet.ui.screens.home.components.BottomActionModel
 import com.thinh.snaplet.ui.screens.home.components.CameraPage
-import com.thinh.snaplet.navigation.CollectNavResult
-import com.thinh.snaplet.navigation.NavResultKeys
 import com.thinh.snaplet.ui.screens.home.components.EmptyMediaPage
 import com.thinh.snaplet.ui.screens.home.components.FriendBottomSheet
 import com.thinh.snaplet.ui.screens.home.components.HomeBottomContent
@@ -543,6 +543,7 @@ private fun HomeScreen(
             acceptedFriends = uiState.friendSheetState.friendList,
             onFeedFilterUserSelected = viewModel::onFeedFilterUserSelected,
             isFeedFilterEnabled = uiState.isFeedFilterEnabled,
+            unreadChatCount = uiState.chatUnreadCount,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)

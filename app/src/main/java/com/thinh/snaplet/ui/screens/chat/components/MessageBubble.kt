@@ -55,7 +55,6 @@ fun MessageBubble(
     isMine: Boolean,
     isPending: Boolean,
     isError: Boolean,
-    showTick: Boolean,
     showSeenTick: Boolean,
     position: BubblePosition,
 ) {
@@ -162,7 +161,7 @@ fun MessageBubble(
                             tint = Color(0xFF0D0D0D),
                         )
 
-                        showTick -> Icon(
+                        !showSeenTick -> Icon(
                             imageVector = Icons.Filled.Done,
                             contentDescription = null,
                             modifier = Modifier.size(ICON_SIZE),

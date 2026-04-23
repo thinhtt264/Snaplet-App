@@ -64,6 +64,8 @@ data class HomeUiState(
     val quickChatEmojiSlots: List<String> = QuickChatEmojiSlots.mergeForDisplay(emptyList()),
 
     val showFriendSheet: Boolean = false,
+
+    val chatUnreadCount: Int = 0
 ) {
     /** Returns true if more data can be loaded (nextCursor is not null and not currently loading) */
     val canLoadMore: Boolean get() = nextCursor != null && !isLoadingMore && !isLoadingPosts

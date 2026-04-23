@@ -85,10 +85,10 @@ fun NavGraphBuilder.homeGraph(navController: NavHostController) {
                     actions.navigateToChatConversation(
                         ChatConversation(
                             conversationId = conversation.id,
-                            partnerName = conversation.partner.displayName,
-                            partnerAvatarUrl = conversation.partner.avatarUrl,
-                            partnerLastReadAtMs = conversation.partnerLastReadAt?.time,
-                            myLastReadAtMs = conversation.myLastReadAt?.time,
+                            partnerName = conversation.participantName,
+                            partnerAvatarUrl = conversation.participantAvatarUrl,
+                            partnerLastReadAtMs = conversation.partnerLastSeenAt,
+                            myLastReadAtMs = conversation.myLastSeenAt,
                         )
                     )
                 },

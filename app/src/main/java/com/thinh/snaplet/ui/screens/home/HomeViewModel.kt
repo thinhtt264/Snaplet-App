@@ -18,9 +18,11 @@ import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.model.post.NewPostUpdate
 import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.model.post.PostAudience
 import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.post.PostRepository
+import com.thinh.snaplet.domain.chat.ObserveUnreadCountUseCase
 import com.thinh.snaplet.domain.feed.FetchNewerFeedUseCase
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase.Companion.FEED_PAGE_LIMIT
@@ -38,17 +40,17 @@ import com.thinh.snaplet.domain.model.UploadPostResult
 import com.thinh.snaplet.domain.post.BuildPostShareContentUseCase
 import com.thinh.snaplet.domain.post.CreateTempPostUseCase
 import com.thinh.snaplet.domain.post.DeletePostUseCase
-import com.thinh.snaplet.domain.post.PostCreateAudience
 import com.thinh.snaplet.domain.post.GetAvailablePostActionsUseCase
 import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
+import com.thinh.snaplet.domain.post.PostCreateAudience
 import com.thinh.snaplet.domain.post.UploadPostUseCase
 import com.thinh.snaplet.domain.post.ValidateRetryUploadUseCase
 import com.thinh.snaplet.domain.post.ValidateUploadPostUseCase
 import com.thinh.snaplet.domain.relationship.AcceptFriendRequestUseCase
 import com.thinh.snaplet.domain.relationship.FormatFriendSearchResultsUseCase
-import com.thinh.snaplet.domain.relationship.ObserveFriendRequestReceivedUseCase
 import com.thinh.snaplet.domain.relationship.GetRelationshipActionUseCase
 import com.thinh.snaplet.domain.relationship.GetRelationshipsByStatusesUseCase
+import com.thinh.snaplet.domain.relationship.ObserveFriendRequestReceivedUseCase
 import com.thinh.snaplet.domain.relationship.RemoveFriendUseCase
 import com.thinh.snaplet.domain.relationship.RemoveRelationshipUseCase
 import com.thinh.snaplet.platform.network.ConnectivityObserver
@@ -58,7 +60,6 @@ import com.thinh.snaplet.platform.share.ShareApp
 import com.thinh.snaplet.platform.share.ShareManager
 import com.thinh.snaplet.platform.widget.WidgetUpdateManager
 import com.thinh.snaplet.ui.common.UiText
-import com.thinh.snaplet.data.model.post.PostAudience
 import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
@@ -124,6 +125,7 @@ class HomeViewModel @Inject constructor(
     private val widgetUpdateManager: WidgetUpdateManager,
     private val mediaRepository: MediaRepository,
     private val observeFriendRequestReceivedUseCase: ObserveFriendRequestReceivedUseCase,
+    private val observeUnreadCountUseCase: ObserveUnreadCountUseCase
 ) : ViewModel() {
     val emojiFloatController: EmojiFloatController by lazy { EmojiFloatController() }
 
@@ -198,9 +200,10 @@ class HomeViewModel @Inject constructor(
         loadNewsfeed()
         loadMyFriendList()
         loadUnreadPostsCount()
+        loadQuickChatEmojiSlots()
+        observeUnreadCount()
         observeUnreadPostsUpdates()
         observeFriendRequestUpdates()
-        loadQuickChatEmojiSlots()
         observeNetworkReconnect()
     }
 
@@ -284,6 +287,13 @@ class HomeViewModel @Inject constructor(
 
             is NewerFeedResult.Empty -> Unit
         }
+    }
+
+    fun observeUnreadCount() {
+        val userId = _uiState.value.userProfile?.id ?: ""
+        observeUnreadCountUseCase(userId).onEach { count ->
+            _uiState.update { it.copy(chatUnreadCount = count) }
+        }.launchIn(viewModelScope)
     }
 
     fun onNewPostsBannerTapped() {

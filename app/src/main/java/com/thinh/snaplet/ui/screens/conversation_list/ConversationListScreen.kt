@@ -37,7 +37,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,11 +53,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.model.RelationshipWithUser
-import com.thinh.snaplet.data.model.chat.Conversation
-import com.thinh.snaplet.data.model.chat.LastMessage
 import com.thinh.snaplet.navigation.ChatConversation
 import com.thinh.snaplet.ui.components.AppIconButton
 import com.thinh.snaplet.ui.components.Avatar
@@ -72,7 +73,7 @@ import pressScaleClickable
 @Composable
 fun ConversationListScreen(
     onNavigateBack: () -> Unit,
-    onConversationClick: (Conversation) -> Unit = {},
+    onConversationClick: (ConversationUiModel) -> Unit = {},
     onNavigateToNewChat: (ChatConversation) -> Unit = {},
     onAddFriendClick: () -> Unit = {},
     viewModel: ConversationListViewModel = hiltViewModel(),
@@ -80,6 +81,15 @@ fun ConversationListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
     var showNewMessageSheet by remember { mutableStateOf(false) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.onScreenResumed()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Column(
         modifier = Modifier
@@ -105,7 +115,7 @@ fun ConversationListScreen(
             uiState = uiState,
             searchQuery = searchQuery,
             onConversationClick = onConversationClick,
-            onRetry = viewModel::loadConversations,
+            onRetry = viewModel::onScreenResumed,
             onLoadMore = viewModel::loadMore,
         )
     }
@@ -238,20 +248,20 @@ private fun ConversationSearchBar(
 private fun ConversationContent(
     uiState: ConversationListUiState,
     searchQuery: String,
-    onConversationClick: (Conversation) -> Unit,
+    onConversationClick: (ConversationUiModel) -> Unit,
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         when {
-            uiState.isLoading -> {
+            uiState.isLoading && uiState.conversations.isEmpty() -> {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
 
-            uiState.error != null -> {
+            uiState.error != null && uiState.conversations.isEmpty() -> {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -291,11 +301,10 @@ private fun ConversationContent(
                         .navigationBarsPadding(),
                     contentPadding = PaddingValues(vertical = 8.dp),
                 ) {
-                    items(displayList, key = { it.conversation.id }) { item ->
+                    items(displayList, key = { it.id }) { item ->
                         ConversationCard(
-                            conversation = item.conversation,
-                            isUnread = item.isUnread,
-                            onClick = { onConversationClick(item.conversation) },
+                            conversation = item,
+                            onClick = { onConversationClick(item) },
                         )
                         HorizontalDivider(
                             color = Color(0xFF161818),
@@ -306,7 +315,7 @@ private fun ConversationContent(
 
                     if (uiState.canLoadMore) {
                         item(key = "load_more") {
-                            LaunchedEffect(Unit) { onLoadMore() }
+                            androidx.compose.runtime.LaunchedEffect(Unit) { onLoadMore() }
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -331,11 +340,11 @@ private fun ConversationContent(
 
 @Composable
 private fun ConversationCard(
-    conversation: Conversation,
-    isUnread: Boolean,
+    conversation: ConversationUiModel,
     onClick: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
+    val isUnread = conversation.hasUnread
 
     val nameColor = if (isUnread) cs.onBackground else cs.onSurface
     val previewColor = if (isUnread) cs.onBackground else cs.onSurface
@@ -349,8 +358,8 @@ private fun ConversationCard(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Avatar(
-            avatarUrl = conversation.partner.avatarUrl,
-            firstName = conversation.partner.displayName,
+            avatarUrl = conversation.participantAvatarUrl,
+            firstName = conversation.participantName,
             size = 48.dp,
             modifier = Modifier.alpha(if (isUnread) 1f else 0.7f),
         )
@@ -359,16 +368,17 @@ private fun ConversationCard(
 
         Column(modifier = Modifier.weight(1f)) {
             BaseText(
-                text = conversation.partner.displayName,
+                text = conversation.participantName,
                 color = nameColor,
                 typography = Typography.bodyMedium,
                 fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (conversation.lastMessage != null) {
+            val preview = lastMessagePreview(conversation)
+            if (preview != null) {
                 BaseText(
-                    text = lastMessagePreview(conversation.lastMessage),
+                    text = preview,
                     color = previewColor,
                     fontWeight = if (isUnread) FontWeight.SemiBold else FontWeight.Normal,
                     typography = Typography.bodySmall,
@@ -384,9 +394,9 @@ private fun ConversationCard(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            conversation.lastMessage?.createdAt?.let { time ->
+            conversation.lastMessageAt?.let { time ->
                 BaseText(
-                    text = time.toLocalTimeAgo(),
+                    text = java.util.Date(time).toLocalTimeAgo(),
                     color = metaColor,
                     typography = Typography.labelSmall,
                     fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal,
@@ -406,11 +416,12 @@ private fun ConversationCard(
 }
 
 @Composable
-private fun lastMessagePreview(msg: LastMessage): String {
+private fun lastMessagePreview(conversation: ConversationUiModel): String? {
+    if (conversation.lastMessageText == null && conversation.lastMessageType == null) return null
     return when {
-        msg.isDeleted -> stringResource(R.string.conversation_deleted_message)
-        msg.type == "image" -> stringResource(R.string.conversation_message_photo)
-        else -> msg.content.orEmpty()
+        conversation.isLastMessageDeleted -> stringResource(R.string.conversation_deleted_message)
+        conversation.lastMessageType == "image" -> stringResource(R.string.conversation_message_photo)
+        else -> conversation.lastMessageText.orEmpty()
     }
 }
 

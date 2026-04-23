@@ -234,6 +234,17 @@ interface ApiService {
         @Query("cursor") cursor: String? = null
     ): Response<BaseResponse<PaginatedResponse<Conversation>>>
 
+    @GET("conversations/{conversationId}")
+    suspend fun getConversationById(
+        @Path("conversationId") conversationId: String
+    ): Response<BaseResponse<Conversation>>
+
+    @PATCH("conversations/{conversationId}/messages/{messageId}/seen")
+    suspend fun markMessageSeen(
+        @Path("conversationId") conversationId: String,
+        @Path("messageId") messageId: String,
+    ): Response<BaseResponse<Unit>>
+
     @GET("conversations/{conversationId}/messages")
     suspend fun getMessages(
         @Path("conversationId") conversationId: String,

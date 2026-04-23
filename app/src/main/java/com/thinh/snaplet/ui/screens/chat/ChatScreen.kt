@@ -48,7 +48,9 @@ import com.thinh.snaplet.ui.screens.chat.components.ChatInputBar
 import com.thinh.snaplet.ui.screens.chat.components.MessageBubble
 import com.thinh.snaplet.ui.screens.chat.components.TypingIndicator
 import com.thinh.snaplet.ui.theme.Typography
+import com.thinh.snaplet.utils.isGreaterWithFallback
 import kotlinx.coroutines.launch
+import java.util.Date
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -110,13 +112,19 @@ fun ChatScreen(
     // Track visible messages for mark-seen; debounce is handled in the ViewModel.
     val visibleMessages by remember {
         derivedStateOf {
-            listState.layoutInfo.visibleItemsInfo
-                .mapNotNull { info -> uiState.messageList.messages.getOrNull(info.index) }
+            listState.layoutInfo.visibleItemsInfo.mapNotNull { info ->
+                uiState.messageList.messages.getOrNull(
+                    info.index
+                )
+            }
         }
     }
     LaunchedEffect(Unit) {
-        snapshotFlow { visibleMessages }
-            .collect { visible -> viewModel.onVisibleMessagesChanged(visible) }
+        snapshotFlow { visibleMessages }.collect { visible ->
+            viewModel.onVisibleMessagesChanged(
+                visible
+            )
+        }
     }
     // TODO: NewMessagesBanner UI — logic is ready via uiState.readTracking.incomingUnread
 
@@ -176,18 +184,14 @@ fun ChatScreen(
                         remember(uiState.messageList.messages, uiState.currentUserId) {
                             uiState.messageList.messages.firstOrNull { it.senderId == uiState.currentUserId }?.id
                         }
-                    val lastReadByPartnerMessageId =
-                        remember(
-                            uiState.messageList.messages,
-                            uiState.currentUserId,
-                            partnerReadHorizonMs
-                        ) {
-                            if (partnerReadHorizonMs == null) null
-                            else uiState.messageList.messages.firstOrNull {
-                                it.senderId == uiState.currentUserId &&
-                                        it.createdAt.time <= partnerReadHorizonMs
-                            }?.id
-                        }
+                    val lastReadByPartnerMessageId = remember(
+                        uiState.messageList.messages, uiState.currentUserId, partnerReadHorizonMs
+                    ) {
+                        if (partnerReadHorizonMs == null) null
+                        else uiState.messageList.messages.firstOrNull {
+                            it.senderId == uiState.currentUserId && it.createdAt.time <= partnerReadHorizonMs
+                        }?.id
+                    }
 
                     LazyColumn(
                         state = listState,
@@ -205,8 +209,6 @@ fun ChatScreen(
                             val isMine = message.senderId == uiState.currentUserId
                             val isPending = message.clientUuid in uiState.pendingClientUuids
                             val isError = message.clientUuid in uiState.errorClientUuids
-                            val showTick =
-                                isMine && message.id == lastSentByMeId && message.id != lastReadByPartnerMessageId
 
                             // reverseLayout=true: index+1 = older (visually above),
                             //                     index-1 = newer (visually below)
@@ -221,13 +223,16 @@ fun ChatScreen(
                                 else -> BubblePosition.SINGLE
                             }
 
+                            val isPartnerSeen = isMine && isGreaterWithFallback(
+                                Date(partnerReadHorizonMs ?: 0L), message.createdAt, false
+                            )
+
                             MessageBubble(
                                 message = message,
                                 isMine = isMine,
                                 isPending = isPending,
                                 isError = isError,
-                                showTick = showTick,
-                                showSeenTick = isMine && message.id == lastReadByPartnerMessageId,
+                                showSeenTick = isPartnerSeen,
                                 position = position,
                             )
                         }

@@ -101,6 +101,10 @@ kotlin {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
 
     implementation(platform(libs.firebase.bom))
@@ -152,6 +156,11 @@ dependencies {
 
     // DataStore for local storage
     implementation(libs.androidx.datastore.preferences)
+
+    // Room for local database
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
     // Socket.io client
     implementation(libs.socket.io.client)

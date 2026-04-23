@@ -78,6 +78,7 @@ fun TopAction(
     onProfileClick: () -> Unit,
     onFriendsClick: () -> Unit,
     onChatClick: () -> Unit,
+    unreadChatCount: Int,
     avatarUrl: String,
     relationshipCounts: RelationshipCounts? = null,
     myUserId: String?,
@@ -308,15 +309,29 @@ fun TopAction(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                AppIconButton(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    onClick = onChatClick,
-                    iconSize = ICON_SIZE,
-                    iconDecoration = IconDecoration(padding = 6.dp),
-                    icon = IconSpec.Painter(
-                        painterResource(CommonImages.ChatIcon), tint = Color.White
+                Box {
+                    AppIconButton(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        onClick = onChatClick,
+                        iconSize = ICON_SIZE,
+                        iconDecoration = IconDecoration(padding = 6.dp),
+                        icon = IconSpec.Painter(
+                            painterResource(CommonImages.ChatIcon), tint = Color.White
+                        )
                     )
-                )
+
+                    if (unreadChatCount > 0) {
+                        CappedCountBadge(
+                            count = unreadChatCount,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 6.dp, y = (-8).dp),
+                            backgroundColor = Primary80,
+                            shape = CircleShape,
+                            minSize = 24.dp,
+                        )
+                    }
+                }
             }
         }
     }

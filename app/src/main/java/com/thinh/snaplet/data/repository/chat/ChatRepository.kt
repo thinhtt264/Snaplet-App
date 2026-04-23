@@ -1,5 +1,6 @@
 package com.thinh.snaplet.data.repository.chat
 
+import com.thinh.snaplet.data.local.entity.ConversationEntity
 import com.thinh.snaplet.data.model.PaginatedResponse
 import com.thinh.snaplet.data.model.chat.Conversation
 import com.thinh.snaplet.data.model.chat.ConversationUpdatedEvent
@@ -29,46 +30,47 @@ interface ChatRepository {
 
     val chatSocketConnectionState: StateFlow<SocketConnectionState>
 
+    fun observeUnreadCount(myUserId: String): Flow<Int>
+
     suspend fun connectChatSocket(conversationId: String)
 
     fun disconnectChatSocket()
 
-    /** POST /api/v1/conversations — create or find an existing conversation. */
     suspend fun createOrFindConversation(recipientId: String): ApiResult<CreateConversationData>
 
-    /**
-     * GET /api/v1/conversations — list conversations with cursor-based pagination.
-     * [nextCursor] == null means no more pages.
-     */
     suspend fun getConversations(
         limit: Int = 10,
         cursor: String? = null,
     ): ApiResult<PaginatedResponse<Conversation>>
 
-    /**
-     * GET /api/v1/conversations/{conversationId}/messages
-     * Cursor-based pagination. [nextCursor] == null means no more pages.
-     */
     suspend fun getMessages(
         conversationId: String,
         limit: Int = 10,
         cursor: String? = null,
     ): ApiResult<PaginatedResponse<Message>>
 
-    /** POST /api/v1/conversations/{conversationId}/messages — send a message. */
     suspend fun sendMessage(
         conversationId: String,
         request: SendMessageRequest,
     ): ApiResult<Message>
 
-    // ── WebSocket outgoing events (/chat) ──────────────────────────────────
+    fun observeConversations(): Flow<List<ConversationEntity>>
 
-    /** Emit `chat:mark_read` — call after the user has read up to [messageId]. */
-    fun markRead(conversationId: String, messageId: String)
+    suspend fun syncConversations(): ApiResult<Unit>
 
-    /** Emit `chat:typing_start` — call when the user starts typing. */
+    suspend fun syncConversationById(convId: String): ApiResult<Unit>
+
+    suspend fun deleteConversationLocal(convId: String)
+
+    suspend fun updateLastMessageLocal(
+        convId: String,
+        lastMessageAt: Long,
+        lastMessageSenderId: String,
+    )
+
+    fun markSeen(conversationId: String, messageId: String)
+
     fun sendTypingStart(conversationId: String)
 
-    /** Emit `chat:typing_stop` — call when the user stops typing. */
     fun sendTypingStop(conversationId: String)
 }

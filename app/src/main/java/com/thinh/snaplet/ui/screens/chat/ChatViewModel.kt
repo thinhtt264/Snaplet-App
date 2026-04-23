@@ -8,7 +8,7 @@ import com.thinh.snaplet.data.model.chat.Message
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.domain.chat.LoadInitialMessagesUseCase
-import com.thinh.snaplet.domain.chat.MarkMessageReadUseCase
+import com.thinh.snaplet.domain.chat.MarkMessageSeenUseCase
 import com.thinh.snaplet.domain.chat.ObserveNewMessageUseCase
 import com.thinh.snaplet.domain.chat.SendMessageUseCase
 import com.thinh.snaplet.navigation.ChatConversation
@@ -43,7 +43,7 @@ class ChatViewModel @Inject constructor(
     private val loadInitialMessagesUseCase: LoadInitialMessagesUseCase,
     private val sendMessageUseCase: SendMessageUseCase,
     private val observeNewMessageUseCase: ObserveNewMessageUseCase,
-    private val markMessageReadUseCase: MarkMessageReadUseCase,
+    private val markMessageSeenUseCase: MarkMessageSeenUseCase,
     private val connectivityObserver: ConnectivityObserver,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -72,7 +72,7 @@ class ChatViewModel @Inject constructor(
         loadCurrentUser()
         observeIncomingMessages()
         observeIncomingTypingEvents()
-        observeReadReceipts()
+        observeIncomingReadReceipts()
         observeConnectivity()
 
         val recipientId = route.recipientId
@@ -167,26 +167,36 @@ class ChatViewModel @Inject constructor(
 
     fun loadMessages() {
         viewModelScope.launch {
-            _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = true, error = null)) }
-            loadInitialMessagesUseCase(conversationId = conversationId, limit = PAGE_LIMIT)
-                .onSuccess { data ->
-                    Logger.d("loaded ${data.data.size} messages nextCursor=${data.pagination.nextCursor}")
-                    _uiState.update {
-                        it.copy(
-                            messageList = it.messageList.copy(
-                                isLoading = false,
-                                messages = data.data,
-                                nextCursor = data.pagination.nextCursor,
-                            )
+            _uiState.update {
+                it.copy(
+                    messageList = it.messageList.copy(
+                        isLoading = true, error = null
+                    )
+                )
+            }
+            loadInitialMessagesUseCase(
+                conversationId = conversationId, limit = PAGE_LIMIT
+            ).onSuccess { data ->
+                Logger.d("loaded ${data.data.size} messages nextCursor=${data.pagination.nextCursor}")
+                _uiState.update {
+                    it.copy(
+                        messageList = it.messageList.copy(
+                            isLoading = false,
+                            messages = data.data,
+                            nextCursor = data.pagination.nextCursor,
                         )
-                    }
+                    )
                 }
-                .onFailure { error ->
-                    Logger.e("loadMessages failed: ${error.message}")
-                    _uiState.update {
-                        it.copy(messageList = it.messageList.copy(isLoading = false, error = error.message))
-                    }
+            }.onFailure { error ->
+                Logger.e("loadMessages failed: ${error.message}")
+                _uiState.update {
+                    it.copy(
+                        messageList = it.messageList.copy(
+                            isLoading = false, error = error.message
+                        )
+                    )
                 }
+            }
         }
     }
 
@@ -200,45 +210,45 @@ class ChatViewModel @Inject constructor(
                 conversationId = conversationId,
                 limit = PAGE_LIMIT,
                 cursor = cursor,
-            )
-                .onSuccess { data ->
-                    Logger.d("loadMore ${data.data.size} messages nextCursor=${data.pagination.nextCursor}")
-                    _uiState.update {
-                        it.copy(
-                            messageList = it.messageList.copy(
-                                isLoadingMore = false,
-                                messages = it.messageList.messages + data.data,
-                                nextCursor = data.pagination.nextCursor,
-                            )
+            ).onSuccess { data ->
+                Logger.d("loadMore ${data.data.size} messages nextCursor=${data.pagination.nextCursor}")
+                _uiState.update {
+                    it.copy(
+                        messageList = it.messageList.copy(
+                            isLoadingMore = false,
+                            messages = it.messageList.messages + data.data,
+                            nextCursor = data.pagination.nextCursor,
                         )
-                    }
+                    )
                 }
-                .onFailure { error ->
-                    Logger.e("loadMore failed: ${error.message}")
-                    _uiState.update { it.copy(messageList = it.messageList.copy(isLoadingMore = false)) }
-                }
+            }.onFailure { error ->
+                Logger.e("loadMore failed: ${error.message}")
+                _uiState.update { it.copy(messageList = it.messageList.copy(isLoadingMore = false)) }
+            }
         }
     }
 
     private fun createOrFindConversationAndInit(recipientId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = true)) }
-            chatRepository.createOrFindConversation(recipientId)
-                .onSuccess { data ->
-                    conversationId = data.id
-                    connectSocket()
-                    if (data.isNew) {
-                        _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
-                    } else {
-                        loadMessages()
-                    }
+            chatRepository.createOrFindConversation(recipientId).onSuccess { data ->
+                conversationId = data.id
+                connectSocket()
+                if (data.isNew) {
+                    _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
+                } else {
+                    loadMessages()
                 }
-                .onFailure { error ->
-                    Logger.e("createOrFindConversation failed: ${error.message}")
-                    _uiState.update {
-                        it.copy(messageList = it.messageList.copy(isLoading = false, error = error.message))
-                    }
+            }.onFailure { error ->
+                Logger.e("createOrFindConversation failed: ${error.message}")
+                _uiState.update {
+                    it.copy(
+                        messageList = it.messageList.copy(
+                            isLoading = false, error = error.message
+                        )
+                    )
                 }
+            }
         }
     }
 
@@ -250,13 +260,11 @@ class ChatViewModel @Inject constructor(
 
     private fun observeConnectivity() {
         viewModelScope.launch {
-            connectivityObserver.isInternetAvailable
-                .onEach { isAvailable ->
-                    if (isAvailable && isInForeground && conversationId.isNotEmpty()) {
-                        connectSocket()
-                    }
+            connectivityObserver.isInternetAvailable.onEach { isAvailable ->
+                if (isAvailable && isInForeground && conversationId.isNotEmpty()) {
+                    connectSocket()
                 }
-                .collect()
+            }.collect()
         }
     }
 
@@ -270,8 +278,7 @@ class ChatViewModel @Inject constructor(
 
     private fun observeIncomingMessages() {
         viewModelScope.launch {
-            observeNewMessageUseCase()
-                .filter { it.conversationId == conversationId }
+            observeNewMessageUseCase().filter { it.conversationId == conversationId }
                 .collect { incoming ->
                     Logger.d("socket message id=${incoming.id}")
                     val snapshot = _uiState.value
@@ -282,7 +289,8 @@ class ChatViewModel @Inject constructor(
                     val isGenuinelyNew = !existsById && optimisticIndex < 0
 
                     _uiState.update { state ->
-                        val existsByIdInState = state.messageList.messages.any { it.id == incoming.id }
+                        val existsByIdInState =
+                            state.messageList.messages.any { it.id == incoming.id }
                         val optimisticIndexInState = state.messageList.messages.indexOfFirst {
                             it.clientUuid == incoming.clientUuid && it.id != incoming.id
                         }
@@ -295,6 +303,7 @@ class ChatViewModel @Inject constructor(
                                 ),
                                 pendingClientUuids = state.pendingClientUuids - incoming.clientUuid,
                             )
+
                             else -> state.copy(
                                 messageList = state.messageList.copy(
                                     messages = listOf(incoming) + state.messageList.messages,
@@ -306,7 +315,7 @@ class ChatViewModel @Inject constructor(
                     if (isGenuinelyNew) {
                         if (_uiState.value.readTracking.isUserAtBottom) {
                             Logger.d("new message, user at bottom → mark read id=${incoming.id}")
-                            triggerMarkRead(incoming.id, incoming.createdAt.time)
+                            triggerMarkSeen(incoming.id, incoming.createdAt.time)
                         } else {
                             _uiState.update { state ->
                                 val current = state.readTracking.incomingUnread
@@ -314,7 +323,9 @@ class ChatViewModel @Inject constructor(
                                 Logger.d("accumulate unread: count=$newCount newestId=${incoming.id}")
                                 state.copy(
                                     readTracking = state.readTracking.copy(
-                                        incomingUnread = current.copy(count = newCount, newestMessageId = incoming.id),
+                                        incomingUnread = current.copy(
+                                            count = newCount, newestMessageId = incoming.id
+                                        ),
                                     )
                                 )
                             }
@@ -338,7 +349,7 @@ class ChatViewModel @Inject constructor(
             val msg = state.messageList.messages.firstOrNull { it.id == newestMessageId }
             if (msg != null) {
                 Logger.d("user scrolled to bottom → mark read from banner id=$newestMessageId")
-                triggerMarkRead(newestMessageId, msg.createdAt.time)
+                triggerMarkSeen(newestMessageId, msg.createdAt.time)
             }
         }
         _uiState.update { it.copy(readTracking = it.readTracking.copy(incomingUnread = IncomingUnreadState())) }
@@ -354,21 +365,20 @@ class ChatViewModel @Inject constructor(
             val myLastReadMs = _uiState.value.readTracking.myLastReadCreatedAtMs
             if (myLastReadMs == null || newestEpoch > myLastReadMs) {
                 Logger.d("onVisibleMessagesChanged → mark read id=${newest.id} epoch=$newestEpoch")
-                triggerMarkRead(newest.id, newestEpoch)
+                triggerMarkSeen(newest.id, newestEpoch)
             }
         }
     }
 
-    private fun triggerMarkRead(messageId: String, createdAtMs: Long) {
-        markMessageReadUseCase(conversationId, messageId)
+    private fun triggerMarkSeen(messageId: String, createdAtMs: Long) {
+        viewModelScope.launch { markMessageSeenUseCase(conversationId, messageId) }
         _uiState.update { it.copy(readTracking = it.readTracking.copy(myLastReadCreatedAtMs = createdAtMs)) }
         Logger.d("triggerMarkRead: messageId=$messageId epoch=$createdAtMs")
     }
 
     private fun observeIncomingTypingEvents() {
         viewModelScope.launch {
-            chatRepository.typingEvents
-                .filter { it.userId != _uiState.value.currentUserId }
+            chatRepository.typingEvents.filter { it.userId != _uiState.value.currentUserId }
                 .collect { event ->
                     typingTimeoutJob?.cancel()
                     if (event.isTyping) {
@@ -384,11 +394,14 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun observeReadReceipts() {
+    private fun observeIncomingReadReceipts() {
         viewModelScope.launch {
             chatRepository.readReceipts.collect { event ->
                 Logger.d("read receipt userId=${event.userId} messageId=${event.messageId}")
-                _uiState.update { it.copy(partner = it.partner.copy(lastReadEvent = event)) }
+                _uiState.update {
+                    if (it.currentUserId == event.userId) return@collect
+                    it.copy(partner = it.partner.copy(lastReadEvent = event))
+                }
             }
         }
     }

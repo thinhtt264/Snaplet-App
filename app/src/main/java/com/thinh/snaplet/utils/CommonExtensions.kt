@@ -33,5 +33,5 @@ fun Date.to24HourTime(): String {
 }
 
 fun <T : Comparable<T>> isGreaterWithFallback(a: T?, b: T?, fallback: Boolean): Boolean {
-    return if (a != null && b != null) a > b else fallback
+    return if (a != null && b != null) a >= b else fallback
 }
