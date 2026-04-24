@@ -14,7 +14,7 @@ data class CreateConversationData(
     @SerializedName("id")
     val id: String,
     @SerializedName("isNew")
-    val isNew: Boolean
+    val isNew: Boolean,
 )
 
 data class ConversationPartner(
@@ -33,15 +33,33 @@ data class LastMessage(
     val id: String,
     @SerializedName("senderId")
     val senderId: String,
-    @SerializedName("type")
-    val type: String,
-    @SerializedName("content")
-    val content: String?,
+    @SerializedName("text")
+    val text: String?,
+    @SerializedName("mediaKey")
+    val mediaKey: String?,
+    @SerializedName("mediaUrl")
+    val mediaUrl: String?,
+    @SerializedName("mimeType")
+    val mimeType: String?,
     @SerializedName("isDeleted")
     val isDeleted: Boolean,
     @SerializedName("createdAt")
     val createdAt: Date
-)
+) {
+    /**
+     * Compute message type based on mimeType.
+     * - image/jpeg, image/jpg, image/png, image/webp → image
+     * - image/gif → gif
+     * - null or other → text
+     */
+    val type: String
+        get() = when {
+            mimeType == null -> "text"
+            mimeType.lowercase() in listOf("image/jpeg", "image/jpg", "image/png", "image/webp") -> "image"
+            mimeType.lowercase() == "image/gif" -> "gif"
+            else -> "text"
+        }
+}
 
 data class Conversation(
     @SerializedName("id")
@@ -68,6 +86,8 @@ data class ConversationUpdatedEvent(
     val lastMessageAt: Date,
     @SerializedName("lastMessageSenderId")
     val lastMessageSenderId: String,
+    @SerializedName("lastMessageText")
+    val lastMessageText: String,
 )
 
 fun Conversation.toEntity(): ConversationEntity = ConversationEntity(
@@ -76,7 +96,7 @@ fun Conversation.toEntity(): ConversationEntity = ConversationEntity(
     participantName = partner.displayName,
     participantAvatarUrl = partner.avatarUrl,
     lastMessageId = lastMessage?.id,
-    lastMessageText = lastMessage?.content,
+    lastMessageText = lastMessage?.text,
     lastMessageType = lastMessage?.type,
     isLastMessageDeleted = lastMessage?.isDeleted ?: false,
     lastMessageSenderId = lastMessage?.senderId,

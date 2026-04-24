@@ -1,7 +1,6 @@
 package com.thinh.snaplet.domain.chat
 
 import com.thinh.snaplet.data.model.chat.Message
-import com.thinh.snaplet.data.model.chat.MessageType
 import com.thinh.snaplet.data.model.chat.SendMessageRequest
 import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.utils.network.onFailure
@@ -38,11 +37,10 @@ class SendMessageUseCase @Inject constructor(
             conversationId = conversationId,
             senderId = senderId,
             clientUuid = clientUuid,
-            type = MessageType.TEXT,
-            content = text,
+            text = text,
+            mimeType = null,
             isDeleted = false,
             replyTo = null,
-            attachments = emptyList(),
             pinnedAt = null,
             createdAt = Date(),
         )
@@ -52,8 +50,7 @@ class SendMessageUseCase @Inject constructor(
             conversationId = conversationId,
             request = SendMessageRequest(
                 clientUuid = clientUuid,
-                type = MessageType.TEXT,
-                content = text,
+                text = text,
             ),
         )
             .onSuccess { emit(Result.Success(it)) }

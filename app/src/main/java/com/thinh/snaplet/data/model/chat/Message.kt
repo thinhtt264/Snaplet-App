@@ -2,18 +2,16 @@ package com.thinh.snaplet.data.model.chat
 
 import androidx.annotation.Keep
 import com.google.gson.annotations.SerializedName
+import com.thinh.snaplet.data.local.entity.MessageEntity
+import com.thinh.snaplet.data.local.entity.MessageStatus
+import com.thinh.snaplet.data.model.media.ImageSizes
 import java.util.Date
 
-data class MessageAttachment(
-    @SerializedName("mediaKey")
-    val mediaKey: String,
-    @SerializedName("mimeType")
-    val mimeType: String,
-    @SerializedName("width")
-    val width: Int?,
-    @SerializedName("height")
-    val height: Int?
-)
+enum class MessageType {
+    TEXT,
+    IMAGE,
+    GIF,
+}
 
 data class Message(
     @SerializedName("id")
@@ -24,39 +22,89 @@ data class Message(
     val senderId: String,
     @SerializedName("clientUuid")
     val clientUuid: String,
-    @SerializedName("type")
-    val type: String,
-    @SerializedName("content")
-    val content: String?,
+    @SerializedName("text")
+    val text: String?,
+    @SerializedName("mediaUrls")
+    val mediaUrls: ImageSizes? = null,
+    @SerializedName("mimeType")
+    val mimeType: String?,
     @SerializedName("isDeleted")
     val isDeleted: Boolean,
     @SerializedName("replyTo")
-    val replyTo: Message?,
-    @SerializedName("attachments")
-    val attachments: List<MessageAttachment>,
+    val replyTo: ReplyToMessage?,
     @SerializedName("pinnedAt")
     val pinnedAt: Date?,
     @SerializedName("createdAt")
-    val createdAt: Date
+    val createdAt: Date,
+    // Client-side status — not from server JSON (null for server-sourced messages)
+    val status: String? = null,
+) {
+    /**
+     * Compute message type based on mimeType.
+     * - image/jpeg, image/jpg, image/png, image/webp → IMAGE
+     * - image/gif → GIF
+     * - null or other → TEXT
+     */
+    val messageType: MessageType
+        get() = when {
+            mimeType == null -> MessageType.TEXT
+            mimeType.lowercase() in listOf(
+                "image/jpeg",
+                "image/jpg",
+                "image/png",
+                "image/webp"
+            ) -> MessageType.IMAGE
+
+            mimeType.lowercase() == "image/gif" -> MessageType.GIF
+            else -> MessageType.TEXT
+        }
+}
+
+data class ReplyToMessage(
+    @SerializedName("id")
+    val id: String,
+    @SerializedName("senderId")
+    val senderId: String,
+    @SerializedName("text")
+    val text: String?,
+    @SerializedName("isDeleted")
+    val isDeleted: Boolean,
 )
 
 data class SendMessageRequest(
     @SerializedName("clientUuid")
     val clientUuid: String,
-    @SerializedName("type")
-    val type: String = "text",
-    @SerializedName("content")
-    val content: String? = null,
+    @SerializedName("text")
+    val text: String? = null,
+    @SerializedName("mediaKey")
+    val mediaKey: String? = null,
+    @SerializedName("mediaUrl")
+    val mediaUrl: String? = null,
+    @SerializedName("mimeType")
+    val mimeType: String? = null,
+    @SerializedName("width")
+    val width: Int? = null,
+    @SerializedName("height")
+    val height: Int? = null,
     @SerializedName("replyToId")
     val replyToId: String? = null,
-    @SerializedName("attachments")
-    val attachments: List<MessageAttachment>? = null
 )
 
-object MessageType {
-    const val TEXT = "text"
-    const val IMAGE = "image"
-}
+fun Message.toEntity(): MessageEntity = MessageEntity(
+    id = id,
+    conversationId = conversationId,
+    senderId = senderId,
+    type = messageType.name.lowercase(),
+    text = text,
+    mediaUrl = mediaUrls?.sm,
+    mediaLocalUri = null,
+    mediaType = mimeType,
+    status = MessageStatus.SENT,
+    isDeleted = isDeleted,
+    createdAt = createdAt.time,
+    serverCreatedAt = createdAt.time,
+    localId = clientUuid,
+)
 
 @Keep
 data class MessageReadEvent(

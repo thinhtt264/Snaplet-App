@@ -1,6 +1,5 @@
 package com.thinh.snaplet.ui.screens.chat
 
-import com.thinh.snaplet.data.model.chat.Message
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
 
 data class IncomingUnreadState(
@@ -13,13 +12,8 @@ data class IncomingUnreadState(
 
 data class MessageListState(
     val isLoading: Boolean = true,
-    val isLoadingMore: Boolean = false,
-    val messages: List<Message> = emptyList(),
-    val nextCursor: String? = null,
     val error: String? = null,
-) {
-    val canLoadMore: Boolean get() = nextCursor != null && !isLoadingMore && !isLoading
-}
+)
 
 data class PartnerState(
     val isTyping: Boolean = false,
@@ -38,8 +32,6 @@ data class ReadTrackingState(
 data class ChatUiState(
     val currentUserId: String? = null,
     val draftMessage: String? = null,
-    val pendingClientUuids: Set<String> = emptySet(),
-    val errorClientUuids: Set<String> = emptySet(),
     val messageList: MessageListState = MessageListState(),
     val partner: PartnerState = PartnerState(),
     val readTracking: ReadTrackingState = ReadTrackingState(),

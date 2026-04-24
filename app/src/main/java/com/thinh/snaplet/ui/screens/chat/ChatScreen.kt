@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -40,7 +39,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.thinh.snaplet.R
+import com.thinh.snaplet.data.local.entity.MessageStatus
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.screens.chat.components.BubblePosition
 import com.thinh.snaplet.ui.screens.chat.components.ChatHeader
@@ -52,12 +54,8 @@ import com.thinh.snaplet.utils.isGreaterWithFallback
 import kotlinx.coroutines.launch
 import java.util.Date
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
-
 private val ChatBg = Color(0xFF0D0D0D)
 private val SeparatorColor = Color(0xFF1A1C1C)
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
 
 @Composable
 fun ChatScreen(
@@ -65,32 +63,15 @@ fun ChatScreen(
     viewModel: ChatViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lazyPagingItems = viewModel.messages.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
-
     val coroutineScope = rememberCoroutineScope()
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { viewModel.onPause() }
 
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            val totalItems = listState.layoutInfo.totalItemsCount
-            val lastVisibleItemIndex =
-                listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            totalItems > 0 && lastVisibleItemIndex >= (totalItems * 0.8f).toInt()
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore, uiState.messageList.canLoadMore) {
-        if (shouldLoadMore && uiState.messageList.canLoadMore) {
-            viewModel.loadMore()
-        }
-    }
-
-    // derivedStateOf makes messageCount a Compose State so snapshotFlow can track it.
-    // This is key: snapshotFlow reads count + scroll position in the same snapshot frame,
-    val messageCountState = remember { derivedStateOf { uiState.messageList.messages.size } }
+    val messageCountState = remember { derivedStateOf { lazyPagingItems.itemCount } }
     LaunchedEffect(listState) {
         var prevMessageCount = 0
         snapshotFlow {
@@ -109,24 +90,18 @@ fun ChatScreen(
         }
     }
 
-    // Track visible messages for mark-seen; debounce is handled in the ViewModel.
     val visibleMessages by remember {
         derivedStateOf {
             listState.layoutInfo.visibleItemsInfo.mapNotNull { info ->
-                uiState.messageList.messages.getOrNull(
-                    info.index
-                )
+                if (info.index < lazyPagingItems.itemCount) lazyPagingItems.peek(info.index) else null
             }
         }
     }
     LaunchedEffect(Unit) {
         snapshotFlow { visibleMessages }.collect { visible ->
-            viewModel.onVisibleMessagesChanged(
-                visible
-            )
+            viewModel.onVisibleMessagesChanged(visible)
         }
     }
-    // TODO: NewMessagesBanner UI — logic is ready via uiState.readTracking.incomingUnread
 
     Column(
         modifier = Modifier
@@ -179,20 +154,6 @@ fun ChatScreen(
                 }
 
                 else -> {
-                    val partnerReadHorizonMs = uiState.partner.readHorizonMs
-                    val lastSentByMeId =
-                        remember(uiState.messageList.messages, uiState.currentUserId) {
-                            uiState.messageList.messages.firstOrNull { it.senderId == uiState.currentUserId }?.id
-                        }
-                    val lastReadByPartnerMessageId = remember(
-                        uiState.messageList.messages, uiState.currentUserId, partnerReadHorizonMs
-                    ) {
-                        if (partnerReadHorizonMs == null) null
-                        else uiState.messageList.messages.firstOrNull {
-                            it.senderId == uiState.currentUserId && it.createdAt.time <= partnerReadHorizonMs
-                        }?.id
-                    }
-
                     LazyColumn(
                         state = listState,
                         reverseLayout = true,
@@ -202,20 +163,23 @@ fun ChatScreen(
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        itemsIndexed(
-                            items = uiState.messageList.messages,
-                            key = { _, item -> item.clientUuid },
-                        ) { index, message ->
+                        items(
+                            count = lazyPagingItems.itemCount,
+                            key = { index ->
+                                lazyPagingItems.peek(index)?.clientUuid ?: "item_$index"
+                            },
+                        ) { index ->
+                            val message = lazyPagingItems[index] ?: return@items
                             val isMine = message.senderId == uiState.currentUserId
-                            val isPending = message.clientUuid in uiState.pendingClientUuids
-                            val isError = message.clientUuid in uiState.errorClientUuids
+                            val isPending = message.status == MessageStatus.PENDING
+                            val isError = message.status == MessageStatus.FAILED
 
-                            // reverseLayout=true: index+1 = older (visually above),
-                            //                     index-1 = newer (visually below)
-                            val prevSenderSame =
-                                uiState.messageList.messages.getOrNull(index + 1)?.senderId == message.senderId
-                            val nextSenderSame =
-                                uiState.messageList.messages.getOrNull(index - 1)?.senderId == message.senderId
+                            val prevSenderSame = if (index + 1 < lazyPagingItems.itemCount)
+                                lazyPagingItems.peek(index + 1)?.senderId == message.senderId
+                            else false
+                            val nextSenderSame = if (index - 1 >= 0)
+                                lazyPagingItems.peek(index - 1)?.senderId == message.senderId
+                            else false
                             val position = when {
                                 prevSenderSame && nextSenderSame -> BubblePosition.MIDDLE
                                 prevSenderSame && !nextSenderSame -> BubblePosition.LAST
@@ -223,6 +187,7 @@ fun ChatScreen(
                                 else -> BubblePosition.SINGLE
                             }
 
+                            val partnerReadHorizonMs = uiState.partner.readHorizonMs
                             val isPartnerSeen = isMine && isGreaterWithFallback(
                                 Date(partnerReadHorizonMs ?: 0L), message.createdAt, false
                             )
@@ -237,8 +202,7 @@ fun ChatScreen(
                             )
                         }
 
-                        // Older-messages loading spinner at the visual top
-                        if (uiState.messageList.isLoadingMore) {
+                        if (lazyPagingItems.loadState.append is LoadState.Loading) {
                             item(key = "loading_more") {
                                 Box(
                                     modifier = Modifier
@@ -259,7 +223,6 @@ fun ChatScreen(
             }
         }
 
-        // Typing indicator sits between the message list and the input bar
         AnimatedVisibility(
             visible = uiState.partner.isTyping,
             enter = fadeIn(),
@@ -277,7 +240,7 @@ fun ChatScreen(
             onValueChange = viewModel::onChangeDraftMessage,
             onSendMessage = { text ->
                 viewModel.onSendMessage(text)
-                coroutineScope.launch { listState.scrollToItem(0) }
+                coroutineScope.launch { listState.animateScrollToItem(0) }
             },
             onAttach = { /* TODO */ },
         )

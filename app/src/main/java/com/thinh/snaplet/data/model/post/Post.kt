@@ -46,7 +46,7 @@ data class Post(
         get() = "$firstName $lastName"
 }
 
-object PostVisibilityApi {
+object PostVisibility {
     const val FRIEND_ONLY = "friend-only"
     const val SELECTED_USERS = "selected-users"
 }

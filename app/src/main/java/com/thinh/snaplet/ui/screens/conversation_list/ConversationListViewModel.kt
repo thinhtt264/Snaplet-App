@@ -67,20 +67,18 @@ class ConversationListViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingMore = true) }
-            chatRepository.getConversations(limit = PAGE_LIMIT, cursor = cursor)
-                .onSuccess { data ->
-                    Logger.d("$LOG_TAG: loadMore ${data.data.size} conversations nextCursor=${data.pagination.nextCursor}")
-                    _uiState.update {
-                        it.copy(
-                            isLoadingMore = false,
-                            nextCursor = data.pagination.nextCursor,
-                        )
-                    }
+            chatRepository.getConversations(limit = PAGE_LIMIT, cursor = cursor).onSuccess { data ->
+                Logger.d("$LOG_TAG: loadMore ${data.data.size} conversations nextCursor=${data.pagination.nextCursor}")
+                _uiState.update {
+                    it.copy(
+                        isLoadingMore = false,
+                        nextCursor = data.pagination.nextCursor,
+                    )
                 }
-                .onFailure { error ->
-                    Logger.e("$LOG_TAG: loadMore failed: ${error.message}")
-                    _uiState.update { it.copy(isLoadingMore = false) }
-                }
+            }.onFailure { error ->
+                Logger.e("$LOG_TAG: loadMore failed: ${error.message}")
+                _uiState.update { it.copy(isLoadingMore = false) }
+            }
         }
     }
 
@@ -88,16 +86,14 @@ class ConversationListViewModel @Inject constructor(
         if (_uiState.value.isFriendListLoading) return
         viewModelScope.launch {
             _uiState.update { it.copy(isFriendListLoading = true, friendListError = null) }
-            userRepository.getMyFriendList()
-                .onSuccess { friends ->
-                    _uiState.update { it.copy(isFriendListLoading = false, friendList = friends) }
+            userRepository.getMyFriendList().onSuccess { friends ->
+                _uiState.update { it.copy(isFriendListLoading = false, friendList = friends) }
+            }.onFailure { error ->
+                Logger.e("$LOG_TAG: loadFriendList failed: ${error.message}")
+                _uiState.update {
+                    it.copy(isFriendListLoading = false, friendListError = error.message)
                 }
-                .onFailure { error ->
-                    Logger.e("$LOG_TAG: loadFriendList failed: ${error.message}")
-                    _uiState.update {
-                        it.copy(isFriendListLoading = false, friendListError = error.message)
-                    }
-                }
+            }
         }
     }
 
@@ -108,7 +104,7 @@ class ConversationListViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             chatRepository.syncConversations()
-                .onSuccess { Logger.d("$LOG_TAG: syncConversations ok") }
+                .onSuccess { Logger.d("$LOG_TAG: syncConversations success") }
                 .onFailure { error ->
                     Logger.e("$LOG_TAG: syncConversations failed: ${error.message}")
                     _uiState.update { it.copy(error = error.message) }
@@ -119,13 +115,10 @@ class ConversationListViewModel @Inject constructor(
 
     private fun observeNetworkReconnect() {
         viewModelScope.launch {
-            connectivityObserver.isInternetAvailable
-                .filter { it }
-                .drop(1)
-                .collect {
-                    Logger.d("$LOG_TAG: network reconnect → sync")
-                    chatRepository.syncConversations()
-                }
+            connectivityObserver.isInternetAvailable.filter { it }.drop(1).collect {
+                Logger.d("$LOG_TAG: network reconnect → sync")
+                chatRepository.syncConversations()
+            }
         }
     }
 }

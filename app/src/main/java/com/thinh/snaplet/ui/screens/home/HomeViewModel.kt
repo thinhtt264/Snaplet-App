@@ -82,6 +82,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -290,10 +292,14 @@ class HomeViewModel @Inject constructor(
     }
 
     fun observeUnreadCount() {
-        val userId = _uiState.value.userProfile?.id ?: ""
-        observeUnreadCountUseCase(userId).onEach { count ->
-            _uiState.update { it.copy(chatUnreadCount = count) }
-        }.launchIn(viewModelScope)
+        userRepository.observeMyUserProfile()
+            .distinctUntilChanged { old, new -> old?.id == new?.id }
+            .flatMapLatest { profile ->
+                val userId = profile?.id ?: return@flatMapLatest flowOf(0)
+                observeUnreadCountUseCase(userId)
+            }
+            .onEach { count -> _uiState.update { it.copy(chatUnreadCount = count) } }
+            .launchIn(viewModelScope)
     }
 
     fun onNewPostsBannerTapped() {

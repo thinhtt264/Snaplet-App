@@ -1,5 +1,7 @@
 package com.thinh.snaplet.domain.post
 
+import com.thinh.snaplet.data.model.post.PostVisibility
+
 /**
  * Audience for creating a post — maps to backend `PostVisibility` and optional `allowedViewerUserIds`.
  */
@@ -10,7 +12,7 @@ sealed class PostCreateAudience {
 
     val apiVisibility: String
         get() = when (this) {
-            is FriendOnly -> "friend-only"
-            is SelectedUsers -> "selected-users"
+            is FriendOnly -> PostVisibility.FRIEND_ONLY
+            is SelectedUsers -> PostVisibility.SELECTED_USERS
         }
 }

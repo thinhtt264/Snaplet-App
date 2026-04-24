@@ -1,6 +1,8 @@
 package com.thinh.snaplet.data.repository.chat
 
 import com.thinh.snaplet.data.local.entity.ConversationEntity
+import androidx.paging.PagingData
+import com.thinh.snaplet.data.local.entity.MessageEntity
 import com.thinh.snaplet.data.model.PaginatedResponse
 import com.thinh.snaplet.data.model.chat.Conversation
 import com.thinh.snaplet.data.model.chat.ConversationUpdatedEvent
@@ -66,6 +68,8 @@ interface ChatRepository {
         convId: String,
         lastMessageAt: Long,
         lastMessageSenderId: String,
+        lastMessageText: String? = null,
+        lastMessageType: String? = null,
     )
 
     fun markSeen(conversationId: String, messageId: String)
@@ -73,4 +77,20 @@ interface ChatRepository {
     fun sendTypingStart(conversationId: String)
 
     fun sendTypingStop(conversationId: String)
+
+    // ── Offline-first message layer ───────────────────────────────────────────
+
+    fun getMessagesPager(convId: String): Flow<PagingData<MessageEntity>>
+
+    suspend fun syncMessages(convId: String, cursor: String? = null): ApiResult<String?>
+
+    suspend fun onIncomingMessage(message: Message)
+
+    suspend fun sendTextMessage(convId: String, senderId: String, text: String)
+
+    suspend fun sendMediaMessage(convId: String, senderId: String, localUri: String, mediaType: String)
+
+    suspend fun retryMessage(localId: String)
+
+    suspend fun syncOnReconnect(convId: String)
 }

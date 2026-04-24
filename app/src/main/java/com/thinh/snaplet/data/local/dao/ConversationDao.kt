@@ -31,16 +31,23 @@ interface ConversationDao {
     @Query("DELETE FROM conversations WHERE id = :id")
     suspend fun deleteById(id: String)
 
-    @Query("""
+    @Query(
+        """
         UPDATE conversations
         SET lastMessageAt = :lastMessageAt,
-            lastMessageSenderId = :lastMessageSenderId
+            lastMessageSenderId = :lastMessageSenderId,
+            lastMessageText = :lastMessageText,
+            lastMessageType = :lastMessageType,
+            isLastMessageDeleted = 0
         WHERE id = :convId
-    """)
+    """
+    )
     suspend fun updateLastMessage(
         convId: String,
         lastMessageAt: Long,
         lastMessageSenderId: String,
+        lastMessageText: String?,
+        lastMessageType: String?,
     )
 
     @Query(
@@ -51,4 +58,7 @@ interface ConversationDao {
     """
     )
     fun observeUnreadCount(myUserId: String): Flow<Int>
+
+    @Query("DELETE FROM conversations")
+    suspend fun deleteAll()
 }

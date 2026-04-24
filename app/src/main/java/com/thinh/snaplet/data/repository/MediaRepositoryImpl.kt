@@ -15,7 +15,7 @@ import com.thinh.snaplet.data.model.media.UploadRequestData
 import com.thinh.snaplet.data.model.media.UploadRequestItem
 import com.thinh.snaplet.data.model.post.CreatePostRequest
 import com.thinh.snaplet.data.model.post.Post
-import com.thinh.snaplet.data.model.post.PostVisibilityApi
+import com.thinh.snaplet.data.model.post.PostVisibility
 import com.thinh.snaplet.di.BaseOkHttpClient
 import com.thinh.snaplet.utils.FileUtils
 import com.thinh.snaplet.utils.Logger
@@ -28,8 +28,8 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.Response
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.File
@@ -54,7 +54,7 @@ class MediaRepositoryImpl @Inject constructor(
     private fun openImageInputStream(imageSource: String): Result<InputStream> {
         return when {
             imageSource.startsWith("http://", ignoreCase = true) ||
-                imageSource.startsWith("https://", ignoreCase = true) -> {
+                    imageSource.startsWith("https://", ignoreCase = true) -> {
                 val response: Response = baseOkHttpClient.newCall(
                     Request.Builder().url(imageSource).build()
                 ).execute()
@@ -351,7 +351,7 @@ class MediaRepositoryImpl @Inject constructor(
             )
         }
 
-        if (visibility == PostVisibilityApi.SELECTED_USERS && allowedViewerUserIds.isNullOrEmpty()) {
+        if (visibility == PostVisibility.SELECTED_USERS && allowedViewerUserIds.isNullOrEmpty()) {
             return ApiResult.Failure(
                 ApiError(
                     httpCode = 400,

@@ -95,7 +95,15 @@ fun MessageBubble(
                     )
                 }
 
-                message.type == MessageType.IMAGE -> {
+                message.messageType == MessageType.IMAGE -> {
+                    BaseText(
+                        text = stringResource(R.string.conversation_message_photo),
+                        color = textColor,
+                        typography = Typography.bodyMedium,
+                    )
+                }
+
+                message.messageType == MessageType.GIF -> {
                     BaseText(
                         text = stringResource(R.string.conversation_message_photo),
                         color = textColor,
@@ -105,7 +113,7 @@ fun MessageBubble(
 
                 else -> {
                     BaseText(
-                        text = message.content.orEmpty(),
+                        text = message.text.orEmpty(),
                         color = textColor,
                         typography = Typography.bodyMedium,
                     )
