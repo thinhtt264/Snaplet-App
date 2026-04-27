@@ -23,7 +23,7 @@ interface MessageDao {
     @Upsert
     suspend fun upsert(message: MessageEntity)
 
-    @Query("UPDATE messages SET status = :status, id = :serverId, serverCreatedAt = :serverCreatedAt WHERE localId = :localId")
+    @Query("UPDATE messages SET status = :status, id = :serverId, createdAt = :serverCreatedAt, serverCreatedAt = :serverCreatedAt WHERE localId = :localId")
     suspend fun updateStatusAfterSend(localId: String, serverId: String, status: String, serverCreatedAt: Long)
 
     @Query("UPDATE messages SET status = :status WHERE localId = :localId")
@@ -34,6 +34,9 @@ interface MessageDao {
 
     @Query("SELECT * FROM messages WHERE status IN ('PENDING', 'UPLOADING', 'FAILED') ORDER BY createdAt ASC")
     suspend fun getAllPending(): List<MessageEntity>
+
+    @Query("SELECT * FROM messages WHERE conversationId = :convId AND status IN ('PENDING', 'UPLOADING', 'FAILED') ORDER BY createdAt ASC")
+    suspend fun getPendingByConvId(convId: String): List<MessageEntity>
 
     @Query("SELECT * FROM messages WHERE localId = :localId LIMIT 1")
     suspend fun getByLocalId(localId: String): MessageEntity?

@@ -5,18 +5,6 @@ import com.google.gson.annotations.SerializedName
 import com.thinh.snaplet.data.local.entity.ConversationEntity
 import java.util.Date
 
-data class CreateConversationRequest(
-    @SerializedName("recipientId")
-    val recipientId: String
-)
-
-data class CreateConversationData(
-    @SerializedName("id")
-    val id: String,
-    @SerializedName("isNew")
-    val isNew: Boolean,
-)
-
 data class ConversationPartner(
     @SerializedName("id")
     val id: String,

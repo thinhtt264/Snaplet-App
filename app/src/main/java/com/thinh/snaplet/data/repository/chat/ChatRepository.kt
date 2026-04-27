@@ -6,10 +6,8 @@ import com.thinh.snaplet.data.local.entity.MessageEntity
 import com.thinh.snaplet.data.model.PaginatedResponse
 import com.thinh.snaplet.data.model.chat.Conversation
 import com.thinh.snaplet.data.model.chat.ConversationUpdatedEvent
-import com.thinh.snaplet.data.model.chat.CreateConversationData
 import com.thinh.snaplet.data.model.chat.Message
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
-import com.thinh.snaplet.data.model.chat.SendMessageRequest
 import com.thinh.snaplet.platform.socket.SocketConnectionState
 import com.thinh.snaplet.utils.network.ApiResult
 import kotlinx.coroutines.flow.Flow
@@ -38,8 +36,6 @@ interface ChatRepository {
 
     fun disconnectChatSocket()
 
-    suspend fun createOrFindConversation(recipientId: String): ApiResult<CreateConversationData>
-
     suspend fun getConversations(
         limit: Int = 10,
         cursor: String? = null,
@@ -50,11 +46,6 @@ interface ChatRepository {
         limit: Int = 10,
         cursor: String? = null,
     ): ApiResult<PaginatedResponse<Message>>
-
-    suspend fun sendMessage(
-        conversationId: String,
-        request: SendMessageRequest,
-    ): ApiResult<Message>
 
     fun observeConversations(): Flow<List<ConversationEntity>>
 
@@ -86,11 +77,15 @@ interface ChatRepository {
 
     suspend fun onIncomingMessage(message: Message)
 
+    suspend fun sendFirstMessage(recipientId: String, senderId: String, text: String): ApiResult<Message>
+
     suspend fun sendTextMessage(convId: String, senderId: String, text: String)
 
     suspend fun sendMediaMessage(convId: String, senderId: String, localUri: String, mediaType: String)
 
     suspend fun retryMessage(localId: String)
+
+    suspend fun retryPendingMessages(convId: String)
 
     suspend fun syncOnReconnect(convId: String)
 }

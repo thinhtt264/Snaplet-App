@@ -89,12 +89,12 @@ class ChatViewModel @Inject constructor(
         observeConnectivity()
         observeNetworkReconnect()
 
-        val recipientId = route.recipientId
-        if (recipientId != null) {
-            createOrFindConversationAndInit(recipientId)
-        } else if (conversationId.isNotEmpty()) {
+        if (conversationId.isNotEmpty()) {
             connectSocket()
             loadMessages()
+            viewModelScope.launch { chatRepository.retryPendingMessages(conversationId) }
+        } else {
+            _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
         }
     }
 
@@ -119,7 +119,7 @@ class ChatViewModel @Inject constructor(
 
     fun onChangeDraftMessage(text: String) {
         _uiState.update { it.copy(draftMessage = text) }
-        if (text.isNotBlank()) {
+        if (text.isNotBlank() && conversationId.isNotEmpty()) {
             typingThrottler.run {
                 viewModelScope.launch { chatRepository.sendTypingStart(conversationId) }
             }
@@ -132,59 +132,47 @@ class ChatViewModel @Inject constructor(
         _uiState.update { it.copy(draftMessage = "") }
         typingThrottler.reset()
         viewModelScope.launch {
-            chatRepository.sendTextMessage(conversationId, currentUserId, trimmed)
+            if (conversationId.isEmpty()) {
+                val recipientId = route.recipientId ?: return@launch
+                sendFirstMessageAndInit(recipientId, currentUserId, trimmed)
+            } else {
+                chatRepository.sendTextMessage(conversationId, currentUserId, trimmed)
+                chatRepository.sendTypingStop(conversationId)
+            }
         }
-        viewModelScope.launch { chatRepository.sendTypingStop(conversationId) }
+    }
+
+    private suspend fun sendFirstMessageAndInit(
+        recipientId: String,
+        senderId: String,
+        text: String
+    ) {
+        _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = true)) }
+        chatRepository.sendFirstMessage(recipientId, senderId, text)
+            .onSuccess { message ->
+                conversationId = message.conversationId
+                _activeConversationId.value = message.conversationId
+                _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
+                connectSocket()
+                loadMessages()
+            }
+            .onFailure { error ->
+                Logger.e("sendFirstMessage failed: ${error.message}")
+                _uiState.update {
+                    it.copy(
+                        draftMessage = text,
+                        messageList = it.messageList.copy(isLoading = false, error = error.message),
+                    )
+                }
+            }
     }
 
     fun loadMessages() {
         if (conversationId.isEmpty()) return
+        _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false, error = null)) }
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    messageList = it.messageList.copy(
-                        isLoading = true,
-                        error = null
-                    )
-                )
-            }
             loadInitialMessagesUseCase(conversationId = conversationId)
-                .onSuccess {
-                    _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
-                }
-                .onFailure { error ->
-                    Logger.e("loadMessages failed: ${error.message}")
-                    _uiState.update {
-                        it.copy(
-                            messageList = it.messageList.copy(
-                                isLoading = false,
-                                error = error.message
-                            )
-                        )
-                    }
-                }
-        }
-    }
-
-    private fun createOrFindConversationAndInit(recipientId: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = true)) }
-            chatRepository.createOrFindConversation(recipientId).onSuccess { data ->
-                conversationId = data.id
-                _activeConversationId.value = data.id
-                connectSocket()
-                loadMessages()
-            }.onFailure { error ->
-                Logger.e("createOrFindConversation failed: ${error.message}")
-                _uiState.update {
-                    it.copy(
-                        messageList = it.messageList.copy(
-                            isLoading = false,
-                            error = error.message
-                        )
-                    )
-                }
-            }
+                .onFailure { Logger.e("loadMessages sync failed: ${it.message}") }
         }
     }
 

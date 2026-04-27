@@ -3,9 +3,15 @@ package com.thinh.snaplet.utils
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSerializationContext
+import com.google.gson.JsonSerializer
 import java.lang.reflect.Type
+import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.util.Date
 
@@ -20,7 +26,18 @@ import java.util.Date
  *
  * On failure, returns Date(0) instead of throwing to avoid crashing the app.
  */
-class UtcDateDeserializer : JsonDeserializer<Date> {
+class UtcDateDeserializer : JsonDeserializer<Date>, JsonSerializer<Date> {
+
+    override fun serialize(
+        src: Date,
+        typeOfSrc: Type,
+        context: JsonSerializationContext
+    ): JsonElement {
+        val iso = Instant.ofEpochMilli(src.time)
+            .atOffset(ZoneOffset.UTC)
+            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"))
+        return JsonPrimitive(iso)
+    }
 
     override fun deserialize(
         json: JsonElement,

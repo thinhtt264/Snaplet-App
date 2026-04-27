@@ -23,6 +23,7 @@ import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.domain.chat.ObserveUnreadCountUseCase
+import com.thinh.snaplet.domain.chat.SyncConversationsUseCase
 import com.thinh.snaplet.domain.feed.FetchNewerFeedUseCase
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase.Companion.FEED_PAGE_LIMIT
@@ -127,7 +128,8 @@ class HomeViewModel @Inject constructor(
     private val widgetUpdateManager: WidgetUpdateManager,
     private val mediaRepository: MediaRepository,
     private val observeFriendRequestReceivedUseCase: ObserveFriendRequestReceivedUseCase,
-    private val observeUnreadCountUseCase: ObserveUnreadCountUseCase
+    private val observeUnreadCountUseCase: ObserveUnreadCountUseCase,
+    private val syncConversationsUseCase: SyncConversationsUseCase,
 ) : ViewModel() {
     val emojiFloatController: EmojiFloatController by lazy { EmojiFloatController() }
 
@@ -203,7 +205,7 @@ class HomeViewModel @Inject constructor(
         loadMyFriendList()
         loadUnreadPostsCount()
         loadQuickChatEmojiSlots()
-        observeUnreadCount()
+        startChatUnreadTracking()
         observeUnreadPostsUpdates()
         observeFriendRequestUpdates()
         observeNetworkReconnect()
@@ -291,7 +293,8 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun observeUnreadCount() {
+    private fun startChatUnreadTracking() {
+        viewModelScope.launch { syncConversationsUseCase() }
         userRepository.observeMyUserProfile()
             .distinctUntilChanged { old, new -> old?.id == new?.id }
             .flatMapLatest { profile ->

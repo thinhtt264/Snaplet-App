@@ -17,8 +17,6 @@ import com.thinh.snaplet.data.local.entity.MessageStatus
 import com.thinh.snaplet.data.model.PaginatedResponse
 import com.thinh.snaplet.data.model.chat.Conversation
 import com.thinh.snaplet.data.model.chat.ConversationUpdatedEvent
-import com.thinh.snaplet.data.model.chat.CreateConversationData
-import com.thinh.snaplet.data.model.chat.CreateConversationRequest
 import com.thinh.snaplet.data.model.chat.Message
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
 import com.thinh.snaplet.data.model.chat.MessageType
@@ -132,12 +130,17 @@ class ChatRepositoryImpl @Inject constructor(
                         gson.fromJson(json, ConversationUpdatedEvent::class.java)
                     }.getOrNull()
                 }.collect { event ->
-                    updateLastMessageLocal(
-                        convId = event.conversationId,
-                        lastMessageAt = event.lastMessageAt.time,
-                        lastMessageSenderId = event.lastMessageSenderId,
-                        lastMessageText = event.lastMessageText
-                    )
+                    val existing = conversationDao.getById(event.conversationId)
+                    if (existing == null) {
+                        syncConversationById(event.conversationId)
+                    } else {
+                        updateLastMessageLocal(
+                            convId = event.conversationId,
+                            lastMessageAt = event.lastMessageAt.time,
+                            lastMessageSenderId = event.lastMessageSenderId,
+                            lastMessageText = event.lastMessageText
+                        )
+                    }
                 }
         }
     }
@@ -179,14 +182,6 @@ class ChatRepositoryImpl @Inject constructor(
         chatSocketManager.disconnect()
     }
 
-    override suspend fun createOrFindConversation(recipientId: String): ApiResult<CreateConversationData> {
-        Logger.d("createOrFindConversation recipientId=$recipientId")
-        return safeApiCall(
-            apiCall = { apiService.createOrFindConversation(CreateConversationRequest(recipientId)) },
-            onSuccess = { data -> syncConversationById(data.id) },
-        )
-    }
-
     override suspend fun getConversations(
         limit: Int,
         cursor: String?,
@@ -218,15 +213,6 @@ class ChatRepositoryImpl @Inject constructor(
                     cursor = cursor,
                 )
             })
-    }
-
-    override suspend fun sendMessage(
-        conversationId: String,
-        request: SendMessageRequest,
-    ): ApiResult<Message> {
-        Logger.d("sendMessage conversationId=$conversationId clientUuid=${request.clientUuid}")
-        return safeApiCall(
-            apiCall = { apiService.sendMessage(conversationId = conversationId, body = request) })
     }
 
     override fun markSeen(conversationId: String, messageId: String) {
@@ -348,6 +334,36 @@ class ChatRepositoryImpl @Inject constructor(
         )
     }
 
+    override suspend fun sendFirstMessage(recipientId: String, senderId: String, text: String): ApiResult<Message> {
+        val localId = UUID.randomUUID().toString()
+        Logger.d("sendFirstMessage recipientId=$recipientId clientUuid=$localId")
+        return safeApiCall(
+            apiCall = {
+                apiService.sendMessage(
+                    body = SendMessageRequest(
+                        recipientId = recipientId,
+                        clientUuid = localId,
+                        text = text,
+                    )
+                )
+            },
+            onSuccess = { message ->
+                if (conversationDao.getById(message.conversationId) == null) {
+                    syncConversationById(message.conversationId)
+                } else {
+                    conversationDao.updateLastMessage(
+                        convId = message.conversationId,
+                        lastMessageAt = message.createdAt.time,
+                        lastMessageSenderId = message.senderId,
+                        lastMessageText = message.text,
+                        lastMessageType = message.messageType.name.lowercase(),
+                    )
+                }
+                messageDao.upsert(message.toEntity())
+            },
+        )
+    }
+
     override suspend fun sendTextMessage(convId: String, senderId: String, text: String) {
         val localId = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
@@ -395,25 +411,33 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun syncOnReconnect(convId: String) {
-        syncMessages(convId)
-        val pending = messageDao.getAllPending()
-        pending.forEach { msg ->
+    override suspend fun retryPendingMessages(convId: String) {
+        messageDao.getPendingByConvId(convId).forEach { msg ->
             when {
                 msg.type == MessageType.TEXT.name.lowercase() -> executeSend(msg.localId)
-                msg.mediaLocalUri != null -> Logger.w("syncOnReconnect: media retry not yet implemented")
                 msg.mediaUrl != null -> executeSend(msg.localId)
+                msg.mediaLocalUri != null -> Logger.w("retryPending: media retry not yet implemented localId=${msg.localId}")
             }
         }
     }
 
+    override suspend fun syncOnReconnect(convId: String) {
+        syncMessages(convId)
+        retryPendingMessages(convId)
+    }
+
     private suspend fun executeSend(localId: String) {
         val msg = messageDao.getByLocalId(localId) ?: return
+        val conv = conversationDao.getById(msg.conversationId) ?: run {
+            Logger.e("executeSend: conversation not found for convId=${msg.conversationId}")
+            messageDao.updateStatus(localId, MessageStatus.FAILED)
+            return
+        }
         safeApiCall(
             apiCall = {
                 apiService.sendMessage(
-                    conversationId = msg.conversationId,
                     body = SendMessageRequest(
+                        recipientId = conv.participantId,
                         clientUuid = localId,
                         text = msg.text,
                     ),

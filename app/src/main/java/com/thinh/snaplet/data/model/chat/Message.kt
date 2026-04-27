@@ -72,6 +72,8 @@ data class ReplyToMessage(
 )
 
 data class SendMessageRequest(
+    @SerializedName("recipientId")
+    val recipientId: String,
     @SerializedName("clientUuid")
     val clientUuid: String,
     @SerializedName("text")

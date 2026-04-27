@@ -124,6 +124,8 @@ fun ChatScreen(
                 .weight(1f)
                 .fillMaxWidth()
         ) {
+            val isRefreshLoading = lazyPagingItems.loadState.refresh is LoadState.Loading
+            val refreshError = lazyPagingItems.loadState.refresh as? LoadState.Error
             when {
                 uiState.messageList.isLoading -> {
                     CircularProgressIndicator(
@@ -143,7 +145,36 @@ fun ChatScreen(
                             color = Color.White.copy(alpha = 0.6f),
                             typography = Typography.bodyMedium,
                         )
-                        OutlinedButton(onClick = viewModel::loadMessages) {
+                        OutlinedButton(onClick = { viewModel.onSendMessage(uiState.draftMessage) }) {
+                            BaseText(
+                                text = stringResource(R.string.retry),
+                                color = Color.White,
+                                typography = Typography.labelLarge,
+                            )
+                        }
+                    }
+                }
+
+                isRefreshLoading && lazyPagingItems.itemCount == 0 -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                refreshError != null && lazyPagingItems.itemCount == 0 -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        BaseText(
+                            text = refreshError.error.localizedMessage
+                                ?: stringResource(R.string.error),
+                            color = Color.White.copy(alpha = 0.6f),
+                            typography = Typography.bodyMedium,
+                        )
+                        OutlinedButton(onClick = { lazyPagingItems.retry() }) {
                             BaseText(
                                 text = stringResource(R.string.retry),
                                 color = Color.White,

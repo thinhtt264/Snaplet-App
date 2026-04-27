@@ -3,8 +3,6 @@ package com.thinh.snaplet.data.datasource.remote
 import com.thinh.snaplet.data.model.BaseResponse
 import com.thinh.snaplet.data.model.PaginatedResponse
 import com.thinh.snaplet.data.model.chat.Conversation
-import com.thinh.snaplet.data.model.chat.CreateConversationData
-import com.thinh.snaplet.data.model.chat.CreateConversationRequest
 import com.thinh.snaplet.data.model.chat.Message
 import com.thinh.snaplet.data.model.chat.SendMessageRequest
 import com.thinh.snaplet.data.model.CompleteOnboardRequest
@@ -223,10 +221,10 @@ interface ApiService {
 
     // ── Chat ──────────────────────────────────────────────────────────────
 
-    @POST("conversations")
-    suspend fun createOrFindConversation(
-        @Body body: CreateConversationRequest
-    ): Response<BaseResponse<CreateConversationData>>
+    @POST("messages")
+    suspend fun sendMessage(
+        @Body body: SendMessageRequest
+    ): Response<BaseResponse<Message>>
 
     @GET("conversations")
     suspend fun getConversations(
@@ -252,9 +250,4 @@ interface ApiService {
         @Query("cursor") cursor: String? = null
     ): Response<BaseResponse<PaginatedResponse<Message>>>
 
-    @POST("conversations/{conversationId}/messages")
-    suspend fun sendMessage(
-        @Path("conversationId") conversationId: String,
-        @Body body: SendMessageRequest
-    ): Response<BaseResponse<Message>>
 }
