@@ -1,10 +1,5 @@
 package com.thinh.snaplet.ui.screens.chat.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,22 +10,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -139,6 +125,7 @@ fun MessageBubble(
                                 isPending = isPending,
                                 showError = isError,
                                 showSeenTick = showSeenTick,
+                                iconSize = ICON_SIZE,
                             ) else Spacer(Modifier.height(ICON_SIZE))
                         }
                     }
@@ -177,78 +164,13 @@ fun MessageBubble(
                                 isPending = isPending,
                                 showError = isError,
                                 showSeenTick = showSeenTick,
+                                iconSize = ICON_SIZE,
                             )
                         }
                     }
                 }
             }
-
-//            if (!isPlainText) Row(
-//                modifier = Modifier.align(Alignment.End),
-//                verticalAlignment = Alignment.CenterVertically,
-//                horizontalArrangement = Arrangement.spacedBy(3.dp),
-//            ) {
-//                BaseText(
-//                    text = message.createdAt.to24HourTime(),
-//                    color = metaColor,
-//                    typography = Typography.labelSmall,
-//                )
-//
-//                if (isMine) MessageStatusIcon(
-//                    isPending = isPending,
-//                    showError = isError,
-//                    showSeenTick = showSeenTick,
-//                )
-//            }
         }
-    }
-}
-
-@Composable
-private fun MessageStatusIcon(
-    isPending: Boolean,
-    showError: Boolean,
-    showSeenTick: Boolean,
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "loading")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = LinearEasing)
-        ),
-        label = "rotation",
-    )
-    when {
-        isPending -> Icon(
-            imageVector = Icons.Filled.Refresh,
-            contentDescription = null,
-            modifier = Modifier
-                .size(ICON_SIZE)
-                .rotate(rotation),
-            tint = Color(0xFF0D0D0D),
-        )
-
-        showError -> Icon(
-            imageVector = Icons.Filled.Error,
-            contentDescription = null,
-            modifier = Modifier.size(ICON_SIZE),
-            tint = MaterialTheme.colorScheme.error,
-        )
-
-        showSeenTick -> Icon(
-            imageVector = Icons.Filled.DoneAll,
-            contentDescription = null,
-            modifier = Modifier.size(ICON_SIZE),
-            tint = Color(0xFF0D0D0D),
-        )
-
-        else -> Icon(
-            imageVector = Icons.Filled.Done,
-            contentDescription = null,
-            modifier = Modifier.size(ICON_SIZE),
-            tint = Color(0xFF0D0D0D),
-        )
     }
 }
 

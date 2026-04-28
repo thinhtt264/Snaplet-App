@@ -13,6 +13,7 @@ data class ConversationUiModel(
     val lastMessageAt: Long?,
     val myLastSeenAt: Long?,
     val partnerLastSeenAt: Long?,
+    val lastMessageStatus: String?,
     val hasUnread: Boolean,
     val isLastMessageMine: Boolean,
     val partnerHasSeen: Boolean,

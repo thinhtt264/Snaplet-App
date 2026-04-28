@@ -44,7 +44,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -58,6 +57,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thinh.snaplet.R
+import com.thinh.snaplet.data.local.entity.MessageStatus
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.navigation.ChatConversation
 import com.thinh.snaplet.ui.components.AppIconButton
@@ -66,9 +66,11 @@ import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.components.IconDecoration
 import com.thinh.snaplet.ui.components.IconSpec
 import com.thinh.snaplet.ui.components.PrimaryButton
+import com.thinh.snaplet.ui.screens.chat.components.MessageStatusIcon
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.toLocalTimeAgo
 import pressScaleClickable
+import java.util.Date
 
 @Composable
 fun ConversationListScreen(
@@ -361,7 +363,6 @@ private fun ConversationCard(
             avatarUrl = conversation.participantAvatarUrl,
             firstName = conversation.participantName,
             size = 48.dp,
-            modifier = Modifier.alpha(if (isUnread) 1f else 0.7f),
         )
 
         Spacer(Modifier.width(12.dp))
@@ -394,13 +395,34 @@ private fun ConversationCard(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            val isPending = conversation.isLastMessageMine &&
+                    (conversation.lastMessageStatus == MessageStatus.PENDING ||
+                            conversation.lastMessageStatus == MessageStatus.UPLOADING)
+            val showError = conversation.isLastMessageMine &&
+                    conversation.lastMessageStatus == MessageStatus.FAILED
+            val showSeenTick = conversation.isLastMessageMine && !isPending &&
+                    !showError && conversation.partnerHasSeen
             conversation.lastMessageAt?.let { time ->
-                BaseText(
-                    text = java.util.Date(time).toLocalTimeAgo(),
-                    color = metaColor,
-                    typography = Typography.labelSmall,
-                    fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    if (conversation.isLastMessageMine) {
+                        MessageStatusIcon(
+                            isPending = isPending,
+                            showError = showError,
+                            showSeenTick = showSeenTick,
+                            iconSize = 20.dp,
+                            defaultTint = metaColor,
+                        )
+                    }
+                    BaseText(
+                        text = Date(time).toLocalTimeAgo(),
+                        color = metaColor,
+                        typography = Typography.labelMedium,
+                        fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal,
+                    )
+                }
             }
             if (isUnread) {
                 Box(

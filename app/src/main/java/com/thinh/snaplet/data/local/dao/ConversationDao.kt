@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
 import com.thinh.snaplet.data.local.entity.ConversationEntity
+import com.thinh.snaplet.data.local.entity.ConversationLastMessageStatusProjection
 import com.thinh.snaplet.data.local.entity.ConversationUpdatedAtProjection
 import kotlinx.coroutines.flow.Flow
 
@@ -12,6 +13,17 @@ interface ConversationDao {
 
     @Query("SELECT * FROM conversations ORDER BY lastMessageAt DESC")
     fun observeAll(): Flow<List<ConversationEntity>>
+
+    @Query(
+        """
+        SELECT c.id AS conversationId, m.status AS status
+        FROM conversations c
+        LEFT JOIN messages m
+            ON m.conversationId = c.id
+           AND m.createdAt = c.lastMessageAt
+    """
+    )
+    fun observeLastMessageStatuses(): Flow<List<ConversationLastMessageStatusProjection>>
 
     @Query("SELECT * FROM conversations WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): ConversationEntity?

@@ -237,6 +237,8 @@ class ChatRepositoryImpl @Inject constructor(
     override fun observeConversations(): Flow<List<ConversationEntity>> =
         conversationDao.observeAll()
 
+    override fun observeLastMessageStatuses() = conversationDao.observeLastMessageStatuses()
+
     override suspend fun syncConversations(): ApiResult<Unit> {
         return safeApiCall(
             apiCall = { apiService.getConversations(limit = 20, cursor = null) },

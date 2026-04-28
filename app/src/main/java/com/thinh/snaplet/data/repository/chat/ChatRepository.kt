@@ -1,6 +1,7 @@
 package com.thinh.snaplet.data.repository.chat
 
 import com.thinh.snaplet.data.local.entity.ConversationEntity
+import com.thinh.snaplet.data.local.entity.ConversationLastMessageStatusProjection
 import androidx.paging.PagingData
 import com.thinh.snaplet.data.local.entity.MessageEntity
 import com.thinh.snaplet.data.model.PaginatedResponse
@@ -48,6 +49,7 @@ interface ChatRepository {
     ): ApiResult<PaginatedResponse<Message>>
 
     fun observeConversations(): Flow<List<ConversationEntity>>
+    fun observeLastMessageStatuses(): Flow<List<ConversationLastMessageStatusProjection>>
 
     suspend fun syncConversations(): ApiResult<Unit>
 

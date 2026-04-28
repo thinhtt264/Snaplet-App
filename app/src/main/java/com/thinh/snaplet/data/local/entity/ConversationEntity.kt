@@ -27,7 +27,15 @@ data class ConversationUpdatedAtProjection(
     val partnerLastSeenAt: Long?,
 )
 
-fun ConversationEntity.toUiModel(myUserId: String?): ConversationUiModel {
+data class ConversationLastMessageStatusProjection(
+    val conversationId: String,
+    val status: String?,
+)
+
+fun ConversationEntity.toUiModel(
+    myUserId: String?,
+    lastMessageStatus: String? = null,
+): ConversationUiModel {
     val hasUnread = lastMessageSenderId != myUserId &&
             (lastMessageAt ?: 0L) > (myLastSeenAt ?: 0L)
     val isLastMessageMine = lastMessageSenderId == myUserId
@@ -42,6 +50,7 @@ fun ConversationEntity.toUiModel(myUserId: String?): ConversationUiModel {
         lastMessageAt = lastMessageAt,
         myLastSeenAt = myLastSeenAt,
         partnerLastSeenAt = partnerLastSeenAt,
+        lastMessageStatus = lastMessageStatus,
         hasUnread = hasUnread,
         isLastMessageMine = isLastMessageMine,
         partnerHasSeen = partnerHasSeen,

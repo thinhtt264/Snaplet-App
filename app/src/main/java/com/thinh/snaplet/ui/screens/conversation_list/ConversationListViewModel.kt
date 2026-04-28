@@ -40,11 +40,18 @@ class ConversationListViewModel @Inject constructor(
         _uiState,
         userRepository.observeMyUserProfile().distinctUntilChanged(),
         chatRepository.observeConversations(),
-    ) { state, profileUi, entities ->
+        chatRepository.observeLastMessageStatuses(),
+    ) { state, profileUi, entities, lastMessageStatuses ->
         val myUserId = profileUi?.id
+        val lastStatusByConversationId = lastMessageStatuses.associate { it.conversationId to it.status }
         state.copy(
             userProfile = profileUi,
-            conversations = entities.map { it.toUiModel(myUserId) },
+            conversations = entities.map { entity ->
+                entity.toUiModel(
+                    myUserId = myUserId,
+                    lastMessageStatus = lastStatusByConversationId[entity.id],
+                )
+            },
         )
     }.stateIn(
         scope = viewModelScope,
