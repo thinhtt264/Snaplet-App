@@ -24,6 +24,7 @@ data class ConversationEntity(
 data class ConversationUpdatedAtProjection(
     val id: String,
     val updatedAt: Long,
+    val partnerLastSeenAt: Long?,
 )
 
 fun ConversationEntity.toUiModel(myUserId: String?): ConversationUiModel {

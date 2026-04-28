@@ -119,6 +119,7 @@ class ChatRepositoryImpl @Inject constructor(
         observeConversationUpdatedSocket(socketManager)
         observeConversationDeletedSocket(socketManager)
         routeIncomingMessagesToRoom()
+        observeReadReceiptsToDb()
     }
 
     private fun observeConversationUpdatedSocket(socketManager: SocketManager) {
@@ -154,7 +155,6 @@ class ChatRepositoryImpl @Inject constructor(
                         JSONObject(json).optString("conversationId").takeIf { it.isNotEmpty() }
                     }.getOrNull()
                 }.collect { convId ->
-                    Logger.d("conversation_deleted convId=$convId")
                     deleteConversationLocal(convId)
                 }
         }
@@ -166,19 +166,32 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
+    private fun observeReadReceiptsToDb() {
+        scope.launch {
+            readReceipts.collect { event ->
+                val convId = activeConversationId.takeIf { it.isNotEmpty() } ?: return@collect
+                conversationDao.updatePartnerLastSeenAt(convId, event.readAt.time)
+            }
+        }
+    }
+
     override val chatSocketConnectionState: StateFlow<SocketConnectionState> =
         chatSocketManager.connectionState
 
     override fun observeUnreadCount(myUserId: String): Flow<Int> =
         conversationDao.observeUnreadCount(myUserId).distinctUntilChanged()
 
+    @Volatile private var activeConversationId: String = ""
+
     override suspend fun connectChatSocket(conversationId: String) {
         Logger.d("connectChatSocket conversationId=$conversationId")
+        activeConversationId = conversationId
         chatSocketManager.connect(conversationId)
     }
 
     override fun disconnectChatSocket() {
         Logger.d("disconnectChatSocket")
+        activeConversationId = ""
         chatSocketManager.disconnect()
     }
 
@@ -204,7 +217,6 @@ class ChatRepositoryImpl @Inject constructor(
         limit: Int,
         cursor: String?,
     ): ApiResult<PaginatedResponse<Message>> {
-        Logger.d("getMessages conversationId=$conversationId limit=$limit cursor=$cursor")
         return safeApiCall(
             apiCall = {
                 apiService.getMessages(
@@ -215,17 +227,11 @@ class ChatRepositoryImpl @Inject constructor(
             })
     }
 
-    override fun markSeen(conversationId: String, messageId: String) {
-        Logger.d("markSeen conversationId=$conversationId messageId=$messageId")
-        val now = System.currentTimeMillis()
+    override fun markSeen(conversationId: String, messageId: String, messageCreatedAtMs: Long) {
         scope.launch(NonCancellable) {
-            conversationDao.updateMyLastSeenAt(conversationId, now)
+            conversationDao.updateMyLastSeenAt(conversationId, messageCreatedAtMs)
             safeApiCall(apiCall = { apiService.markMessageSeen(conversationId, messageId) })
         }
-    }
-
-    override suspend fun updatePartnerLastSeenAt(convId: String, seenAt: Long) {
-        conversationDao.updatePartnerLastSeenAt(convId, seenAt)
     }
 
     override fun observeConversations(): Flow<List<ConversationEntity>> =
@@ -247,7 +253,6 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun syncConversationById(convId: String): ApiResult<Unit> {
-        Logger.d("syncConversationById convId=$convId")
         return safeApiCall(
             apiCall = { apiService.getConversationById(convId) },
             onSuccess = { conv -> conversationDao.upsert(conv.toEntity()) },
@@ -277,7 +282,6 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override fun sendTypingStart(conversationId: String) {
-        Logger.d("sendTypingStart conversationId=$conversationId")
         chatSocketManager.emit(
             eventName = CHAT_TYPING_START,
             data = JSONObject(gson.toJson(TypingSocketPayload(conversationId))),
@@ -285,7 +289,6 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override fun sendTypingStop(conversationId: String) {
-        Logger.d("sendTypingStop conversationId=$conversationId")
         chatSocketManager.emit(
             eventName = CHAT_TYPING_STOP,
             data = JSONObject(gson.toJson(TypingSocketPayload(conversationId))),
@@ -306,7 +309,6 @@ class ChatRepositoryImpl @Inject constructor(
     ).flow
 
     override suspend fun syncMessages(convId: String, cursor: String?): ApiResult<String?> {
-        Logger.d("syncMessages convId=$convId cursor=$cursor")
         return safeApiCall(
             apiCall = { apiService.getMessages(convId, limit = PAGE_SIZE, cursor = cursor) },
             onSuccess = { data ->
@@ -348,7 +350,6 @@ class ChatRepositoryImpl @Inject constructor(
         height: Int,
     ): ApiResult<Message> {
         val localId = UUID.randomUUID().toString()
-        Logger.d("sendFirstMessage recipientId=$recipientId clientUuid=$localId")
         return safeApiCall(
             apiCall = {
                 apiService.sendMessage(
@@ -475,11 +476,21 @@ class ChatRepositoryImpl @Inject constructor(
         if (incoming.isEmpty()) return
         val snapshot = conversationDao.getAllUpdatedAtSnapshot().associateBy { it.id }
         val changed = incoming.filter { conv ->
-            val existing = snapshot[conv.id]
-            existing == null || existing.updatedAt != conv.updatedAt.time
+            val existing = snapshot[conv.id] ?: return@filter true
+            existing.updatedAt != conv.updatedAt.time ||
+                (conv.partnerLastReadAt != null && existing.partnerLastSeenAt == null)
         }
         if (changed.isNotEmpty()) {
-            conversationDao.upsertAll(changed.map { it.toEntity() })
+            val entities = changed.map { conv ->
+                val entity = conv.toEntity()
+                val existingPartnerSeen = snapshot[conv.id]?.partnerLastSeenAt
+                if (existingPartnerSeen != null && existingPartnerSeen > (entity.partnerLastSeenAt ?: 0L)) {
+                    entity.copy(partnerLastSeenAt = existingPartnerSeen)
+                } else {
+                    entity
+                }
+            }
+            conversationDao.upsertAll(entities)
         }
     }
 }

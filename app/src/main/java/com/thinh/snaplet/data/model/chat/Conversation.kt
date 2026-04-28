@@ -56,9 +56,9 @@ data class Conversation(
     val partner: ConversationPartner,
     @SerializedName("lastMessage")
     val lastMessage: LastMessage?,
-    @SerializedName("partnerLastReadAt")
+    @SerializedName("partnerLastSeenAt")
     val partnerLastReadAt: Date?,
-    @SerializedName("myLastReadAt")
+    @SerializedName("myLastSeenAt")
     val myLastReadAt: Date?,
     @SerializedName("createdAt")
     val createdAt: Date,

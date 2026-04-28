@@ -63,9 +63,7 @@ interface ChatRepository {
         lastMessageType: String? = null,
     )
 
-    fun markSeen(conversationId: String, messageId: String)
-
-    suspend fun updatePartnerLastSeenAt(convId: String, seenAt: Long)
+    fun markSeen(conversationId: String, messageId: String, messageCreatedAtMs: Long)
 
     fun sendTypingStart(conversationId: String)
 

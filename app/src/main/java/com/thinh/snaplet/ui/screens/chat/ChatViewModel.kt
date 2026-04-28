@@ -246,7 +246,7 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun triggerMarkSeen(messageId: String, createdAtMs: Long) {
-        viewModelScope.launch { markMessageSeenUseCase(conversationId, messageId) }
+        markMessageSeenUseCase(conversationId, messageId, createdAtMs)
         _uiState.update { it.copy(readTracking = it.readTracking.copy(myLastReadCreatedAtMs = createdAtMs)) }
     }
 
@@ -273,9 +273,6 @@ class ChatViewModel @Inject constructor(
             chatRepository.readReceipts.collect { event ->
                 if (_uiState.value.currentUserId == event.userId) return@collect
                 _uiState.update { it.copy(partner = it.partner.copy(lastReadEvent = event)) }
-                if (conversationId.isNotEmpty()) {
-                    chatRepository.updatePartnerLastSeenAt(conversationId, event.readAt.time)
-                }
             }
         }
     }

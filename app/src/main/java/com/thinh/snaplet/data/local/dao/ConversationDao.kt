@@ -16,7 +16,7 @@ interface ConversationDao {
     @Query("SELECT * FROM conversations WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): ConversationEntity?
 
-    @Query("SELECT id, updatedAt FROM conversations")
+    @Query("SELECT id, updatedAt, partnerLastSeenAt FROM conversations")
     suspend fun getAllUpdatedAtSnapshot(): List<ConversationUpdatedAtProjection>
 
     @Upsert
