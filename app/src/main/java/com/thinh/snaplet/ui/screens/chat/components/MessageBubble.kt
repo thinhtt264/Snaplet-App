@@ -7,9 +7,13 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -28,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
@@ -45,6 +50,8 @@ private const val BUBBLE_MAX_WIDTH_FRACTION = 0.75f
 private val BUBBLE_CORNER = 16.dp
 private val BUBBLE_CORNER_SMALL = 4.dp
 
+internal val BUBBLE_VERTICAL_PADDING = 8.dp
+
 private val ICON_SIZE = 14.dp
 
 enum class BubblePosition { FIRST, MIDDLE, LAST, SINGLE }
@@ -57,6 +64,7 @@ fun MessageBubble(
     isError: Boolean,
     showSeenTick: Boolean,
     position: BubblePosition,
+    onRetry: (() -> Unit)? = null,
 ) {
     val cs = MaterialTheme.colorScheme
     val windowSize = LocalWindowInfo.current.containerSize
@@ -71,7 +79,13 @@ fun MessageBubble(
     val metaColor = if (isMine) cs.background.copy(alpha = 0.6f)
     else cs.onBackground.copy(alpha = 0.6f)
 
+    val translationYPx = with(density) { 6.dp.toPx() }
+
     val shape = if (isMine) mineShape(position) else theirShape(position)
+
+    val isImageMessage = message.messageType == MessageType.IMAGE
+    val resolvePadding = if (isImageMessage) PaddingValues(0.dp)
+    else PaddingValues(horizontal = 12.dp, vertical = BUBBLE_VERTICAL_PADDING)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -82,8 +96,7 @@ fun MessageBubble(
                 .widthIn(max = screenWidthDp * BUBBLE_MAX_WIDTH_FRACTION)
                 .clip(shape)
                 .background(bubbleColor)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+                .padding(resolvePadding)
         ) {
             when {
                 message.isDeleted -> {
@@ -95,12 +108,40 @@ fun MessageBubble(
                     )
                 }
 
-                message.messageType == MessageType.IMAGE -> {
-                    BaseText(
-                        text = stringResource(R.string.conversation_message_photo),
-                        color = textColor,
-                        typography = Typography.bodyMedium,
-                    )
+                isImageMessage -> {
+                    val media = message.media ?: return@Column
+                    val ratio = media.width.toFloat() / media.height.toFloat()
+
+                    Box(modifier = Modifier.padding(bottom = BUBBLE_VERTICAL_PADDING)) {
+                        MessageImageContent(
+                            modifier = Modifier.fillMaxWidth(),
+                            imageUrl = media.urls?.md.orEmpty(),
+                            ratio = ratio,
+                            bubbleColor = bubbleColor,
+                            textColor = textColor,
+                            caption = message.text,
+                            onRetry = onRetry,
+                        )
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 12.dp)
+                                .graphicsLayer { translationY = translationYPx },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            BaseText(
+                                text = message.createdAt.to24HourTime(),
+                                color = metaColor,
+                                typography = Typography.labelSmall,
+                            )
+                            if (isMine) MessageStatusIcon(
+                                isPending = isPending,
+                                showError = isError,
+                                showSeenTick = showSeenTick,
+                            ) else Spacer(Modifier.height(ICON_SIZE))
+                        }
+                    }
                 }
 
                 message.messageType == MessageType.GIF -> {
@@ -112,73 +153,102 @@ fun MessageBubble(
                 }
 
                 else -> {
-                    BaseText(
-                        text = message.text.orEmpty(),
-                        color = textColor,
-                        typography = Typography.bodyMedium,
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.align(Alignment.End),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                BaseText(
-                    text = message.createdAt.to24HourTime(),
-                    color = metaColor,
-                    typography = Typography.labelSmall,
-                )
-
-                val infiniteTransition = rememberInfiniteTransition(label = "loading")
-                val rotation by infiniteTransition.animateFloat(
-                    initialValue = 0f,
-                    targetValue = 360f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(
-                            durationMillis = 1000,
-                            easing = LinearEasing
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        BaseText(
+                            text = message.text.orEmpty(),
+                            color = textColor,
+                            typography = Typography.bodyMedium,
+                            modifier = Modifier.weight(1f, fill = false),
                         )
-                    ),
-                    label = "rotation"
-                )
-
-                if (isMine) {
-                    when {
-                        isPending -> Icon(
-                            imageVector = Icons.Filled.Refresh,
-                            contentDescription = null,
+                        Row(
                             modifier = Modifier
-                                .size(ICON_SIZE)
-                                .rotate(rotation),
-                            tint = Color(0xFF0D0D0D),
-                        )
+                                .padding(start = 8.dp)
+                                .graphicsLayer { translationY = translationYPx },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            BaseText(
+                                text = message.createdAt.to24HourTime(),
+                                color = metaColor,
+                                typography = Typography.labelSmall,
+                            )
 
-                        isError -> Icon(
-                            imageVector = Icons.Filled.Error,
-                            contentDescription = null,
-                            modifier = Modifier.size(ICON_SIZE),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-
-                        showSeenTick -> Icon(
-                            imageVector = Icons.Filled.DoneAll,
-                            contentDescription = null,
-                            modifier = Modifier.size(ICON_SIZE),
-                            tint = Color(0xFF0D0D0D),
-                        )
-
-                        !showSeenTick -> Icon(
-                            imageVector = Icons.Filled.Done,
-                            contentDescription = null,
-                            modifier = Modifier.size(ICON_SIZE),
-                            tint = Color(0xFF0D0D0D),
-                        )
+                            if (isMine) MessageStatusIcon(
+                                isPending = isPending,
+                                showError = isError,
+                                showSeenTick = showSeenTick,
+                            )
+                        }
                     }
                 }
             }
+
+//            if (!isPlainText) Row(
+//                modifier = Modifier.align(Alignment.End),
+//                verticalAlignment = Alignment.CenterVertically,
+//                horizontalArrangement = Arrangement.spacedBy(3.dp),
+//            ) {
+//                BaseText(
+//                    text = message.createdAt.to24HourTime(),
+//                    color = metaColor,
+//                    typography = Typography.labelSmall,
+//                )
+//
+//                if (isMine) MessageStatusIcon(
+//                    isPending = isPending,
+//                    showError = isError,
+//                    showSeenTick = showSeenTick,
+//                )
+//            }
         }
+    }
+}
+
+@Composable
+private fun MessageStatusIcon(
+    isPending: Boolean,
+    showError: Boolean,
+    showSeenTick: Boolean,
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "loading")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1000, easing = LinearEasing)
+        ),
+        label = "rotation",
+    )
+    when {
+        isPending -> Icon(
+            imageVector = Icons.Filled.Refresh,
+            contentDescription = null,
+            modifier = Modifier
+                .size(ICON_SIZE)
+                .rotate(rotation),
+            tint = Color(0xFF0D0D0D),
+        )
+
+        showError -> Icon(
+            imageVector = Icons.Filled.Error,
+            contentDescription = null,
+            modifier = Modifier.size(ICON_SIZE),
+            tint = MaterialTheme.colorScheme.error,
+        )
+
+        showSeenTick -> Icon(
+            imageVector = Icons.Filled.DoneAll,
+            contentDescription = null,
+            modifier = Modifier.size(ICON_SIZE),
+            tint = Color(0xFF0D0D0D),
+        )
+
+        else -> Icon(
+            imageVector = Icons.Filled.Done,
+            contentDescription = null,
+            modifier = Modifier.size(ICON_SIZE),
+            tint = Color(0xFF0D0D0D),
+        )
     }
 }
 

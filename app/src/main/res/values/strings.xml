@@ -193,6 +193,7 @@
     <string name="conversation_deleted_message">Tin nhắn đã bị xóa</string>
     <string name="conversation_message_photo">Ảnh</string>
     <string name="conversation_search_hint">Tìm kiếm…</string>
+    <string name="conversation_image_load_failed">Không tải được ảnh</string>
     <string name="chat_input_placeholder">Nhắn tin…</string>
     <string name="new_message_title">Tin nhắn mới</string>
     <string name="new_message_search_hint">Tìm tên hoặc @username…</string>

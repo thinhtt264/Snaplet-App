@@ -28,6 +28,9 @@ interface ConversationDao {
     @Query("UPDATE conversations SET myLastSeenAt = :seenAt WHERE id = :id")
     suspend fun updateMyLastSeenAt(id: String, seenAt: Long)
 
+    @Query("UPDATE conversations SET partnerLastSeenAt = :seenAt WHERE id = :id")
+    suspend fun updatePartnerLastSeenAt(id: String, seenAt: Long)
+
     @Query("DELETE FROM conversations WHERE id = :id")
     suspend fun deleteById(id: String)
 

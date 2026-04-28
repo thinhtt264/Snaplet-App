@@ -9,6 +9,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageCapture
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -17,6 +18,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,7 +43,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -67,6 +72,7 @@ import com.thinh.snaplet.ui.screens.home.components.PostGridView
 import com.thinh.snaplet.ui.screens.home.components.QuickChatBarModel
 import com.thinh.snaplet.ui.screens.home.components.ReactionsBottomSheet
 import com.thinh.snaplet.ui.screens.home.components.TopAction
+import com.thinh.snaplet.ui.theme.BackdropScrim
 import com.thinh.snaplet.ui.theme.MotionTokens
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
@@ -331,6 +337,7 @@ private fun HomeScreen(
 ) {
     var friendSearchQuery by remember { mutableStateOf("") }
     var chatMessage by remember { mutableStateOf("") }
+    var isGlobalInputFocused by remember { mutableStateOf(false) }
     var previousPostListViewMode by remember { mutableStateOf(uiState.postListViewMode) }
 
     val showGlobalBottomContent by remember(uiState.postListViewMode) {
@@ -349,7 +356,7 @@ private fun HomeScreen(
             quickEmojiSlots = uiState.quickChatEmojiSlots,
             onMessageChange = { chatMessage = it },
             onSendMessage = {
-                /* TODO: send chat message */
+                viewModel.sendQuickChatFromPost(chatMessage)
                 chatMessage = ""
             },
             onEmojiSelected = { emoji -> onEmojiReaction(emoji) },
@@ -586,12 +593,30 @@ private fun HomeScreen(
             val postIndex = pagerState.currentPage - 1
             if (postIndex in uiState.posts.indices) {
                 val currentPost = uiState.posts[postIndex]
+                val focusManager = LocalFocusManager.current
+
+                AnimatedVisibility(
+                    visible = isGlobalInputFocused,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(BackdropScrim)
+                            .pointerInput(Unit) {
+                                detectTapGestures(onTap = { focusManager.clearFocus() })
+                            }
+                    )
+                }
+
                 HomeBottomContent(
                     quickChatBar = quickChatBar,
                     bottomAction = bottomAction,
                     modifier = Modifier.align(Alignment.BottomCenter),
                     isShowActivityBar = currentPost.isOwnPost,
                     postActivityBar = postActivityBar,
+                    onQuickChatFocusChange = { isGlobalInputFocused = it },
                 )
             }
         }

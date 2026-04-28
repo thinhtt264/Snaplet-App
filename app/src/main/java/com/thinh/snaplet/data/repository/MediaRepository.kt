@@ -1,6 +1,7 @@
 package com.thinh.snaplet.data.repository
 
 import com.thinh.snaplet.data.model.media.ConfirmUploadData
+import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.model.media.UploadRequestData
 import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.utils.network.ApiResult
@@ -19,7 +20,9 @@ interface MediaRepository {
 
     suspend fun requestUpload(
         items: List<String>,
-        transforms: List<com.thinh.snaplet.data.model.media.ImageTransform>? = null
+        transforms: ImageTransform? = null,
+        widths: List<Int>,
+        heights: List<Int>,
     ): ApiResult<UploadRequestData>
 
     suspend fun uploadMedia(uploadUrl: String, filePath: String): ApiResult<Unit>

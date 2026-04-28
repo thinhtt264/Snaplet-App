@@ -21,6 +21,7 @@ import com.thinh.snaplet.data.model.post.Post
 import com.thinh.snaplet.data.model.post.PostAudience
 import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.data.repository.UserRepository
+import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.domain.chat.ObserveUnreadCountUseCase
 import com.thinh.snaplet.domain.chat.SyncConversationsUseCase
@@ -73,6 +74,7 @@ import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -81,6 +83,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -130,6 +133,7 @@ class HomeViewModel @Inject constructor(
     private val observeFriendRequestReceivedUseCase: ObserveFriendRequestReceivedUseCase,
     private val observeUnreadCountUseCase: ObserveUnreadCountUseCase,
     private val syncConversationsUseCase: SyncConversationsUseCase,
+    private val chatRepository: ChatRepository,
 ) : ViewModel() {
     val emojiFloatController: EmojiFloatController by lazy { EmojiFloatController() }
 
@@ -293,16 +297,19 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun startChatUnreadTracking() {
-        viewModelScope.launch { syncConversationsUseCase() }
-        userRepository.observeMyUserProfile()
-            .distinctUntilChanged { old, new -> old?.id == new?.id }
-            .flatMapLatest { profile ->
-                val userId = profile?.id ?: return@flatMapLatest flowOf(0)
-                observeUnreadCountUseCase(userId)
+        viewModelScope.launch {
+            syncConversationsUseCase()
+            val unreadCountFlow = userRepository.observeMyUserProfile()
+                .distinctUntilChanged { old, new -> old?.id == new?.id }
+                .flatMapLatest { profile ->
+                    profile?.id?.let(observeUnreadCountUseCase::invoke) ?: flowOf(0)
+                }
+            unreadCountFlow.collectLatest { count ->
+                _uiState.update { it.copy(chatUnreadCount = count) }
             }
-            .onEach { count -> _uiState.update { it.copy(chatUnreadCount = count) } }
-            .launchIn(viewModelScope)
+        }
     }
 
     fun onNewPostsBannerTapped() {
@@ -764,6 +771,35 @@ class HomeViewModel @Inject constructor(
 
     fun onReactionsSheetDismissed() {
         _uiState.update { it.copy(showReactionsSheet = false) }
+    }
+
+    fun sendQuickChatFromPost(text: String) {
+        val post = currentPostVisible ?: return
+        if (post.isOwnPost) return
+        val media = post.media.firstOrNull() ?: return
+        val senderId = uiState.value.userProfile?.id ?: return
+
+        emojiFloatController.emit("\uD83D\uDCAC")
+        
+        viewModelScope.launch {
+            chatRepository.sendFirstMessage(
+                recipientId = post.userId,
+                senderId = senderId,
+                text = text,
+                mediaKey = media.id,
+                mimeType = media.type,
+                width = media.width,
+                height = media.height,
+            ).onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        snackbarMessage = UiText.DynamicString(
+                            error.message
+                        )
+                    )
+                }
+            }
+        }
     }
 
     private var reactToPostJob: Job? = null

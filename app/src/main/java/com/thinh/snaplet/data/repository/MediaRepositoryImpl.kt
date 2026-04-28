@@ -188,7 +188,9 @@ class MediaRepositoryImpl @Inject constructor(
 
     override suspend fun requestUpload(
         items: List<String>,
-        transforms: List<ImageTransform>?
+        transforms: ImageTransform?,
+        widths: List<Int>,
+        heights: List<Int>,
     ): ApiResult<UploadRequestData> {
         if (items.size > 3) {
             return ApiResult.Failure(
@@ -199,12 +201,15 @@ class MediaRepositoryImpl @Inject constructor(
             )
         }
 
-        if (transforms != null && transforms.size != items.size) {
+        if (widths.size != items.size) {
             return ApiResult.Failure(
-                ApiError(
-                    httpCode = 400,
-                    message = "Transforms count must match items count"
-                )
+                ApiError(httpCode = 400, message = "Widths count must match items count")
+            )
+        }
+
+        if (heights.size != items.size) {
+            return ApiResult.Failure(
+                ApiError(httpCode = 400, message = "Heights count must match items count")
             )
         }
 
@@ -239,12 +244,13 @@ class MediaRepositoryImpl @Inject constructor(
                 )
             }
 
-            val transform = transforms?.get(index)
             uploadRequestItems.add(
                 UploadRequestItem(
                     mimeType = mimeType,
                     size = fileSize,
-                    transform = transform
+                    transform = transforms,
+                    width = widths[index],
+                    height = heights[index],
                 )
             )
         }

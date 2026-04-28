@@ -192,7 +192,7 @@ fun ChatScreen(
                             .fillMaxSize()
                             .animateContentSize(),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         items(
                             count = lazyPagingItems.itemCount,

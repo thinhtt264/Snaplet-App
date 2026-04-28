@@ -189,6 +189,7 @@
     <string name="conversation_deleted_message">Message deleted</string>
     <string name="conversation_message_photo">Photo</string>
     <string name="conversation_search_hint">Search…</string>
+    <string name="conversation_image_load_failed">Failed to load image</string>
     <string name="chat_input_placeholder">Message…</string>
     <string name="new_message_title">New message</string>
     <string name="new_message_search_hint">Search by name or @username…</string>

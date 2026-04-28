@@ -2,7 +2,6 @@ package com.thinh.snaplet.di
 
 import android.content.Context
 import androidx.room.Room
-import com.thinh.snaplet.BuildConfig
 import com.thinh.snaplet.data.local.dao.ConversationDao
 import com.thinh.snaplet.data.local.dao.MessageDao
 import com.thinh.snaplet.data.local.dao.MessageRemoteKeyDao
@@ -26,7 +25,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "snaplet.db",
         )
-            .fallbackToDestructiveMigration(BuildConfig.DEBUG)
+            .fallbackToDestructiveMigration(false)
             .build()
     }
 

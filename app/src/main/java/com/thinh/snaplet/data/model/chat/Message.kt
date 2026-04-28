@@ -13,6 +13,18 @@ enum class MessageType {
     GIF,
 }
 
+data class MessageMedia(
+    @SerializedName("urls")
+    val urls: ImageSizes?,
+    @SerializedName("mimeType")
+    val mimeType: String?,
+    @SerializedName("width")
+    val width: Int = 0,
+    @SerializedName("height")
+    val height: Int = 0
+)
+
+
 data class Message(
     @SerializedName("id")
     val id: String,
@@ -24,10 +36,10 @@ data class Message(
     val clientUuid: String,
     @SerializedName("text")
     val text: String?,
-    @SerializedName("mediaUrls")
-    val mediaUrls: ImageSizes? = null,
-    @SerializedName("mimeType")
-    val mimeType: String?,
+
+    @SerializedName("media")
+    val media: MessageMedia?,
+
     @SerializedName("isDeleted")
     val isDeleted: Boolean,
     @SerializedName("replyTo")
@@ -47,15 +59,15 @@ data class Message(
      */
     val messageType: MessageType
         get() = when {
-            mimeType == null -> MessageType.TEXT
-            mimeType.lowercase() in listOf(
+            media?.mimeType == null -> MessageType.TEXT
+            media.mimeType.lowercase() in listOf(
                 "image/jpeg",
                 "image/jpg",
                 "image/png",
                 "image/webp"
             ) -> MessageType.IMAGE
 
-            mimeType.lowercase() == "image/gif" -> MessageType.GIF
+            media.mimeType.lowercase() == "image/gif" -> MessageType.GIF
             else -> MessageType.TEXT
         }
 }
@@ -85,9 +97,9 @@ data class SendMessageRequest(
     @SerializedName("mimeType")
     val mimeType: String? = null,
     @SerializedName("width")
-    val width: Int? = null,
+    val width: Int = 0,
     @SerializedName("height")
-    val height: Int? = null,
+    val height: Int = 0,
     @SerializedName("replyToId")
     val replyToId: String? = null,
 )
@@ -98,9 +110,11 @@ fun Message.toEntity(): MessageEntity = MessageEntity(
     senderId = senderId,
     type = messageType.name.lowercase(),
     text = text,
-    mediaUrl = mediaUrls?.sm,
+    mediaUrl = media?.urls?.md,
     mediaLocalUri = null,
-    mediaType = mimeType,
+    mediaType = media?.mimeType,
+    mediaWidth = media?.width ?: 0,
+    mediaHeight = media?.height ?: 0,
     status = MessageStatus.SENT,
     isDeleted = isDeleted,
     createdAt = createdAt.time,

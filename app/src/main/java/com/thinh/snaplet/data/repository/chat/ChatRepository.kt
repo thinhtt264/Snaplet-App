@@ -65,6 +65,8 @@ interface ChatRepository {
 
     fun markSeen(conversationId: String, messageId: String)
 
+    suspend fun updatePartnerLastSeenAt(convId: String, seenAt: Long)
+
     fun sendTypingStart(conversationId: String)
 
     fun sendTypingStop(conversationId: String)
@@ -77,7 +79,15 @@ interface ChatRepository {
 
     suspend fun onIncomingMessage(message: Message)
 
-    suspend fun sendFirstMessage(recipientId: String, senderId: String, text: String): ApiResult<Message>
+    suspend fun sendFirstMessage(
+        recipientId: String,
+        senderId: String,
+        text: String,
+        mediaKey: String? = null,
+        mimeType: String? = null,
+        width: Int = 0,
+        height: Int = 0,
+    ): ApiResult<Message>
 
     suspend fun sendTextMessage(convId: String, senderId: String, text: String)
 

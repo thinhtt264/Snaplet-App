@@ -15,7 +15,7 @@ import com.thinh.snaplet.data.local.entity.MessageRemoteKeyEntity
         MessageEntity::class,
         MessageRemoteKeyEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

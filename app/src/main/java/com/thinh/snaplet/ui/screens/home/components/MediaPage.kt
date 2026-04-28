@@ -1,7 +1,11 @@
 package com.thinh.snaplet.ui.screens.home.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -25,12 +29,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +57,7 @@ import com.thinh.snaplet.ui.components.image.ErrorPlaceholderConfig
 import com.thinh.snaplet.ui.components.image.ErrorStateConfig
 import com.thinh.snaplet.ui.components.image.ImageSize
 import com.thinh.snaplet.ui.screens.home.UploadStatus
+import com.thinh.snaplet.ui.theme.BackdropScrim
 import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.formatTimeAgo
 
@@ -69,8 +80,15 @@ fun MediaPage(
         val topPadding = screenHeight * TOP_SPACE_RATIO
         val isUploadFailed = uploadStatus is UploadStatus.Failed
 
+        val focusManager = LocalFocusManager.current
+        var isInputFocused by remember { mutableStateOf(false) }
+
         Column(
-            modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                }, horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.height(topPadding))
 
@@ -94,12 +112,28 @@ fun MediaPage(
             )
         }
 
+        AnimatedVisibility(
+            visible = showBottomContent && isInputFocused,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BackdropScrim)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { focusManager.clearFocus() })
+                    }
+            )
+        }
+
         if (showBottomContent) {
             HomeBottomContent(
                 quickChatBar = quickChatBar,
                 bottomAction = bottomAction,
                 isShowActivityBar = post.isOwnPost,
                 postActivityBar = postActivityBar,
+                onQuickChatFocusChange = { isInputFocused = it },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
@@ -259,7 +293,8 @@ private fun PostMetadata(
                         typography = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 

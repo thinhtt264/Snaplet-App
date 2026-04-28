@@ -93,8 +93,6 @@ class ChatViewModel @Inject constructor(
             connectSocket()
             loadMessages()
             viewModelScope.launch { chatRepository.retryPendingMessages(conversationId) }
-        } else {
-            _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
         }
     }
 
@@ -169,7 +167,14 @@ class ChatViewModel @Inject constructor(
 
     fun loadMessages() {
         if (conversationId.isEmpty()) return
-        _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false, error = null)) }
+        _uiState.update {
+            it.copy(
+                messageList = it.messageList.copy(
+                    isLoading = false,
+                    error = null
+                )
+            )
+        }
         viewModelScope.launch {
             loadInitialMessagesUseCase(conversationId = conversationId)
                 .onFailure { Logger.e("loadMessages sync failed: ${it.message}") }
@@ -206,7 +211,6 @@ class ChatViewModel @Inject constructor(
     private fun loadCurrentUser() {
         viewModelScope.launch {
             val profile = userRepository.getCurrentUserProfile()
-            Logger.d("currentUserId=${profile?.id}")
             _uiState.update { it.copy(currentUserId = profile?.id) }
         }
     }
@@ -214,7 +218,6 @@ class ChatViewModel @Inject constructor(
     fun onIsAtBottomChanged(isAtBottom: Boolean) {
         val wasAtBottom = _uiState.value.readTracking.isUserAtBottom
         _uiState.update { it.copy(readTracking = it.readTracking.copy(isUserAtBottom = isAtBottom)) }
-        Logger.d("isUserAtBottom=$isAtBottom")
         if (isAtBottom && !wasAtBottom) onUserScrolledToBottom()
     }
 
@@ -225,7 +228,6 @@ class ChatViewModel @Inject constructor(
             triggerMarkSeen(newestMessageId, System.currentTimeMillis())
         }
         _uiState.update { it.copy(readTracking = it.readTracking.copy(incomingUnread = IncomingUnreadState())) }
-        Logger.d("incoming unread banner reset")
     }
 
     fun onVisibleMessagesChanged(visibleMessages: List<Message>) {
@@ -238,7 +240,6 @@ class ChatViewModel @Inject constructor(
             val newestEpoch = newest.createdAt.time
             val myLastReadMs = _uiState.value.readTracking.myLastReadCreatedAtMs
             if (myLastReadMs == null || newestEpoch > myLastReadMs) {
-                Logger.d("onVisibleMessagesChanged → mark read id=${newest.id} epoch=$newestEpoch")
                 triggerMarkSeen(newest.id, newestEpoch)
             }
         }
@@ -247,7 +248,6 @@ class ChatViewModel @Inject constructor(
     private fun triggerMarkSeen(messageId: String, createdAtMs: Long) {
         viewModelScope.launch { markMessageSeenUseCase(conversationId, messageId) }
         _uiState.update { it.copy(readTracking = it.readTracking.copy(myLastReadCreatedAtMs = createdAtMs)) }
-        Logger.d("triggerMarkRead: messageId=$messageId epoch=$createdAtMs")
     }
 
     private fun observeIncomingTypingEvents() {
@@ -271,9 +271,10 @@ class ChatViewModel @Inject constructor(
     private fun observeIncomingReadReceipts() {
         viewModelScope.launch {
             chatRepository.readReceipts.collect { event ->
-                _uiState.update {
-                    if (it.currentUserId == event.userId) return@collect
-                    it.copy(partner = it.partner.copy(lastReadEvent = event))
+                if (_uiState.value.currentUserId == event.userId) return@collect
+                _uiState.update { it.copy(partner = it.partner.copy(lastReadEvent = event)) }
+                if (conversationId.isNotEmpty()) {
+                    chatRepository.updatePartnerLastSeenAt(conversationId, event.readAt.time)
                 }
             }
         }

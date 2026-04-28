@@ -5,6 +5,8 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.thinh.snaplet.data.model.chat.Message
+import com.thinh.snaplet.data.model.chat.MessageMedia
+import com.thinh.snaplet.data.model.media.ImageSizes
 import java.util.Date
 
 @Entity(
@@ -32,6 +34,8 @@ data class MessageEntity(
     val serverCreatedAt: Long?,
     // Stable local UUID — use this as the UI key, never `id`
     val localId: String,
+    val mediaWidth: Int = 0,
+    val mediaHeight: Int = 0,
 )
 
 fun MessageEntity.toMessage(): Message = Message(
@@ -40,8 +44,12 @@ fun MessageEntity.toMessage(): Message = Message(
     senderId = senderId,
     clientUuid = localId,
     text = text,
-    mediaUrls = null,
-    mimeType = mediaType,
+    media = MessageMedia(
+        urls = (mediaUrl ?: mediaLocalUri)?.let { ImageSizes(original = it) },
+        mimeType = mediaType,
+        width = mediaWidth,
+        height = mediaHeight
+    ),
     isDeleted = isDeleted,
     replyTo = null,
     pinnedAt = null,

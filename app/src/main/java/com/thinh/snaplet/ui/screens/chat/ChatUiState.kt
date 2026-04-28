@@ -11,7 +11,7 @@ data class IncomingUnreadState(
 }
 
 data class MessageListState(
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
     val error: String? = null,
 )
 

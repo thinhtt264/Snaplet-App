@@ -224,6 +224,10 @@ class ChatRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun updatePartnerLastSeenAt(convId: String, seenAt: Long) {
+        conversationDao.updatePartnerLastSeenAt(convId, seenAt)
+    }
+
     override fun observeConversations(): Flow<List<ConversationEntity>> =
         conversationDao.observeAll()
 
@@ -334,7 +338,15 @@ class ChatRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun sendFirstMessage(recipientId: String, senderId: String, text: String): ApiResult<Message> {
+    override suspend fun sendFirstMessage(
+        recipientId: String,
+        senderId: String,
+        text: String,
+        mediaKey: String?,
+        mimeType: String?,
+        width: Int,
+        height: Int,
+    ): ApiResult<Message> {
         val localId = UUID.randomUUID().toString()
         Logger.d("sendFirstMessage recipientId=$recipientId clientUuid=$localId")
         return safeApiCall(
@@ -344,6 +356,10 @@ class ChatRepositoryImpl @Inject constructor(
                         recipientId = recipientId,
                         clientUuid = localId,
                         text = text,
+                        mediaKey = mediaKey,
+                        mimeType = mimeType,
+                        width = width,
+                        height = height,
                     )
                 )
             },
@@ -463,7 +479,6 @@ class ChatRepositoryImpl @Inject constructor(
             existing == null || existing.updatedAt != conv.updatedAt.time
         }
         if (changed.isNotEmpty()) {
-            Logger.d("upsertIfChanged: ${changed.size}/${incoming.size} changed")
             conversationDao.upsertAll(changed.map { it.toEntity() })
         }
     }
