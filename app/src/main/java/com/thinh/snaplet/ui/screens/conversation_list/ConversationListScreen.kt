@@ -405,7 +405,7 @@ private fun ConversationCard(
             conversation.lastMessageAt?.let { time ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     if (conversation.isLastMessageMine) {
                         MessageStatusIcon(
