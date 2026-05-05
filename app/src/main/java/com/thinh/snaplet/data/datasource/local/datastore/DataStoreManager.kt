@@ -64,7 +64,9 @@ class DataStoreManager @Inject constructor(
     }
 
     fun getRefreshToken(): String? {
-        return currentRefreshToken.get()
+        return currentRefreshToken.get() ?: runBlocking {
+            loadRefreshToken()
+        }
     }
 
     suspend fun saveCompleteOnboarding(isCompleteOnboarding: Boolean) {

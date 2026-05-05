@@ -11,6 +11,7 @@ import com.thinh.snaplet.data.model.RefreshTokenRequest
 import com.thinh.snaplet.data.model.RegisterRequest
 import com.thinh.snaplet.data.model.TokenResponse
 import com.thinh.snaplet.data.model.user.UserProfile
+import com.thinh.snaplet.di.AuthApiService
 import com.thinh.snaplet.network.SessionController
 import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.ApiResult
@@ -25,6 +26,7 @@ import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
     private val apiService: ApiService,
+    @AuthApiService private val authApiService: ApiService,
     private val dataStoreManager: DataStoreManager,
     private val sessionController: SessionController,
 ) : AuthRepository {
@@ -37,7 +39,7 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun login(email: String, password: String): ApiResult<UserProfile> {
         dataStoreManager.clearSession()
         return safeApiCall(apiCall = {
-            apiService.login(body = LoginRequest(email, password))
+            authApiService.login(body = LoginRequest(email, password))
         }, onSuccess = { result ->
             dataStoreManager.saveTokens(
                 result.token.accessToken, result.token.refreshToken
@@ -52,7 +54,7 @@ class AuthRepositoryImpl @Inject constructor(
         idToken: String,
     ): ApiResult<LoginResponse> {
         return safeApiCall(apiCall = {
-            apiService.loginWithGoogle(
+            authApiService.loginWithGoogle(
                 body = LoginWithGoogleRequest(
                     idToken,
                 )
@@ -103,7 +105,7 @@ class AuthRepositoryImpl @Inject constructor(
         )
 
         return safeApiCall(apiCall = {
-            apiService.register(body = request)
+            authApiService.register(body = request)
         }, onSuccess = { result ->
             dataStoreManager.saveTokens(
                 accessToken = result.token.accessToken, refreshToken = result.token.refreshToken
@@ -126,7 +128,7 @@ class AuthRepositoryImpl @Inject constructor(
 
         logoutScope.launch {
             if (accessToken.isNullOrBlank()) return@launch
-            safeApiCall(apiCall = { apiService.logout("Bearer $accessToken") })
+            safeApiCall(apiCall = { authApiService.logout("Bearer $accessToken") })
         }
     }
 
@@ -178,7 +180,7 @@ class AuthRepositoryImpl @Inject constructor(
         }
 
         return safeApiCall(apiCall = {
-            apiService.refreshToken(
+            authApiService.refreshToken(
                 RefreshTokenRequest(
                     refreshToken = refreshToken, accessToken = accessToken
                 )
