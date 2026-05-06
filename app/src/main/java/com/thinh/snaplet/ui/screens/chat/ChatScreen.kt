@@ -69,8 +69,8 @@ import com.thinh.snaplet.ui.screens.chat.components.ChatHeader
 import com.thinh.snaplet.ui.screens.chat.components.ChatInputBar
 import com.thinh.snaplet.ui.screens.chat.components.MessageBubble
 import com.thinh.snaplet.ui.screens.chat.components.MessageInspectOverlay
-import com.thinh.snaplet.ui.screens.chat.components.bubbleInspectRoundRect
 import com.thinh.snaplet.ui.screens.chat.components.TypingIndicator
+import com.thinh.snaplet.ui.screens.chat.components.bubbleInspectRoundRect
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.isGreaterWithFallback
 import kotlinx.coroutines.launch
@@ -78,7 +78,7 @@ import java.util.Date
 
 private val ChatBg = Color(0xFF0D0D0D)
 private val SeparatorColor = Color(0xFF1A1C1C)
-private val InspectDimColor = Color.Black.copy(alpha = 0.78f)
+private val InspectDimColor = Color.Black.copy(alpha = 0.7f)
 private val InspectEdgePadding = 12.dp
 private val InspectReactionBarHeight = 60.dp
 private val InspectActionMenuHeightMine = 144.dp

@@ -41,7 +41,7 @@ import com.thinh.snaplet.utils.to24HourTime
 import java.util.Date
 
 private val BubbleTheirs = Color(0xFF1E2020)
-private const val BUBBLE_MAX_WIDTH_FRACTION = 0.75f
+private const val BUBBLE_MAX_WIDTH_FRACTION = 0.70f
 private val BUBBLE_CORNER = 16.dp
 private val BUBBLE_CORNER_SMALL = 4.dp
 
@@ -257,20 +257,27 @@ internal fun bubbleInspectRoundRect(
         isMine -> when (position) {
             BubblePosition.FIRST ->
                 RoundRect(left, top, right, bottom, rL, rL, rS, rL)
+
             BubblePosition.MIDDLE ->
                 RoundRect(left, top, right, bottom, rL, rS, rS, rL)
+
             BubblePosition.LAST ->
                 RoundRect(left, top, right, bottom, rL, rS, rL, rL)
+
             BubblePosition.SINGLE ->
                 RoundRect(left, top, right, bottom, rL, rL, rL, rL)
         }
+
         else -> when (position) {
             BubblePosition.FIRST ->
                 RoundRect(left, top, right, bottom, rL, rL, rL, rS)
+
             BubblePosition.MIDDLE ->
                 RoundRect(left, top, right, bottom, rS, rL, rL, rS)
+
             BubblePosition.LAST ->
                 RoundRect(left, top, right, bottom, rS, rL, rL, rL)
+
             BubblePosition.SINGLE ->
                 RoundRect(left, top, right, bottom, rL, rL, rL, rL)
         }
