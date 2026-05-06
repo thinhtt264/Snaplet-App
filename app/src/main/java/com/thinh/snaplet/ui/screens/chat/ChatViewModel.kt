@@ -6,12 +6,12 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import androidx.paging.map
+import com.thinh.snaplet.data.local.entity.MessageEntity
 import com.thinh.snaplet.data.local.entity.MessageStatus
-import com.thinh.snaplet.data.local.entity.toMessage
 import com.thinh.snaplet.data.model.chat.Message
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.chat.ChatRepository
+import com.thinh.snaplet.data.repository.quickchat.QuickChatEmojiRepository
 import com.thinh.snaplet.domain.chat.LoadInitialMessagesUseCase
 import com.thinh.snaplet.domain.chat.MarkMessageSeenUseCase
 import com.thinh.snaplet.navigation.ChatConversation
@@ -32,7 +32,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -41,11 +40,14 @@ import javax.inject.Inject
 private const val OUT_GOING_TYPING_TIMEOUT_MS = 1_500L
 private const val IN_COMING_TYPING_TIMEOUT_MS = 3_000L
 private const val MARK_READ_DEBOUNCE_MS = 500L
+private const val CHAT_RECENT_MAX_SLOTS = 4
+private val CHAT_RECENT_DEFAULT_EMOJIS = listOf("😀", "😂", "😮", "👍")
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val userRepository: UserRepository,
+    private val quickChatEmojiRepository: QuickChatEmojiRepository,
     private val loadInitialMessagesUseCase: LoadInitialMessagesUseCase,
     private val markMessageSeenUseCase: MarkMessageSeenUseCase,
     private val connectivityObserver: ConnectivityObserver,
@@ -68,12 +70,9 @@ class ChatViewModel @Inject constructor(
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val messages: Flow<PagingData<Message>> = _activeConversationId
+    val messages: Flow<PagingData<MessageEntity>> = _activeConversationId
         .filter { it.isNotEmpty() }
-        .flatMapLatest { convId ->
-            chatRepository.getMessagesPager(convId)
-                .map { pagingData -> pagingData.map { it.toMessage() } }
-        }
+        .flatMapLatest { convId -> chatRepository.getMessagesPager(convId) }
         .cachedIn(viewModelScope)
 
     private var typingTimeoutJob: Job? = null
@@ -88,6 +87,7 @@ class ChatViewModel @Inject constructor(
         observeIncomingReadReceipts()
         observeConnectivity()
         observeNetworkReconnect()
+        loadRecentEmojis()
 
         if (conversationId.isNotEmpty()) {
             connectSocket()
@@ -137,6 +137,21 @@ class ChatViewModel @Inject constructor(
                 chatRepository.sendTextMessage(conversationId, currentUserId, trimmed)
                 chatRepository.sendTypingStop(conversationId)
             }
+        }
+    }
+
+    fun onMessageLongPress(message: MessageEntity) {
+        _uiState.update { it.copy(inspectedMessage = message) }
+    }
+
+    fun dismissInspect() {
+        _uiState.update { it.copy(inspectedMessage = null) }
+    }
+
+    fun onRecentEmojiUsed(emoji: String) {
+        viewModelScope.launch {
+            quickChatEmojiRepository.recordEmojiUsage(emoji)
+            loadRecentEmojis()
         }
     }
 
@@ -274,6 +289,16 @@ class ChatViewModel @Inject constructor(
                 if (_uiState.value.currentUserId == event.userId) return@collect
                 _uiState.update { it.copy(partner = it.partner.copy(lastReadEvent = event)) }
             }
+        }
+    }
+
+    private fun loadRecentEmojis() {
+        viewModelScope.launch {
+            val recents = quickChatEmojiRepository.getRecentEmojis(
+                defaultEmojis = CHAT_RECENT_DEFAULT_EMOJIS,
+                maxSlots = CHAT_RECENT_MAX_SLOTS,
+            )
+            _uiState.update { it.copy(recentEmojis = recents) }
         }
     }
 }

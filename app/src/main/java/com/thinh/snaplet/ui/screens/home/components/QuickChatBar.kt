@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -26,9 +23,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.PrimaryScrollableTabRow
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,18 +43,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.model.emoji.EmojiEntry
 import com.thinh.snaplet.data.model.emoji.EmojiLoader
-import com.thinh.snaplet.data.model.emoji.EmojiTab
 import com.thinh.snaplet.ui.components.BaseText
-import com.thinh.snaplet.ui.screens.home.QuickChatEmojiSlots
+import com.thinh.snaplet.ui.components.EmojiTabGrid
 import pressScaleClickable
 
-private const val EMOJI_GRID_COLUMNS = 8
 private val EMOJI_GRID_HEIGHT = 300.dp
 private val EMOJI_ICON_SIZE = 36.dp
 
@@ -68,7 +59,7 @@ private val EMOJI_ICON_SIZE = 36.dp
 fun QuickChatBar(
     modifier: Modifier = Modifier,
     messageText: String,
-    quickEmojiSlots: List<String> = QuickChatEmojiSlots.mergeForDisplay(emptyList()),
+    quickEmojiSlots: List<String> = emptyList(),
     onFocusChange: (Boolean) -> Unit = {},
     onMessageChange: (String) -> Unit,
     onSendMessage: () -> Unit,
@@ -280,18 +271,7 @@ private fun EmojiPickerSheet(
 ) {
     val context = LocalContext.current
     val grouped = remember { EmojiLoader.loadGrouped(context) }
-    val tabs = remember { EmojiTab.entries }
-
-    var selectedTab by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
-
-    val displayEmojis = remember(searchQuery, selectedTab) {
-        if (searchQuery.isNotBlank()) {
-            EmojiLoader.search(context, searchQuery)
-        } else {
-            grouped[tabs[selectedTab]] ?: emptyList()
-        }
-    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -307,17 +287,12 @@ private fun EmojiPickerSheet(
                     .padding(horizontal = 12.dp, vertical = 4.dp)
             )
 
-            if (searchQuery.isBlank()) {
-                EmojiTabRow(
-                    tabs = tabs, selectedIndex = selectedTab, onTabSelected = { selectedTab = it })
-            }
-
-            EmojiGrid(
-                emojis = displayEmojis,
-                onEmojiClick = onEmojiPicked,
+            EmojiTabGrid(
+                groupedEmojis = grouped,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(EMOJI_GRID_HEIGHT)
+                    .height(EMOJI_GRID_HEIGHT),
+                onEmojiClick = { onEmojiPicked(it.unicode) },
             )
         }
     }
@@ -368,46 +343,3 @@ private fun SearchBar(
         })
 }
 
-@Composable
-private fun EmojiTabRow(
-    tabs: List<EmojiTab>,
-    selectedIndex: Int,
-    onTabSelected: (Int) -> Unit,
-) {
-    PrimaryScrollableTabRow(
-        selectedTabIndex = selectedIndex,
-        containerColor = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        edgePadding = 4.dp,
-        divider = {},
-    ) {
-        tabs.forEachIndexed { index, tab ->
-            Tab(
-                selected = selectedIndex == index,
-                onClick = { onTabSelected(index) },
-                text = { Text(text = tab.icon, fontSize = 20.sp) })
-        }
-    }
-}
-
-@Composable
-private fun EmojiGrid(
-    emojis: List<EmojiEntry>, onEmojiClick: (String) -> Unit, modifier: Modifier = Modifier
-) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(EMOJI_GRID_COLUMNS),
-        modifier = modifier.padding(horizontal = 4.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        items(emojis, key = { it.hexcode ?: it.unicode }) { entry ->
-            Text(
-                text = entry.unicode,
-                fontSize = 28.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .clickable { onEmojiClick(entry.unicode) }
-                    .padding(6.dp))
-        }
-    }
-}

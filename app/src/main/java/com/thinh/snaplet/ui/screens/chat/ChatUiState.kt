@@ -1,5 +1,6 @@
 package com.thinh.snaplet.ui.screens.chat
 
+import com.thinh.snaplet.data.local.entity.MessageEntity
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
 
 data class IncomingUnreadState(
@@ -35,4 +36,6 @@ data class ChatUiState(
     val messageList: MessageListState = MessageListState(),
     val partner: PartnerState = PartnerState(),
     val readTracking: ReadTrackingState = ReadTrackingState(),
+    val inspectedMessage: MessageEntity? = null,
+    val recentEmojis: List<String> = emptyList(),
 )

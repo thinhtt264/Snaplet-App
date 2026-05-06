@@ -12,6 +12,8 @@ import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.data.repository.chat.ChatRepositoryImpl
 import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.data.repository.post.PostRepositoryImpl
+import com.thinh.snaplet.data.repository.quickchat.QuickChatEmojiRepository
+import com.thinh.snaplet.data.repository.quickchat.QuickChatEmojiRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -53,4 +55,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindChatRepository(impl: ChatRepositoryImpl): ChatRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindQuickChatEmojiRepository(
+        impl: QuickChatEmojiRepositoryImpl
+    ): QuickChatEmojiRepository
 }

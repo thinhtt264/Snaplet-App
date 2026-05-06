@@ -61,7 +61,7 @@ data class HomeUiState(
     val postReactionsState: PostReactionsUiState = PostReactionsUiState.Loading,
     val showReactionsSheet: Boolean = false,
 
-    val quickChatEmojiSlots: List<String> = QuickChatEmojiSlots.mergeForDisplay(emptyList()),
+    val quickChatEmojiSlots: List<String> = emptyList(),
 
     val showFriendSheet: Boolean = false,
 

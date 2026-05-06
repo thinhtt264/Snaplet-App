@@ -1,9 +1,13 @@
 package com.thinh.snaplet.ui.screens.chat
 
+import android.content.ClipData
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -25,15 +29,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -43,11 +62,14 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.local.entity.MessageStatus
+import com.thinh.snaplet.data.local.entity.toMessage
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.screens.chat.components.BubblePosition
 import com.thinh.snaplet.ui.screens.chat.components.ChatHeader
 import com.thinh.snaplet.ui.screens.chat.components.ChatInputBar
 import com.thinh.snaplet.ui.screens.chat.components.MessageBubble
+import com.thinh.snaplet.ui.screens.chat.components.MessageInspectOverlay
+import com.thinh.snaplet.ui.screens.chat.components.bubbleInspectRoundRect
 import com.thinh.snaplet.ui.screens.chat.components.TypingIndicator
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.isGreaterWithFallback
@@ -56,6 +78,11 @@ import java.util.Date
 
 private val ChatBg = Color(0xFF0D0D0D)
 private val SeparatorColor = Color(0xFF1A1C1C)
+private val InspectDimColor = Color.Black.copy(alpha = 0.78f)
+private val InspectEdgePadding = 12.dp
+private val InspectReactionBarHeight = 60.dp
+private val InspectActionMenuHeightMine = 144.dp
+private val InspectActionMenuHeightOther = 96.dp
 
 @Composable
 fun ChatScreen(
@@ -65,11 +92,22 @@ fun ChatScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lazyPagingItems = viewModel.messages.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
+    val clipboard = LocalClipboard.current
     val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val bubbleBounds = remember { mutableStateMapOf<String, Rect>() }
+
+    var chatAreaHeightPx by remember { mutableIntStateOf(0) }
+    var chatAreaWidthPx by remember { mutableIntStateOf(0) }
+    var chatAreaTopPx by remember { mutableFloatStateOf(0f) }
+    var chatAreaLeftPx by remember { mutableFloatStateOf(0f) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { viewModel.onPause() }
+    BackHandler(enabled = uiState.inspectedMessage != null) {
+        viewModel.dismissInspect()
+    }
 
     val messageCountState = remember { derivedStateOf { lazyPagingItems.itemCount } }
     LaunchedEffect(listState) {
@@ -99,7 +137,35 @@ fun ChatScreen(
     }
     LaunchedEffect(Unit) {
         snapshotFlow { visibleMessages }.collect { visible ->
-            viewModel.onVisibleMessagesChanged(visible)
+            viewModel.onVisibleMessagesChanged(visible.map { it.toMessage() })
+        }
+    }
+
+    val inspectedMessage = uiState.inspectedMessage
+    val inspectMeta by remember(
+        inspectedMessage, lazyPagingItems.itemCount, uiState.currentUserId
+    ) {
+        derivedStateOf {
+            val target = inspectedMessage ?: return@derivedStateOf null
+            val index =
+                (0 until lazyPagingItems.itemCount).firstOrNull { lazyPagingItems.peek(it)?.localId == target.localId }
+                    ?: return@derivedStateOf null
+            val prevSenderSame = if (index + 1 < lazyPagingItems.itemCount) {
+                lazyPagingItems.peek(index + 1)?.senderId == target.senderId
+            } else {
+                false
+            }
+            val nextSenderSame = if (index - 1 >= 0) {
+                lazyPagingItems.peek(index - 1)?.senderId == target.senderId
+            } else {
+                false
+            }
+            val position = bubbleChainPosition(prevSenderSame, nextSenderSame)
+            val isMine = target.senderId == uiState.currentUserId
+            InspectMeta(
+                isMine = isMine,
+                position = position,
+            )
         }
     }
 
@@ -123,8 +189,13 @@ fun ChatScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
+                .onGloballyPositioned { coords ->
+                    chatAreaHeightPx = coords.size.height
+                    chatAreaWidthPx = coords.size.width
+                    chatAreaTopPx = coords.positionInRoot().y
+                    chatAreaLeftPx = coords.positionInRoot().x
+                }
         ) {
-            val isRefreshLoading = lazyPagingItems.loadState.refresh is LoadState.Loading
             val refreshError = lazyPagingItems.loadState.refresh as? LoadState.Error
             when {
                 uiState.messageList.isLoading -> {
@@ -153,13 +224,6 @@ fun ChatScreen(
                             )
                         }
                     }
-                }
-
-                isRefreshLoading && lazyPagingItems.itemCount == 0 -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.primary,
-                    )
                 }
 
                 refreshError != null && lazyPagingItems.itemCount == 0 -> {
@@ -197,7 +261,7 @@ fun ChatScreen(
                         items(
                             count = lazyPagingItems.itemCount,
                             key = { index ->
-                                lazyPagingItems.peek(index)?.clientUuid ?: "item_$index"
+                                lazyPagingItems.peek(index)?.localId ?: "item_$index"
                             },
                         ) { index ->
                             val message = lazyPagingItems[index] ?: return@items
@@ -205,22 +269,24 @@ fun ChatScreen(
                             val isPending = message.status == MessageStatus.PENDING
                             val isError = message.status == MessageStatus.FAILED
 
-                            val prevSenderSame = if (index + 1 < lazyPagingItems.itemCount)
-                                lazyPagingItems.peek(index + 1)?.senderId == message.senderId
-                            else false
-                            val nextSenderSame = if (index - 1 >= 0)
-                                lazyPagingItems.peek(index - 1)?.senderId == message.senderId
-                            else false
-                            val position = when {
-                                prevSenderSame && nextSenderSame -> BubblePosition.MIDDLE
-                                prevSenderSame && !nextSenderSame -> BubblePosition.LAST
-                                !prevSenderSame && nextSenderSame -> BubblePosition.FIRST
-                                else -> BubblePosition.SINGLE
-                            }
+                            val prevSenderSame =
+                                if (index + 1 < lazyPagingItems.itemCount) {
+                                    lazyPagingItems.peek(index + 1)?.senderId == message.senderId
+                                } else {
+                                    false
+                                }
+                            val nextSenderSame =
+                                if (index - 1 >= 0) {
+                                    lazyPagingItems.peek(index - 1)?.senderId == message.senderId
+                                } else {
+                                    false
+                                }
+                            val position =
+                                bubbleChainPosition(prevSenderSame, nextSenderSame)
 
                             val partnerReadHorizonMs = uiState.partner.readHorizonMs
                             val isPartnerSeen = isMine && isGreaterWithFallback(
-                                Date(partnerReadHorizonMs ?: 0L), message.createdAt, false
+                                Date(partnerReadHorizonMs ?: 0L), Date(message.createdAt), false
                             )
 
                             MessageBubble(
@@ -230,6 +296,8 @@ fun ChatScreen(
                                 isError = isError,
                                 showSeenTick = isPartnerSeen,
                                 position = position,
+                                onClick = viewModel::onMessageLongPress,
+                                onBoundsChanged = { key, rect -> bubbleBounds[key] = rect },
                             )
                         }
 
@@ -250,6 +318,77 @@ fun ChatScreen(
                             }
                         }
                     }
+                }
+            }
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = inspectedMessage != null && inspectMeta != null,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                val message = inspectedMessage ?: return@AnimatedVisibility
+                val meta = inspectMeta ?: return@AnimatedVisibility
+
+                val anchorRoot = bubbleBounds[message.localId]
+                val layout = inspectOverlayLayout(
+                    anchorRoot = anchorRoot,
+                    chatLeftPx = chatAreaLeftPx,
+                    chatTopPx = chatAreaTopPx,
+                    chatWidthPx = chatAreaWidthPx,
+                    chatHeightPx = chatAreaHeightPx,
+                    density = density,
+                    meta = meta,
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(
+                            message.localId,
+                            anchorRoot,
+                            chatAreaLeftPx,
+                            chatAreaTopPx,
+                        ) {
+                            detectTapGestures { offset ->
+                                val bubbleChat = anchorRoot?.let {
+                                    bubbleRectRootToChat(it, chatAreaLeftPx, chatAreaTopPx)
+                                }
+                                if (bubbleChat != null && bubbleChat.contains(offset)) return@detectTapGestures
+                                viewModel.dismissInspect()
+                            }
+                        },
+                ) {
+                    InspectDimScrim(
+                        anchorRoot = anchorRoot,
+                        chatLeftPx = chatAreaLeftPx,
+                        chatTopPx = chatAreaTopPx,
+                        density = density,
+                        meta = meta,
+                    )
+                    MessageInspectOverlay(
+                        message = message,
+                        isMine = meta.isMine,
+                        panelTop = layout.panelTopDp,
+                        bubbleCenterXDp = layout.bubbleCenterXDp,
+                        chatAreaWidthDp = layout.chatAreaWidthDp,
+                        maxHeight = layout.panelMaxHeightDp,
+                        isFlipped = layout.flipPanelVertical,
+                        recentEmojis = uiState.recentEmojis,
+                        onEmojiClick = viewModel::onRecentEmojiUsed,
+                        onCopy = { copiedMessage ->
+                            val messageText = copiedMessage.text?.trim().orEmpty()
+                            if (messageText.isNotEmpty()) {
+                                coroutineScope.launch {
+                                    clipboard.setClipEntry(
+                                        ClipEntry(
+                                            ClipData.newPlainText("message", messageText)
+                                        )
+                                    )
+                                }
+                            }
+                        },
+                        onDismiss = viewModel::dismissInspect,
+                    )
                 }
             }
         }
@@ -277,3 +416,116 @@ fun ChatScreen(
         )
     }
 }
+
+private fun bubbleChainPosition(prevSame: Boolean, nextSame: Boolean): BubblePosition = when {
+    prevSame && nextSame -> BubblePosition.MIDDLE
+    prevSame && !nextSame -> BubblePosition.LAST
+    !prevSame && nextSame -> BubblePosition.FIRST
+    else -> BubblePosition.SINGLE
+}
+
+private fun bubbleRectRootToChat(root: Rect, chatLeft: Float, chatTop: Float): Rect = Rect(
+    root.left - chatLeft,
+    root.top - chatTop,
+    root.right - chatLeft,
+    root.bottom - chatTop,
+)
+
+private data class InspectOverlayLayout(
+    val chatAreaWidthDp: Dp,
+    val bubbleCenterXDp: Dp,
+    val panelTopDp: Dp,
+    val panelMaxHeightDp: Dp,
+    val flipPanelVertical: Boolean,
+)
+
+private fun inspectOverlayLayout(
+    anchorRoot: Rect?,
+    chatLeftPx: Float,
+    chatTopPx: Float,
+    chatWidthPx: Int,
+    chatHeightPx: Int,
+    density: Density,
+    meta: InspectMeta,
+): InspectOverlayLayout {
+    val chatH = with(density) { chatHeightPx.toDp() }.coerceAtLeast(200.dp)
+    val chatW = with(density) { chatWidthPx.toDp() }.coerceAtLeast(1.dp)
+    val topDp = with(density) { ((anchorRoot?.top ?: 0f) - chatTopPx).toDp() }
+    val bottomDp = with(density) { ((anchorRoot?.bottom ?: 0f) - chatTopPx).toDp() }
+    val centerXPx = if (anchorRoot != null) {
+        (anchorRoot.left + anchorRoot.right) / 2f - chatLeftPx
+    } else {
+        chatWidthPx / 2f
+    }
+    val bubbleCenterXDp = with(density) { centerXPx.toDp() }.coerceIn(
+        InspectEdgePadding,
+        (chatW - InspectEdgePadding).coerceAtLeast(InspectEdgePadding),
+    )
+    val actionH = if (meta.isMine) InspectActionMenuHeightMine else InspectActionMenuHeightOther
+    val panelH = InspectReactionBarHeight + actionH
+    val midY = (topDp + bottomDp) / 2f
+    val edge = InspectEdgePadding
+    val panelTopNormal = (midY - panelH / 2f).coerceIn(
+        edge,
+        (chatH - panelH - edge).coerceAtLeast(edge),
+    )
+    val flip = (topDp - edge) < InspectReactionBarHeight
+    val panelTop = if (flip) {
+        (midY - actionH / 2f).coerceIn(
+            edge,
+            (chatH - panelH - edge).coerceAtLeast(edge),
+        )
+    } else {
+        panelTopNormal
+    }
+    return InspectOverlayLayout(
+        chatAreaWidthDp = chatW,
+        bubbleCenterXDp = bubbleCenterXDp,
+        panelTopDp = panelTop,
+        panelMaxHeightDp = (chatH - panelTop - edge).coerceAtLeast(120.dp),
+        flipPanelVertical = flip,
+    )
+}
+
+@Composable
+private fun InspectDimScrim(
+    anchorRoot: Rect?,
+    chatLeftPx: Float,
+    chatTopPx: Float,
+    density: Density,
+    meta: InspectMeta,
+) {
+    Canvas(Modifier.fillMaxSize()) {
+        val ar = anchorRoot
+        if (ar != null) {
+            val hole = bubbleInspectRoundRect(
+                left = ar.left - chatLeftPx,
+                top = ar.top - chatTopPx,
+                right = ar.right - chatLeftPx,
+                bottom = ar.bottom - chatTopPx,
+                density = density,
+                isMine = meta.isMine,
+                position = meta.position,
+            )
+            val dimPath = Path().apply {
+                addRect(Rect(0f, 0f, size.width, size.height))
+                addRoundRect(hole)
+                fillType = PathFillType.EvenOdd
+            }
+            drawPath(dimPath, color = InspectDimColor)
+            val outline = Path().apply { addRoundRect(hole) }
+            drawPath(
+                path = outline,
+                color = Color.White.copy(alpha = 0.14f),
+                style = Stroke(width = 1.dp.toPx()),
+            )
+        } else {
+            drawRect(color = InspectDimColor)
+        }
+    }
+}
+
+private data class InspectMeta(
+    val isMine: Boolean,
+    val position: BubblePosition,
+)

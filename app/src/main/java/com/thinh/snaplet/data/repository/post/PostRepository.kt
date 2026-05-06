@@ -46,7 +46,4 @@ interface PostRepository {
         postId: String,
     ): ApiResult<Post>
 
-    suspend fun getQuickChatRecentEmojis(): List<String>
-
-    suspend fun recordQuickChatEmojiUsage(emoji: String)
 }

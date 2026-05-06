@@ -23,6 +23,7 @@ import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.data.repository.post.PostRepository
+import com.thinh.snaplet.data.repository.quickchat.QuickChatEmojiRepository
 import com.thinh.snaplet.domain.chat.ObserveUnreadCountUseCase
 import com.thinh.snaplet.domain.chat.SyncConversationsUseCase
 import com.thinh.snaplet.domain.feed.FetchNewerFeedUseCase
@@ -134,11 +135,14 @@ class HomeViewModel @Inject constructor(
     private val observeUnreadCountUseCase: ObserveUnreadCountUseCase,
     private val syncConversationsUseCase: SyncConversationsUseCase,
     private val chatRepository: ChatRepository,
+    private val quickChatEmojiRepository: QuickChatEmojiRepository,
 ) : ViewModel() {
     val emojiFloatController: EmojiFloatController by lazy { EmojiFloatController() }
 
     private companion object {
         private const val DEBOUNCE_MS = 500L
+        private const val QUICK_CHAT_MAX_SLOTS = 3
+        private val QUICK_CHAT_DEFAULT_EMOJIS = listOf("❤️", "🔥", "😍")
     }
 
     private var lastFriendSearchQuery: String = ""
@@ -222,9 +226,12 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun refreshQuickChatEmojiSlots() {
-        val recent = postRepository.getQuickChatRecentEmojis()
+        val recent = quickChatEmojiRepository.getRecentEmojis(
+            defaultEmojis = QUICK_CHAT_DEFAULT_EMOJIS,
+            maxSlots = QUICK_CHAT_MAX_SLOTS,
+        )
         _uiState.update {
-            it.copy(quickChatEmojiSlots = QuickChatEmojiSlots.mergeForDisplay(recent))
+            it.copy(quickChatEmojiSlots = recent)
         }
     }
 
@@ -813,7 +820,7 @@ class HomeViewModel @Inject constructor(
         reactToPostJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
 
-            runCatching { postRepository.recordQuickChatEmojiUsage(emoji) }.onFailure { error ->
+            runCatching { quickChatEmojiRepository.recordEmojiUsage(emoji) }.onFailure { error ->
                 Logger.e("Failed to persist quick chat emoji usage: ${error.message}")
             }
             postRepository.reactToPost(postId = postIdToReact, reactionIcon = emoji)
