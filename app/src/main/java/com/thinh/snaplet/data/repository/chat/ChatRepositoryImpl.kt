@@ -495,33 +495,57 @@ class ChatRepositoryImpl @Inject constructor(
 
     private suspend fun upsertIfChanged(incoming: List<Conversation>) {
         if (incoming.isEmpty()) return
-        val snapshot = conversationDao.getAllUpdatedAtSnapshot().associateBy { it.id }
-        val changed = incoming.filter { conv ->
-            val existing = snapshot[conv.id] ?: return@filter true
-            existing.updatedAt != conv.syncUpdatedAt.time ||
-                existing.partnerLastSeenAt != conv.partnerLastReadAt?.time ||
-                existing.myLastSeenAt != conv.myLastReadAt?.time
-        }
-        if (changed.isNotEmpty()) {
-            val entities = changed.map { conv ->
-                val incomingEntity = conv.toEntity()
-                val existing = snapshot[conv.id]
-                if (existing == null) {
-                    incomingEntity
-                } else {
-                    incomingEntity.copy(
-                        myLastSeenAt = listOfNotNull(
-                            incomingEntity.myLastSeenAt,
-                            existing.myLastSeenAt,
-                        ).maxOrNull(),
-                        partnerLastSeenAt = listOfNotNull(
-                            incomingEntity.partnerLastSeenAt,
-                            existing.partnerLastSeenAt,
-                        ).maxOrNull(),
-                    )
-                }
+        val dedupedIncoming = dedupeByPartnerId(incoming)
+        appDatabase.withTransaction {
+            // Enforce one active conversation per partner in local DB.
+            dedupedIncoming.forEach { conv ->
+                conversationDao.deleteByParticipantIdExcept(
+                    participantId = conv.partner.id,
+                    keepId = conv.id,
+                )
             }
-            conversationDao.upsertAll(entities)
+
+            val snapshot = conversationDao.getAllUpdatedAtSnapshot().associateBy { it.id }
+            val changed = dedupedIncoming.filter { conv ->
+                val existing = snapshot[conv.id] ?: return@filter true
+                existing.updatedAt != conv.syncUpdatedAt.time ||
+                    existing.partnerLastSeenAt != conv.partnerLastReadAt?.time ||
+                    existing.myLastSeenAt != conv.myLastReadAt?.time
+            }
+            if (changed.isNotEmpty()) {
+                val entities = changed.map { conv ->
+                    val incomingEntity = conv.toEntity()
+                    val existing = snapshot[conv.id]
+                    if (existing == null) {
+                        incomingEntity
+                    } else {
+                        incomingEntity.copy(
+                            myLastSeenAt = listOfNotNull(
+                                incomingEntity.myLastSeenAt,
+                                existing.myLastSeenAt,
+                            ).maxOrNull(),
+                            partnerLastSeenAt = listOfNotNull(
+                                incomingEntity.partnerLastSeenAt,
+                                existing.partnerLastSeenAt,
+                            ).maxOrNull(),
+                        )
+                    }
+                }
+                conversationDao.upsertAll(entities)
+            }
         }
+    }
+
+    private fun dedupeByPartnerId(incoming: List<Conversation>): List<Conversation> {
+        return incoming
+            .groupBy { it.partner.id }
+            .values
+            .map { samePartnerConversations ->
+                samePartnerConversations.maxWithOrNull(
+                    compareBy<Conversation> { it.syncUpdatedAt.time }
+                        .thenBy { it.lastMessage?.createdAt?.time ?: Long.MIN_VALUE }
+                        .thenBy { it.createdAt.time }
+                ) ?: samePartnerConversations.first()
+            }
     }
 }

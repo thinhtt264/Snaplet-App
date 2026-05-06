@@ -12,7 +12,6 @@ import com.thinh.snaplet.data.model.chat.Message
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.data.repository.quickchat.QuickChatEmojiRepository
-import com.thinh.snaplet.domain.chat.LoadInitialMessagesUseCase
 import com.thinh.snaplet.domain.chat.MarkMessageSeenUseCase
 import com.thinh.snaplet.navigation.ChatConversation
 import com.thinh.snaplet.platform.network.ConnectivityObserver
@@ -32,7 +31,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -40,6 +38,7 @@ import javax.inject.Inject
 private const val OUT_GOING_TYPING_TIMEOUT_MS = 1_500L
 private const val IN_COMING_TYPING_TIMEOUT_MS = 3_000L
 private const val MARK_READ_DEBOUNCE_MS = 500L
+private const val SYNC_DEBOUNCE_MS = 5_000L
 private const val CHAT_RECENT_MAX_SLOTS = 4
 private val CHAT_RECENT_DEFAULT_EMOJIS = listOf("😀", "😂", "😮", "👍")
 
@@ -48,7 +47,6 @@ class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val userRepository: UserRepository,
     private val quickChatEmojiRepository: QuickChatEmojiRepository,
-    private val loadInitialMessagesUseCase: LoadInitialMessagesUseCase,
     private val markMessageSeenUseCase: MarkMessageSeenUseCase,
     private val connectivityObserver: ConnectivityObserver,
     savedStateHandle: SavedStateHandle,
@@ -79,20 +77,17 @@ class ChatViewModel @Inject constructor(
     private var markReadJob: Job? = null
     private val typingThrottler = Throttler(OUT_GOING_TYPING_TIMEOUT_MS)
 
-    private var isInForeground = false
+    private var lastSyncAt = 0L
 
     init {
         loadCurrentUser()
         observeIncomingTypingEvents()
         observeIncomingReadReceipts()
-        observeConnectivity()
         observeNetworkReconnect()
         loadRecentEmojis()
 
         if (conversationId.isNotEmpty()) {
-            connectSocket()
-            loadMessages()
-            viewModelScope.launch { chatRepository.retryPendingMessages(conversationId) }
+            syncOnResume()
         }
     }
 
@@ -102,14 +97,10 @@ class ChatViewModel @Inject constructor(
     }
 
     fun onResume() {
-        isInForeground = true
-        if (conversationId.isNotEmpty() && connectivityObserver.isInternetAvailable.value) {
-            connectSocket()
-        }
+        syncOnResume()
     }
 
     fun onPause() {
-        isInForeground = false
         typingThrottler.reset()
         viewModelScope.launch { chatRepository.sendTypingStop(conversationId) }
         chatRepository.disconnectChatSocket()
@@ -166,8 +157,7 @@ class ChatViewModel @Inject constructor(
                 conversationId = message.conversationId
                 _activeConversationId.value = message.conversationId
                 _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
-                connectSocket()
-                loadMessages()
+                viewModelScope.launch { connectSocketAndSyncMessages() }
             }
             .onFailure { error ->
                 Logger.e("sendFirstMessage failed: ${error.message}")
@@ -182,44 +172,35 @@ class ChatViewModel @Inject constructor(
 
     fun loadMessages() {
         if (conversationId.isEmpty()) return
+        viewModelScope.launch { connectSocketAndSyncMessages() }
+    }
+
+    private fun syncOnResume() {
+        if (conversationId.isEmpty()) return
+        val now = System.currentTimeMillis()
+        if (now - lastSyncAt < SYNC_DEBOUNCE_MS) return
+        lastSyncAt = now
+        viewModelScope.launch { connectSocketAndSyncMessages() }
+    }
+
+    private suspend fun connectSocketAndSyncMessages() {
+        if (conversationId.isEmpty()) return
         _uiState.update {
             it.copy(
-                messageList = it.messageList.copy(
-                    isLoading = false,
-                    error = null
-                )
+                messageList = it.messageList.copy(isLoading = false, error = null),
             )
         }
-        viewModelScope.launch {
-            loadInitialMessagesUseCase(conversationId = conversationId)
-                .onFailure { Logger.e("loadMessages sync failed: ${it.message}") }
-        }
-    }
-
-    private fun connectSocket() {
-        viewModelScope.launch { chatRepository.connectChatSocket(conversationId) }
-    }
-
-    private fun observeConnectivity() {
-        viewModelScope.launch {
-            connectivityObserver.isInternetAvailable.onEach { isAvailable ->
-                if (isAvailable && isInForeground && conversationId.isNotEmpty()) {
-                    connectSocket()
-                }
-            }.collect()
-        }
+        chatRepository.connectChatSocket(conversationId)
+        chatRepository.syncOnReconnect(conversationId)
     }
 
     private fun observeNetworkReconnect() {
         viewModelScope.launch {
-            connectivityObserver.isInternetAvailable
-                .filter { it }
-                .drop(1)
-                .collect {
-                    if (conversationId.isNotEmpty()) {
-                        chatRepository.syncOnReconnect(conversationId)
-                    }
+            connectivityObserver.isInternetAvailable.filter { it }.drop(1).collect {
+                if (conversationId.isNotEmpty()) {
+                    connectSocketAndSyncMessages()
                 }
+            }
         }
     }
 

@@ -44,7 +44,11 @@ class UtcDateDeserializer : JsonDeserializer<Date>, JsonSerializer<Date> {
         typeOfT: Type,
         context: JsonDeserializationContext
     ): Date {
-        val raw = json.asString.takeIf { it.isNotBlank() } ?: return Date(0)
+        val raw = try {
+            json.asString.takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        } ?: return Date(0)
 
         return try {
             val instant = OffsetDateTime.parse(raw).toInstant()
