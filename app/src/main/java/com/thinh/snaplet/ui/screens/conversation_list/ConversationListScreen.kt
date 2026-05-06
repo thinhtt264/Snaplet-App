@@ -417,7 +417,7 @@ private fun ConversationCard(
                         )
                     }
                     BaseText(
-                        text = Date(time).toLocalTimeAgo(),
+                        text = formatConversationTime(time),
                         color = metaColor,
                         typography = Typography.labelMedium,
                         fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal,
@@ -445,6 +445,13 @@ private fun lastMessagePreview(conversation: ConversationUiModel): String? {
         conversation.lastMessageType == "image" -> stringResource(R.string.conversation_message_photo)
         else -> conversation.lastMessageText.orEmpty()
     }
+}
+
+@Composable
+private fun formatConversationTime(time: Long): String {
+    val diff = kotlin.math.abs(System.currentTimeMillis() - time)
+    if (diff < 60_000L) return stringResource(R.string.conversation_time_now)
+    return Date(time).toLocalTimeAgo()
 }
 
 // ─── New message bottom sheet ─────────────────────────────────────────────────
