@@ -1,0 +1,80 @@
+---
+description: Hard behavioral rules for coding safely in SnapletApp (Kotlin/Compose/Hilt).
+alwaysApply: true
+globs:
+  - "**/*"
+---
+
+# Hard Agent Rules (SnapletApp)
+
+Behavioral guardrails to reduce common LLM coding mistakes, aligned to this repository (Android Kotlin + Jetpack Compose + Hilt).
+
+**Tradeoff:** Biased toward caution over speed. Use judgment for trivial tasks, but never violate these rules.
+
+## 1) Think Before Coding
+
+**Don’t assume. Don’t hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State assumptions explicitly.
+- If multiple interpretations exist, present them instead of picking silently.
+- If something is unclear, stop and ask.
+- If a simpler approach exists, call it out and prefer it.
+
+## 2) Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No “flexibility” or “configurability” that wasn’t requested.
+- No defensive error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Heuristic: if a senior engineer would call it overcomplicated, simplify.
+
+## 3) Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don’t “improve” adjacent code, comments, or formatting.
+- Don’t refactor things that aren’t broken.
+- Match existing style and patterns used in this codebase (Compose, Hilt, repositories/use-cases/viewmodels).
+- If you notice unrelated dead code or issues, mention them — don’t delete/fix unless asked.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don’t remove pre-existing dead code unless asked.
+
+**Test:** every changed line should trace directly to the user request.
+
+## 4) Goal-Driven Execution (Verify Loop)
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- “Add validation” → “invalid inputs are rejected and UI shows the intended message/state”
+- “Fix the bug” → “reproduction steps no longer reproduce; behavior matches expected output”
+- “Refactor X” → “behavior is unchanged; builds/linters still pass”
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+### Verification policy (aligned to this repo)
+
+- **Unit testing is disabled by policy unless explicitly requested by the user.**
+- Prefer verification via:
+  - `./gradlew assembleDevelopmentDebug` (or the smallest applicable Gradle task)
+  - targeted manual checks / reproduction steps (when a UI/behavior change is requested)
+  - fixing compilation/lint issues introduced by your changes
+
+Strong success criteria reduce back-and-forth; weak criteria require clarification before coding.
+
+---
+
+These rules are working if diffs stay minimal, rewrites decrease, and clarifying questions happen *before* implementation rather than after mistakes.

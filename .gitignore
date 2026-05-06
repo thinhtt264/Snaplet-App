@@ -19,10 +19,5 @@ app/release
 # Keystore files
 *.jks
 *.keystore
-
-## cursor memory bank
-memory-bank/*
-
-
 fastlane/report.xml
 fastlane/README.md
