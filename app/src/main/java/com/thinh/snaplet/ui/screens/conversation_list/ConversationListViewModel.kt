@@ -22,9 +22,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private const val LOG_TAG = "ConversationListVM"
 private const val PAGE_LIMIT = 20
-private const val SYNC_DEBOUNCE_MS = 15_000L
+private const val SYNC_DEBOUNCE_MS = 5_000L
 
 @HiltViewModel
 class ConversationListViewModel @Inject constructor(
@@ -75,7 +74,6 @@ class ConversationListViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingMore = true) }
             chatRepository.getConversations(limit = PAGE_LIMIT, cursor = cursor).onSuccess { data ->
-                Logger.d("$LOG_TAG: loadMore ${data.data.size} conversations nextCursor=${data.pagination.nextCursor}")
                 _uiState.update {
                     it.copy(
                         isLoadingMore = false,
@@ -83,7 +81,7 @@ class ConversationListViewModel @Inject constructor(
                     )
                 }
             }.onFailure { error ->
-                Logger.e("$LOG_TAG: loadMore failed: ${error.message}")
+                Logger.e("conversation list loadMore failed: ${error.message}")
                 _uiState.update { it.copy(isLoadingMore = false) }
             }
         }
@@ -96,7 +94,7 @@ class ConversationListViewModel @Inject constructor(
             userRepository.getMyFriendList().onSuccess { friends ->
                 _uiState.update { it.copy(isFriendListLoading = false, friendList = friends) }
             }.onFailure { error ->
-                Logger.e("$LOG_TAG: loadFriendList failed: ${error.message}")
+                Logger.e("conversation list loadFriendList failed: ${error.message}")
                 _uiState.update {
                     it.copy(isFriendListLoading = false, friendListError = error.message)
                 }
@@ -111,9 +109,8 @@ class ConversationListViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             chatRepository.syncConversations()
-                .onSuccess { Logger.d("$LOG_TAG: syncConversations success") }
                 .onFailure { error ->
-                    Logger.e("$LOG_TAG: syncConversations failed: ${error.message}")
+                    Logger.e("conversation list syncConversations failed: ${error.message}")
                     _uiState.update { it.copy(error = error.message) }
                 }
             _uiState.update { it.copy(isLoading = false) }
@@ -123,7 +120,6 @@ class ConversationListViewModel @Inject constructor(
     private fun observeNetworkReconnect() {
         viewModelScope.launch {
             connectivityObserver.isInternetAvailable.filter { it }.drop(1).collect {
-                Logger.d("$LOG_TAG: network reconnect → sync")
                 chatRepository.syncConversations()
             }
         }

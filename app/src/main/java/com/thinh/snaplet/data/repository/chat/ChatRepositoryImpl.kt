@@ -48,8 +48,6 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val CHAT_TYPING_START = "chat:typing_start"
-private const val CHAT_TYPING_STOP = "chat:typing_stop"
 private const val PAGE_SIZE = 20
 
 @Singleton
@@ -137,6 +135,7 @@ class ChatRepositoryImpl @Inject constructor(
                     } else {
                         updateLastMessageLocal(
                             convId = event.conversationId,
+                            lastMessageId = null,
                             lastMessageAt = event.lastMessageAt.time,
                             lastMessageSenderId = event.lastMessageSenderId,
                             lastMessageText = event.lastMessageText
@@ -170,7 +169,13 @@ class ChatRepositoryImpl @Inject constructor(
         scope.launch {
             readReceipts.collect { event ->
                 val convId = activeConversationId.takeIf { it.isNotEmpty() } ?: return@collect
-                conversationDao.updatePartnerLastSeenAt(convId, event.readAt.time)
+                // Backend có thể bắn read receipts cho cả room.
+                // Quy ước local: `conversations.participantId` là id của partner, nên dựa vào `event.userId` để ghi đúng cột.
+                conversationDao.updatePartnerLastSeenAt(
+                    id = convId,
+                    readerId = event.userId,
+                    seenAt = event.readAt.time,
+                )
             }
         }
     }
@@ -181,7 +186,8 @@ class ChatRepositoryImpl @Inject constructor(
     override fun observeUnreadCount(myUserId: String): Flow<Int> =
         conversationDao.observeUnreadCount(myUserId).distinctUntilChanged()
 
-    @Volatile private var activeConversationId: String = ""
+    @Volatile
+    private var activeConversationId: String = ""
 
     override suspend fun connectChatSocket(conversationId: String) {
         Logger.d("connectChatSocket conversationId=$conversationId")
@@ -269,6 +275,7 @@ class ChatRepositoryImpl @Inject constructor(
 
     override suspend fun updateLastMessageLocal(
         convId: String,
+        lastMessageId: String?,
         lastMessageAt: Long,
         lastMessageSenderId: String,
         lastMessageText: String?,
@@ -276,6 +283,7 @@ class ChatRepositoryImpl @Inject constructor(
     ) {
         conversationDao.updateLastMessage(
             convId,
+            lastMessageId,
             lastMessageAt,
             lastMessageSenderId,
             lastMessageText,
@@ -285,14 +293,14 @@ class ChatRepositoryImpl @Inject constructor(
 
     override fun sendTypingStart(conversationId: String) {
         chatSocketManager.emit(
-            eventName = CHAT_TYPING_START,
+            eventName = SocketEvent.CHAT_TYPING_START.name,
             data = JSONObject(gson.toJson(TypingSocketPayload(conversationId))),
         )
     }
 
     override fun sendTypingStop(conversationId: String) {
         chatSocketManager.emit(
-            eventName = CHAT_TYPING_STOP,
+            eventName = SocketEvent.CHAT_TYPING_STOP.name,
             data = JSONObject(gson.toJson(TypingSocketPayload(conversationId))),
         )
     }
@@ -335,6 +343,7 @@ class ChatRepositoryImpl @Inject constructor(
         messageDao.upsert(message.toEntity())
         conversationDao.updateLastMessage(
             convId = message.conversationId,
+            lastMessageId = message.id,
             lastMessageAt = message.createdAt.time,
             lastMessageSenderId = message.senderId,
             lastMessageText = message.text,
@@ -372,6 +381,7 @@ class ChatRepositoryImpl @Inject constructor(
                 } else {
                     conversationDao.updateLastMessage(
                         convId = message.conversationId,
+                        lastMessageId = message.id,
                         lastMessageAt = message.createdAt.time,
                         lastMessageSenderId = message.senderId,
                         lastMessageText = message.text,
@@ -405,6 +415,7 @@ class ChatRepositoryImpl @Inject constructor(
         )
         conversationDao.updateLastMessage(
             convId,
+            localId,
             now,
             senderId,
             text,
@@ -468,6 +479,14 @@ class ChatRepositoryImpl @Inject constructor(
                 status = MessageStatus.SENT,
                 serverCreatedAt = sent.createdAt.time,
             )
+            conversationDao.updateLastMessage(
+                convId = msg.conversationId,
+                lastMessageId = sent.id,
+                lastMessageAt = sent.createdAt.time,
+                lastMessageSenderId = msg.senderId,
+                lastMessageText = msg.text,
+                lastMessageType = msg.type,
+            )
         }.onFailure {
             Logger.e("executeSend failed localId=$localId: ${it.message}")
             messageDao.updateStatus(localId, MessageStatus.FAILED)
@@ -479,17 +498,27 @@ class ChatRepositoryImpl @Inject constructor(
         val snapshot = conversationDao.getAllUpdatedAtSnapshot().associateBy { it.id }
         val changed = incoming.filter { conv ->
             val existing = snapshot[conv.id] ?: return@filter true
-            existing.updatedAt != conv.updatedAt.time ||
-                (conv.partnerLastReadAt != null && existing.partnerLastSeenAt == null)
+            existing.updatedAt != conv.syncUpdatedAt.time ||
+                existing.partnerLastSeenAt != conv.partnerLastReadAt?.time ||
+                existing.myLastSeenAt != conv.myLastReadAt?.time
         }
         if (changed.isNotEmpty()) {
             val entities = changed.map { conv ->
-                val entity = conv.toEntity()
-                val existingPartnerSeen = snapshot[conv.id]?.partnerLastSeenAt
-                if (existingPartnerSeen != null && existingPartnerSeen > (entity.partnerLastSeenAt ?: 0L)) {
-                    entity.copy(partnerLastSeenAt = existingPartnerSeen)
+                val incomingEntity = conv.toEntity()
+                val existing = snapshot[conv.id]
+                if (existing == null) {
+                    incomingEntity
                 } else {
-                    entity
+                    incomingEntity.copy(
+                        myLastSeenAt = listOfNotNull(
+                            incomingEntity.myLastSeenAt,
+                            existing.myLastSeenAt,
+                        ).maxOrNull(),
+                        partnerLastSeenAt = listOfNotNull(
+                            incomingEntity.partnerLastSeenAt,
+                            existing.partnerLastSeenAt,
+                        ).maxOrNull(),
+                    )
                 }
             }
             conversationDao.upsertAll(entities)

@@ -59,6 +59,7 @@ interface ChatRepository {
 
     suspend fun updateLastMessageLocal(
         convId: String,
+        lastMessageId: String? = null,
         lastMessageAt: Long,
         lastMessageSenderId: String,
         lastMessageText: String? = null,

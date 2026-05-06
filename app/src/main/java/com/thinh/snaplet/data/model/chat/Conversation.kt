@@ -62,8 +62,8 @@ data class Conversation(
     val myLastReadAt: Date?,
     @SerializedName("createdAt")
     val createdAt: Date,
-    @SerializedName("updatedAt")
-    val updatedAt: Date,
+    @SerializedName("syncUpdatedAt")
+    val syncUpdatedAt: Date,
 )
 
 @Keep
@@ -91,5 +91,5 @@ fun Conversation.toEntity(): ConversationEntity = ConversationEntity(
     lastMessageAt = lastMessage?.createdAt?.time,
     myLastSeenAt = myLastReadAt?.time,
     partnerLastSeenAt = partnerLastReadAt?.time,
-    updatedAt = updatedAt.time,
+    updatedAt = syncUpdatedAt.time,
 )

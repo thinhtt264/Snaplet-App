@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ConversationDao {
 
-    @Query("SELECT * FROM conversations ORDER BY lastMessageAt DESC")
+    @Query("SELECT * FROM conversations ORDER BY updatedAt DESC")
     fun observeAll(): Flow<List<ConversationEntity>>
 
     @Query(
@@ -19,8 +19,7 @@ interface ConversationDao {
         SELECT c.id AS conversationId, m.status AS status
         FROM conversations c
         LEFT JOIN messages m
-            ON m.conversationId = c.id
-           AND m.createdAt = c.lastMessageAt
+            ON m.id = c.lastMessageId
     """
     )
     fun observeLastMessageStatuses(): Flow<List<ConversationLastMessageStatusProjection>>
@@ -28,7 +27,7 @@ interface ConversationDao {
     @Query("SELECT * FROM conversations WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): ConversationEntity?
 
-    @Query("SELECT id, updatedAt, partnerLastSeenAt FROM conversations")
+    @Query("SELECT id, updatedAt, myLastSeenAt, partnerLastSeenAt FROM conversations")
     suspend fun getAllUpdatedAtSnapshot(): List<ConversationUpdatedAtProjection>
 
     @Upsert
@@ -37,11 +36,46 @@ interface ConversationDao {
     @Upsert
     suspend fun upsert(conversation: ConversationEntity)
 
-    @Query("UPDATE conversations SET myLastSeenAt = :seenAt WHERE id = :id")
+    @Query(
+        """
+        UPDATE conversations
+        SET myLastSeenAt = CASE
+            WHEN COALESCE(myLastSeenAt, 0) >= :seenAt THEN myLastSeenAt
+            ELSE :seenAt
+        END
+        WHERE id = :id
+        """
+    )
     suspend fun updateMyLastSeenAt(id: String, seenAt: Long)
 
-    @Query("UPDATE conversations SET partnerLastSeenAt = :seenAt WHERE id = :id")
-    suspend fun updatePartnerLastSeenAt(id: String, seenAt: Long)
+    // Backend có thể bắn read receipts cho cả room.
+    // `participantId` trong conversations đang lưu id của partner, vì vậy:
+    // - nếu readerId == participantId  -> partner vừa đọc -> update `partnerLastSeenAt`
+    // - ngược lại -> user hiện tại vừa đọc -> update `myLastSeenAt`
+    @Query(
+        """
+        UPDATE conversations
+        SET
+            myLastSeenAt = CASE
+                WHEN :readerId != participantId THEN
+                    CASE
+                        WHEN COALESCE(myLastSeenAt, 0) >= :seenAt THEN myLastSeenAt
+                        ELSE :seenAt
+                    END
+                ELSE myLastSeenAt
+            END,
+            partnerLastSeenAt = CASE
+                WHEN :readerId = participantId THEN
+                    CASE
+                        WHEN COALESCE(partnerLastSeenAt, 0) >= :seenAt THEN partnerLastSeenAt
+                        ELSE :seenAt
+                    END
+                ELSE partnerLastSeenAt
+            END
+        WHERE id = :id
+        """
+    )
+    suspend fun updatePartnerLastSeenAt(id: String, readerId: String, seenAt: Long)
 
     @Query("DELETE FROM conversations WHERE id = :id")
     suspend fun deleteById(id: String)
@@ -49,7 +83,8 @@ interface ConversationDao {
     @Query(
         """
         UPDATE conversations
-        SET lastMessageAt = :lastMessageAt,
+        SET lastMessageId = COALESCE(:lastMessageId, lastMessageId),
+            lastMessageAt = :lastMessageAt,
             lastMessageSenderId = :lastMessageSenderId,
             lastMessageText = :lastMessageText,
             lastMessageType = :lastMessageType,
@@ -59,6 +94,7 @@ interface ConversationDao {
     )
     suspend fun updateLastMessage(
         convId: String,
+        lastMessageId: String?,
         lastMessageAt: Long,
         lastMessageSenderId: String,
         lastMessageText: String?,
