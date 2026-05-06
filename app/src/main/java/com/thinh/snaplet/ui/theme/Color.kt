@@ -222,3 +222,5 @@ val outline_light = NeutralVariant50 // #807667
 val outlineVariant_light = NeutralVariant80 //
 
 val WidgetStatePanelBackground = Color(0xFF1A1A1A) // loading / error / empty
+
+val BackdropScrim = Color.Black.copy(alpha = 0.6f)

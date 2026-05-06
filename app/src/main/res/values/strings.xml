@@ -185,4 +185,23 @@
     <string name="force_logout_title">Phiên đăng nhập đã hết hạn</string>
     <string name="force_logout_message">Tài khoản của bạn vừa đăng nhập trên một thiết bị khác. Phiên này đã bị kết thúc.</string>
     <string name="force_logout_button">Đăng xuất</string>
+
+    <!-- Conversation list -->
+    <string name="conversation_list_title">Tin nhắn</string>
+    <string name="conversation_list_empty">Chưa có cuộc trò chuyện nào</string>
+    <string name="conversation_list_load_failed">Không tải được danh sách</string>
+    <string name="conversation_deleted_message">Tin nhắn đã bị xóa</string>
+    <string name="conversation_message_photo">Ảnh</string>
+    <string name="conversation_search_hint">Tìm kiếm…</string>
+    <string name="conversation_image_load_failed">Không tải được ảnh</string>
+    <string name="chat_input_placeholder">Nhắn tin…</string>
+    <string name="chat_message_action_reply">Trả lời</string>
+    <string name="chat_message_action_copy">Sao chép</string>
+    <string name="chat_message_action_recall">Thu hồi</string>
+    <string name="new_message_title">Tin nhắn mới</string>
+    <string name="new_message_search_hint">Tìm tên hoặc @username…</string>
+    <string name="new_message_friends_empty">Chưa có bạn bè nào</string>
+    <string name="new_message_friends_empty_subtitle">Kết bạn với mọi người để bắt đầu nhắn tin</string>
+    <string name="new_message_find_friends">Tìm kiếm bạn bè</string>
+    <string name="new_message_friends_load_failed">Không tải được danh sách bạn bè</string>
 </resources>

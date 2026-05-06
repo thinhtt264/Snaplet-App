@@ -13,4 +13,6 @@ object MotionTokens {
     const val Slow = 350
 
     const val VerySlow = 500
+
+    const val LoadingRotation = 1000
 }

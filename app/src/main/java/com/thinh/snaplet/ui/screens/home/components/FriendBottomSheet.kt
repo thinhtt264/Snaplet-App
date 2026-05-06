@@ -650,7 +650,7 @@ private fun FriendListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 16.dp),
+            .padding(bottom = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Avatar(

@@ -61,9 +61,11 @@ data class HomeUiState(
     val postReactionsState: PostReactionsUiState = PostReactionsUiState.Loading,
     val showReactionsSheet: Boolean = false,
 
-    val quickChatEmojiSlots: List<String> = QuickChatEmojiSlots.mergeForDisplay(emptyList()),
+    val quickChatEmojiSlots: List<String> = emptyList(),
 
     val showFriendSheet: Boolean = false,
+
+    val chatUnreadCount: Int = 0
 ) {
     /** Returns true if more data can be loaded (nextCursor is not null and not currently loading) */
     val canLoadMore: Boolean get() = nextCursor != null && !isLoadingMore && !isLoadingPosts

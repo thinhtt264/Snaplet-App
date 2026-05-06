@@ -19,6 +19,20 @@ annotation class BaseOkHttpClient
 annotation class InternalOkHttpClient
 
 /**
+ * Auth OkHttpClient: dedicated client for authentication-related endpoints.
+ */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class AuthOkHttpClient
+
+/**
+ * ApiService backed by [AuthOkHttpClient].
+ */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class AuthApiService
+
+/**
  * Logging Interceptor: custom HTTP logger (method, url, headers, body, status).
  * Distinguishes from AuthInterceptor which also provides okhttp3.Interceptor.
  */

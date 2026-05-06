@@ -8,9 +8,7 @@ import io.socket.client.IO
 import io.socket.client.Socket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -55,7 +53,7 @@ class SocketManager @Inject constructor(
 
     private val reconnectController = SocketReconnectController(
         connector = this,
-        scope = scope
+        scope = scope,
     )
 
     override suspend fun connect() {
@@ -171,53 +169,20 @@ class SocketManager @Inject constructor(
             }
     }
 
+    fun emit(eventName: String, data: org.json.JSONObject? = null) {
+        val s = socket
+        if (s == null || !s.connected()) {
+            Logger.w("$LOG_TAG: emit skipped (not connected) event=$eventName")
+            return
+        }
+        if (data != null) {
+            s.emit(eventName, data)
+        } else {
+            s.emit(eventName)
+        }
+        Logger.d("$LOG_TAG: emit event=$eventName data=$data")
+    }
+
     private fun generateSessionId(): String = UUID.randomUUID().toString()
 
-    private class SocketReconnectController(
-        private val connector: SocketConnector,
-        private val scope: CoroutineScope,
-        private val delayMillis: Long = 2_000L,
-        private val maxRetriesPerError: Int = 5
-    ) {
-
-        private data class ErrorRetryState(
-            val errorKey: String,
-            val retryCount: Int
-        )
-
-        private var currentErrorState: ErrorRetryState? = null
-        private var reconnectJob: Job? = null
-
-        fun onConnectSuccess() {
-            reconnectJob?.cancel()
-            reconnectJob = null
-            currentErrorState = null
-        }
-
-        fun onConnectError(errorKey: String) {
-            val previous = currentErrorState
-
-            val nextState =
-                if (previous == null || previous.errorKey != errorKey) {
-                    ErrorRetryState(errorKey = errorKey, retryCount = 0)
-                } else {
-                    previous.copy(retryCount = previous.retryCount + 1)
-                }
-
-            currentErrorState = nextState
-
-            if (nextState.retryCount >= maxRetriesPerError) {
-                return
-            }
-
-            reconnectJob?.cancel()
-            reconnectJob = scope.launch {
-                delay(delayMillis)
-                try {
-                    connector.connect()
-                } catch (_: Exception) {
-                }
-            }
-        }
-    }
 }

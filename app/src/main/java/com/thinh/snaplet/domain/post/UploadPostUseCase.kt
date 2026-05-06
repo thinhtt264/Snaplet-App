@@ -1,5 +1,6 @@
 package com.thinh.snaplet.domain.post
 
+import android.graphics.BitmapFactory
 import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.domain.model.UploadPostResult
@@ -31,9 +32,16 @@ class UploadPostUseCase @Inject constructor(
         }
 
         return runCatching {
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(imagePath, opts)
+            val width = opts.outWidth.takeIf { it > 0 } ?: 0
+            val height = opts.outHeight.takeIf { it > 0 } ?: 0
+
             val uploadRequestResult = mediaRepository.requestUpload(
                 items = listOf(imagePath),
-                transforms = listOf(transform)
+                transforms = transform,
+                widths = listOf(width),
+                heights = listOf(height),
             )
             val uploadRequestData = uploadRequestResult.fold(
                 onSuccess = { it },

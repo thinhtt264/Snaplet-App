@@ -15,7 +15,7 @@ import com.thinh.snaplet.data.model.media.UploadRequestData
 import com.thinh.snaplet.data.model.media.UploadRequestItem
 import com.thinh.snaplet.data.model.post.CreatePostRequest
 import com.thinh.snaplet.data.model.post.Post
-import com.thinh.snaplet.data.model.post.PostVisibilityApi
+import com.thinh.snaplet.data.model.post.PostVisibility
 import com.thinh.snaplet.di.BaseOkHttpClient
 import com.thinh.snaplet.utils.FileUtils
 import com.thinh.snaplet.utils.Logger
@@ -28,8 +28,8 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.Response
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.File
@@ -54,7 +54,7 @@ class MediaRepositoryImpl @Inject constructor(
     private fun openImageInputStream(imageSource: String): Result<InputStream> {
         return when {
             imageSource.startsWith("http://", ignoreCase = true) ||
-                imageSource.startsWith("https://", ignoreCase = true) -> {
+                    imageSource.startsWith("https://", ignoreCase = true) -> {
                 val response: Response = baseOkHttpClient.newCall(
                     Request.Builder().url(imageSource).build()
                 ).execute()
@@ -188,7 +188,9 @@ class MediaRepositoryImpl @Inject constructor(
 
     override suspend fun requestUpload(
         items: List<String>,
-        transforms: List<ImageTransform>?
+        transforms: ImageTransform?,
+        widths: List<Int>,
+        heights: List<Int>,
     ): ApiResult<UploadRequestData> {
         if (items.size > 3) {
             return ApiResult.Failure(
@@ -199,12 +201,15 @@ class MediaRepositoryImpl @Inject constructor(
             )
         }
 
-        if (transforms != null && transforms.size != items.size) {
+        if (widths.size != items.size) {
             return ApiResult.Failure(
-                ApiError(
-                    httpCode = 400,
-                    message = "Transforms count must match items count"
-                )
+                ApiError(httpCode = 400, message = "Widths count must match items count")
+            )
+        }
+
+        if (heights.size != items.size) {
+            return ApiResult.Failure(
+                ApiError(httpCode = 400, message = "Heights count must match items count")
             )
         }
 
@@ -239,12 +244,13 @@ class MediaRepositoryImpl @Inject constructor(
                 )
             }
 
-            val transform = transforms?.get(index)
             uploadRequestItems.add(
                 UploadRequestItem(
                     mimeType = mimeType,
                     size = fileSize,
-                    transform = transform
+                    transform = transforms,
+                    width = widths[index],
+                    height = heights[index],
                 )
             )
         }
@@ -351,7 +357,7 @@ class MediaRepositoryImpl @Inject constructor(
             )
         }
 
-        if (visibility == PostVisibilityApi.SELECTED_USERS && allowedViewerUserIds.isNullOrEmpty()) {
+        if (visibility == PostVisibility.SELECTED_USERS && allowedViewerUserIds.isNullOrEmpty()) {
             return ApiResult.Failure(
                 ApiError(
                     httpCode = 400,

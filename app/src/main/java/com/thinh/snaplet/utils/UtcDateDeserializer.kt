@@ -3,13 +3,17 @@ package com.thinh.snaplet.utils
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
-import com.google.gson.JsonParseException
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSerializationContext
+import com.google.gson.JsonSerializer
 import java.lang.reflect.Type
-import java.text.ParseException
-import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 
 /**
  * Lenient UTC Date deserializer for backend ISO-8601 timestamps.
@@ -22,16 +26,18 @@ import java.util.TimeZone
  *
  * On failure, returns Date(0) instead of throwing to avoid crashing the app.
  */
-class UtcDateDeserializer : JsonDeserializer<Date> {
+class UtcDateDeserializer : JsonDeserializer<Date>, JsonSerializer<Date> {
 
-    private val utcTimeZone: TimeZone = TimeZone.getTimeZone("UTC")
-
-    private val formats: List<SimpleDateFormat> = listOf(
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX", Locale.US),
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US),
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX", Locale.US),
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US),
-    ).onEach { it.timeZone = utcTimeZone }
+    override fun serialize(
+        src: Date,
+        typeOfSrc: Type,
+        context: JsonSerializationContext
+    ): JsonElement {
+        val iso = Instant.ofEpochMilli(src.time)
+            .atOffset(ZoneOffset.UTC)
+            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"))
+        return JsonPrimitive(iso)
+    }
 
     override fun deserialize(
         json: JsonElement,
@@ -39,32 +45,21 @@ class UtcDateDeserializer : JsonDeserializer<Date> {
         context: JsonDeserializationContext
     ): Date {
         val raw = try {
-            json.asString
-        } catch (_: UnsupportedOperationException) {
-            return Date(0)
-        } catch (_: ClassCastException) {
-            return Date(0)
-        } catch (_: IllegalStateException) {
-            return Date(0)
-        }
-
-        if (raw.isNullOrBlank()) return Date(0)
-
-        for (format in formats) {
-            try {
-                val date = format.parse(raw)
-                if (date != null) return date
-            } catch (_: ParseException) {
-                // try next format
-            }
-        }
+            json.asString.takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        } ?: return Date(0)
 
         return try {
-            context.deserialize(json, Date::class.java)
-        } catch (_: JsonParseException) {
-            Date(0)
-        } catch (_: Exception) {
-            Date(0)
+            val instant = OffsetDateTime.parse(raw).toInstant()
+            Date.from(instant)
+        } catch (_: DateTimeParseException) {
+            try {
+                val instant = ZonedDateTime.parse(raw).toInstant()
+                Date.from(instant)
+            } catch (_: Exception) {
+                Date(0)
+            }
         }
     }
 }

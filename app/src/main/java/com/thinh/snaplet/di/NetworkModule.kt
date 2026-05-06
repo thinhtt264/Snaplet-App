@@ -24,6 +24,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Dispatcher
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.Date
@@ -52,8 +53,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideGson(): Gson {
-        return GsonBuilder().serializeNulls() // Include null fields in JSON
-            .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX") // ISO 8601 with timezone offset/Z
+        return GsonBuilder()
+            .serializeNulls()
             .registerTypeAdapter(Date::class.java, UtcDateDeserializer())
             .create()
     }
@@ -235,6 +236,31 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @AuthOkHttpClient
+    fun provideAuthOkHttpClient(
+        @LoggingInterceptor loggingInterceptor: Interceptor,
+        fingerprintInterceptor: FingerprintInterceptor,
+        chuckerInterceptor: ChuckerInterceptor,
+    ): OkHttpClient {
+        val dispatcher = Dispatcher().apply {
+            maxRequests = 8
+            maxRequestsPerHost = 8
+        }
+
+        return OkHttpClient.Builder()
+            .addInterceptor(fingerprintInterceptor)
+            .addInterceptor(chuckerInterceptor)
+            .addInterceptor(loggingInterceptor)
+            .dispatcher(dispatcher)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
+            .build()
+    }
+
+    @Provides
+    @Singleton
     fun provideRetrofit(
         @InternalOkHttpClient okHttpClient: OkHttpClient,
         gson: Gson
@@ -247,5 +273,20 @@ object NetworkModule {
     @Singleton
     fun provideApiService(retrofit: Retrofit): ApiService {
         return retrofit.create(ApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    @AuthApiService
+    fun provideAuthApiService(
+        @AuthOkHttpClient okHttpClient: OkHttpClient,
+        gson: Gson,
+    ): ApiService {
+        return Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
+            .create(ApiService::class.java)
     }
 }

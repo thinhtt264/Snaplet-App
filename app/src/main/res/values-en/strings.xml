@@ -181,4 +181,23 @@
     <string name="force_logout_title">Your login session has expired</string>
     <string name="force_logout_message">Your account was just signed in on another device. This session has ended.</string>
     <string name="force_logout_button">Log out</string>
+
+    <!-- Conversation list -->
+    <string name="conversation_list_title">Messages</string>
+    <string name="conversation_list_empty">No conversations yet</string>
+    <string name="conversation_list_load_failed">Failed to load conversations</string>
+    <string name="conversation_deleted_message">Message deleted</string>
+    <string name="conversation_message_photo">Photo</string>
+    <string name="conversation_search_hint">Search…</string>
+    <string name="conversation_image_load_failed">Failed to load image</string>
+    <string name="chat_input_placeholder">Message…</string>
+    <string name="chat_message_action_reply">Reply</string>
+    <string name="chat_message_action_copy">Copy</string>
+    <string name="chat_message_action_recall">Recall</string>
+    <string name="new_message_title">New message</string>
+    <string name="new_message_search_hint">Search by name or @username…</string>
+    <string name="new_message_friends_empty">No friends yet</string>
+    <string name="new_message_friends_empty_subtitle">Add friends to start messaging</string>
+    <string name="new_message_find_friends">Find friends</string>
+    <string name="new_message_friends_load_failed">Failed to load friends</string>
 </resources>

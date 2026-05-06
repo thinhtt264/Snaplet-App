@@ -5,12 +5,18 @@ import com.google.gson.annotations.SerializedName
 data class UploadRequestItem(
     @SerializedName("mimeType")
     val mimeType: String,
-    
+
     @SerializedName("size")
     val size: Long,
-    
+
     @SerializedName("transform")
-    val transform: ImageTransform? = null
+    val transform: ImageTransform? = null,
+
+    @SerializedName("width")
+    val width: Int = 0,
+
+    @SerializedName("height")
+    val height: Int = 0,
 )
 
 data class RequestUploadRequest(

@@ -1,6 +1,10 @@
 package com.thinh.snaplet.data.datasource.remote
 
 import com.thinh.snaplet.data.model.BaseResponse
+import com.thinh.snaplet.data.model.PaginatedResponse
+import com.thinh.snaplet.data.model.chat.Conversation
+import com.thinh.snaplet.data.model.chat.Message
+import com.thinh.snaplet.data.model.chat.SendMessageRequest
 import com.thinh.snaplet.data.model.CompleteOnboardRequest
 import com.thinh.snaplet.data.model.EmailAvailabilityData
 import com.thinh.snaplet.data.model.LoginRequest
@@ -214,4 +218,36 @@ interface ApiService {
     suspend fun markPostOwnerViewed(
         @Path("postId") postId: String,
     ): Response<BaseResponse<Unit>>
+
+    // ── Chat ──────────────────────────────────────────────────────────────
+
+    @POST("messages")
+    suspend fun sendMessage(
+        @Body body: SendMessageRequest
+    ): Response<BaseResponse<Message>>
+
+    @GET("conversations")
+    suspend fun getConversations(
+        @Query("limit") limit: Int = 20,
+        @Query("cursor") cursor: String? = null
+    ): Response<BaseResponse<PaginatedResponse<Conversation>>>
+
+    @GET("conversations/{conversationId}")
+    suspend fun getConversationById(
+        @Path("conversationId") conversationId: String
+    ): Response<BaseResponse<Conversation>>
+
+    @PATCH("conversations/{conversationId}/messages/{messageId}/seen")
+    suspend fun markMessageSeen(
+        @Path("conversationId") conversationId: String,
+        @Path("messageId") messageId: String,
+    ): Response<BaseResponse<Unit>>
+
+    @GET("conversations/{conversationId}/messages")
+    suspend fun getMessages(
+        @Path("conversationId") conversationId: String,
+        @Query("limit") limit: Int = 20,
+        @Query("cursor") cursor: String? = null
+    ): Response<BaseResponse<PaginatedResponse<Message>>>
+
 }

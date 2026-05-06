@@ -48,5 +48,11 @@ data class Media(
     val transform: ImageTransform? = null,
 
     @SerializedName("images")
-    val images: ImageSizes = ImageSizes()
+    val images: ImageSizes = ImageSizes(),
+
+    @SerializedName("width")
+    val width: Int = 0,
+
+    @SerializedName("height")
+    val height: Int = 0,
 )

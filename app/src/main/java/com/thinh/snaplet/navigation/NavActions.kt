@@ -14,6 +14,14 @@ class NavActions(
         nav.navigate(MyProfile)
     }
 
+    fun navigateToConversationList() {
+        nav.navigate(ConversationList)
+    }
+
+    fun navigateToChatConversation(dest: ChatConversation) {
+        nav.navigate(dest)
+    }
+
     fun navigateToHome() {
         nav.navigate(Home) {
             popUpTo<HomeGraph> { inclusive = false }

@@ -1,6 +1,7 @@
 package com.thinh.snaplet.navigation
 
 import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraphBuilder
@@ -8,6 +9,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
+import com.thinh.snaplet.ui.screens.chat.ChatScreen
+import com.thinh.snaplet.ui.screens.conversation_list.ConversationListScreen
 import com.thinh.snaplet.ui.screens.home.Home
 import com.thinh.snaplet.ui.screens.image_crop.ImageCrop
 import com.thinh.snaplet.ui.screens.login.Login
@@ -39,13 +42,12 @@ fun NavGraph(
 
 fun NavGraphBuilder.homeGraph(navController: NavHostController) {
     val actions = NavActions(navController)
-    navigation<HomeGraph>(
-        startDestination = Home,
-//        enterTransition = NavTransitions.HomeGraph.enter,
-//        popExitTransition = NavTransitions.HomeGraph.exit
-    ) {
+    navigation<HomeGraph>(startDestination = Home) {
         composable<Home> {
-            Home(onProfileClick = actions::navigateToMyProfile)
+            Home(
+                onProfileClick = actions::navigateToMyProfile,
+                onChatClick = actions::navigateToConversationList,
+            )
         }
         composable<MyProfile>(
             enterTransition = NavTransitions.MyProfile.enter,
@@ -72,6 +74,36 @@ fun NavGraphBuilder.homeGraph(navController: NavHostController) {
                 onNavigateBack = actions::popBackStack,
                 onNavigateHome = actions::navigateToHome,
             )
+        }
+        composable<ConversationList>(
+            exitTransition = { ExitTransition.None },
+            popExitTransition = NavTransitions.Default.popExit,
+        ) {
+            ConversationListScreen(
+                onNavigateBack = actions::popBackStack,
+                onConversationClick = { conversation ->
+                    actions.navigateToChatConversation(
+                        ChatConversation(
+                            conversationId = conversation.id,
+                            partnerName = conversation.participantName,
+                            partnerAvatarUrl = conversation.participantAvatarUrl,
+                            partnerLastReadAtMs = conversation.partnerLastSeenAt,
+                            myLastReadAtMs = conversation.myLastSeenAt,
+                        )
+                    )
+                },
+                onNavigateToNewChat = actions::navigateToChatConversation,
+                onAddFriendClick = {
+                    actions.sendResultToPreviousScreen(NavResultKeys.OpenFriendSheet, true)
+                    actions.popBackStack()
+                },
+            )
+        }
+        composable<ChatConversation>(
+            enterTransition = NavTransitions.Default.enter,
+            popExitTransition = NavTransitions.Default.popExit,
+        ) {
+            ChatScreen(onNavigateBack = actions::popBackStack)
         }
     }
 }

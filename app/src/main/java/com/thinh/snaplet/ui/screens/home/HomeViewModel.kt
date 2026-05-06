@@ -18,9 +18,14 @@ import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.media.ImageTransform
 import com.thinh.snaplet.data.model.post.NewPostUpdate
 import com.thinh.snaplet.data.model.post.Post
+import com.thinh.snaplet.data.model.post.PostAudience
 import com.thinh.snaplet.data.repository.MediaRepository
 import com.thinh.snaplet.data.repository.UserRepository
+import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.data.repository.post.PostRepository
+import com.thinh.snaplet.data.repository.quickchat.QuickChatEmojiRepository
+import com.thinh.snaplet.domain.chat.ObserveUnreadCountUseCase
+import com.thinh.snaplet.domain.chat.SyncConversationsUseCase
 import com.thinh.snaplet.domain.feed.FetchNewerFeedUseCase
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase
 import com.thinh.snaplet.domain.feed.GetNewsfeedUseCase.Companion.FEED_PAGE_LIMIT
@@ -38,17 +43,17 @@ import com.thinh.snaplet.domain.model.UploadPostResult
 import com.thinh.snaplet.domain.post.BuildPostShareContentUseCase
 import com.thinh.snaplet.domain.post.CreateTempPostUseCase
 import com.thinh.snaplet.domain.post.DeletePostUseCase
-import com.thinh.snaplet.domain.post.PostCreateAudience
 import com.thinh.snaplet.domain.post.GetAvailablePostActionsUseCase
 import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
+import com.thinh.snaplet.domain.post.PostCreateAudience
 import com.thinh.snaplet.domain.post.UploadPostUseCase
 import com.thinh.snaplet.domain.post.ValidateRetryUploadUseCase
 import com.thinh.snaplet.domain.post.ValidateUploadPostUseCase
 import com.thinh.snaplet.domain.relationship.AcceptFriendRequestUseCase
 import com.thinh.snaplet.domain.relationship.FormatFriendSearchResultsUseCase
-import com.thinh.snaplet.domain.relationship.ObserveFriendRequestReceivedUseCase
 import com.thinh.snaplet.domain.relationship.GetRelationshipActionUseCase
 import com.thinh.snaplet.domain.relationship.GetRelationshipsByStatusesUseCase
+import com.thinh.snaplet.domain.relationship.ObserveFriendRequestReceivedUseCase
 import com.thinh.snaplet.domain.relationship.RemoveFriendUseCase
 import com.thinh.snaplet.domain.relationship.RemoveRelationshipUseCase
 import com.thinh.snaplet.platform.network.ConnectivityObserver
@@ -58,7 +63,6 @@ import com.thinh.snaplet.platform.share.ShareApp
 import com.thinh.snaplet.platform.share.ShareManager
 import com.thinh.snaplet.platform.widget.WidgetUpdateManager
 import com.thinh.snaplet.ui.common.UiText
-import com.thinh.snaplet.data.model.post.PostAudience
 import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.overlay.SheetOption
@@ -71,6 +75,7 @@ import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -79,8 +84,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -124,11 +132,17 @@ class HomeViewModel @Inject constructor(
     private val widgetUpdateManager: WidgetUpdateManager,
     private val mediaRepository: MediaRepository,
     private val observeFriendRequestReceivedUseCase: ObserveFriendRequestReceivedUseCase,
+    private val observeUnreadCountUseCase: ObserveUnreadCountUseCase,
+    private val syncConversationsUseCase: SyncConversationsUseCase,
+    private val chatRepository: ChatRepository,
+    private val quickChatEmojiRepository: QuickChatEmojiRepository,
 ) : ViewModel() {
     val emojiFloatController: EmojiFloatController by lazy { EmojiFloatController() }
 
     private companion object {
         private const val DEBOUNCE_MS = 500L
+        private const val QUICK_CHAT_MAX_SLOTS = 3
+        private val QUICK_CHAT_DEFAULT_EMOJIS = listOf("❤️", "🔥", "😍")
     }
 
     private var lastFriendSearchQuery: String = ""
@@ -198,9 +212,10 @@ class HomeViewModel @Inject constructor(
         loadNewsfeed()
         loadMyFriendList()
         loadUnreadPostsCount()
+        loadQuickChatEmojiSlots()
+        startChatUnreadTracking()
         observeUnreadPostsUpdates()
         observeFriendRequestUpdates()
-        loadQuickChatEmojiSlots()
         observeNetworkReconnect()
     }
 
@@ -211,9 +226,12 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun refreshQuickChatEmojiSlots() {
-        val recent = postRepository.getQuickChatRecentEmojis()
+        val recent = quickChatEmojiRepository.getRecentEmojis(
+            defaultEmojis = QUICK_CHAT_DEFAULT_EMOJIS,
+            maxSlots = QUICK_CHAT_MAX_SLOTS,
+        )
         _uiState.update {
-            it.copy(quickChatEmojiSlots = QuickChatEmojiSlots.mergeForDisplay(recent))
+            it.copy(quickChatEmojiSlots = recent)
         }
     }
 
@@ -283,6 +301,21 @@ class HomeViewModel @Inject constructor(
             is NewerFeedResult.Refresh -> loadNewsfeed(isLoadMore = false)
 
             is NewerFeedResult.Empty -> Unit
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun startChatUnreadTracking() {
+        viewModelScope.launch {
+            syncConversationsUseCase()
+            val unreadCountFlow = userRepository.observeMyUserProfile()
+                .distinctUntilChanged { old, new -> old?.id == new?.id }
+                .flatMapLatest { profile ->
+                    profile?.id?.let(observeUnreadCountUseCase::invoke) ?: flowOf(0)
+                }
+            unreadCountFlow.collectLatest { count ->
+                _uiState.update { it.copy(chatUnreadCount = count) }
+            }
         }
     }
 
@@ -747,6 +780,35 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(showReactionsSheet = false) }
     }
 
+    fun sendQuickChatFromPost(text: String) {
+        val post = currentPostVisible ?: return
+        if (post.isOwnPost) return
+        val media = post.media.firstOrNull() ?: return
+        val senderId = uiState.value.userProfile?.id ?: return
+
+        emojiFloatController.emit("\uD83D\uDCAC")
+        
+        viewModelScope.launch {
+            chatRepository.sendFirstMessage(
+                recipientId = post.userId,
+                senderId = senderId,
+                text = text,
+                mediaKey = media.id,
+                mimeType = media.type,
+                width = media.width,
+                height = media.height,
+            ).onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        snackbarMessage = UiText.DynamicString(
+                            error.message
+                        )
+                    )
+                }
+            }
+        }
+    }
+
     private var reactToPostJob: Job? = null
 
     fun onEmojiReaction(emoji: String) {
@@ -758,7 +820,7 @@ class HomeViewModel @Inject constructor(
         reactToPostJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
 
-            runCatching { postRepository.recordQuickChatEmojiUsage(emoji) }.onFailure { error ->
+            runCatching { quickChatEmojiRepository.recordEmojiUsage(emoji) }.onFailure { error ->
                 Logger.e("Failed to persist quick chat emoji usage: ${error.message}")
             }
             postRepository.reactToPost(postId = postIdToReact, reactionIcon = emoji)

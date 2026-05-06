@@ -1,20 +1,13 @@
 package com.thinh.snaplet.utils
 
-import java.text.SimpleDateFormat
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 
-/**
- * Backwards-compatible helper used in existing call sites.
- * Delegates to [Date.toLocalTimeAgo].
- */
+private val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
 fun formatTimeAgo(createdAt: Date): String = createdAt.toLocalTimeAgo()
 
-/**
- * Convert a UTC-backed [Date] to a relative "time ago" string
- * using the device's current time as reference.
- */
 fun Date.toLocalTimeAgo(): String {
     return try {
         val createdTime = time
@@ -35,19 +28,10 @@ fun Date.toLocalTimeAgo(): String {
     }
 }
 
-/**
- * Format a UTC-backed [Date] into a human-readable local time string
- * using the device's timezone.
- *
- * Default format example: "14:32 · 18/03/2026"
- */
-fun Date.toLocalDisplay(pattern: String = "HH:mm · dd/MM/yyyy"): String {
-    return try {
-        val formatter = SimpleDateFormat(pattern, Locale.getDefault()).apply {
-            timeZone = TimeZone.getDefault()
-        }
-        formatter.format(this)
-    } catch (_: Exception) {
-        ""
-    }
+fun Date.to24HourTime(): String {
+    return this.toInstant().atZone(ZoneId.systemDefault()).format(TIME_FORMATTER)
+}
+
+fun <T : Comparable<T>> isGreaterWithFallback(a: T?, b: T?, fallback: Boolean): Boolean {
+    return if (a != null && b != null) a >= b else fallback
 }

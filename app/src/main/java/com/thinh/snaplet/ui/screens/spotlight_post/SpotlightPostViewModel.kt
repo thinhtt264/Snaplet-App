@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.repository.post.PostRepository
+import com.thinh.snaplet.data.repository.quickchat.QuickChatEmojiRepository
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.domain.model.FloatDirection
 import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
@@ -13,7 +14,6 @@ import com.thinh.snaplet.navigation.SpotlightPost
 import com.thinh.snaplet.platform.share.ShareManager
 import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
-import com.thinh.snaplet.ui.screens.home.QuickChatEmojiSlots
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.onFailure
@@ -31,6 +31,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SpotlightPostViewModel @Inject constructor(
     private val postRepository: PostRepository,
+    private val quickChatEmojiRepository: QuickChatEmojiRepository,
     private val userRepository: UserRepository,
     private val shareManager: ShareManager,
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
@@ -40,6 +41,8 @@ class SpotlightPostViewModel @Inject constructor(
 
     private companion object {
         private const val DEBOUNCE_MS = 500L
+        private const val QUICK_CHAT_MAX_SLOTS = 3
+        private val QUICK_CHAT_DEFAULT_EMOJIS = listOf("❤️", "🔥", "😍")
     }
 
     private val route = savedStateHandle.toRoute<SpotlightPost>()
@@ -56,9 +59,12 @@ class SpotlightPostViewModel @Inject constructor(
 
     private fun loadQuickChatEmojiSlots() {
         viewModelScope.launch {
-            val recent = postRepository.getQuickChatRecentEmojis()
+            val recent = quickChatEmojiRepository.getRecentEmojis(
+                defaultEmojis = QUICK_CHAT_DEFAULT_EMOJIS,
+                maxSlots = QUICK_CHAT_MAX_SLOTS,
+            )
             _uiState.update {
-                it.copy(quickChatEmojiSlots = QuickChatEmojiSlots.mergeForDisplay(recent))
+                it.copy(quickChatEmojiSlots = recent)
             }
         }
     }
@@ -136,7 +142,7 @@ class SpotlightPostViewModel @Inject constructor(
         reactToPostJob = viewModelScope.launch {
             delay(DEBOUNCE_MS)
 
-            runCatching { postRepository.recordQuickChatEmojiUsage(emoji) }.onFailure { error ->
+            runCatching { quickChatEmojiRepository.recordEmojiUsage(emoji) }.onFailure { error ->
                 Logger.e("Failed to persist quick chat emoji usage: ${error.message}")
             }
             postRepository.reactToPost(postId = postIdToReact, reactionIcon = emoji)
