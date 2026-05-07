@@ -27,18 +27,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Date
 import javax.inject.Inject
 
 private const val OUT_GOING_TYPING_TIMEOUT_MS = 1_500L
 private const val IN_COMING_TYPING_TIMEOUT_MS = 3_000L
 private const val MARK_READ_DEBOUNCE_MS = 500L
-private const val SYNC_DEBOUNCE_MS = 5_000L
+private const val RESUME_LOAD_THROTTLE_MS = 1_500L
 private const val CHAT_RECENT_MAX_SLOTS = 4
 private val CHAT_RECENT_DEFAULT_EMOJIS = listOf("😀", "😂", "😮", "👍")
 
@@ -61,8 +61,8 @@ class ChatViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(
         ChatUiState(
-            partner = PartnerState(lastReadAtMsFallback = route.partnerLastReadAtMs),
-            readTracking = ReadTrackingState(myLastReadCreatedAtMs = route.myLastReadAtMs),
+            partner = PartnerState(lastReadAtFallback = route.partnerLastReadAtMs?.let(::Date)),
+            readTracking = ReadTrackingState(myLastReadCreatedAt = route.myLastReadAtMs?.let(::Date)),
         )
     )
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
@@ -76,8 +76,7 @@ class ChatViewModel @Inject constructor(
     private var typingTimeoutJob: Job? = null
     private var markReadJob: Job? = null
     private val typingThrottler = Throttler(OUT_GOING_TYPING_TIMEOUT_MS)
-
-    private var lastSyncAt = 0L
+    private val resumeLoadThrottler = Throttler(RESUME_LOAD_THROTTLE_MS)
 
     init {
         loadCurrentUser()
@@ -85,10 +84,7 @@ class ChatViewModel @Inject constructor(
         observeIncomingReadReceipts()
         observeNetworkReconnect()
         loadRecentEmojis()
-
-        if (conversationId.isNotEmpty()) {
-            syncOnResume()
-        }
+        loadMessages()
     }
 
     override fun onCleared() {
@@ -97,7 +93,7 @@ class ChatViewModel @Inject constructor(
     }
 
     fun onResume() {
-        syncOnResume()
+        resumeLoadThrottler.run { loadMessages() }
     }
 
     fun onPause() {
@@ -146,6 +142,23 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    fun reactToMessage(messageId: String, emoji: String) {
+        val selectedEmoji = emoji.trim()
+        if (selectedEmoji.isEmpty()) return
+        val safeMessageId = messageId.trim()
+        if (safeMessageId.isEmpty()) return
+
+        viewModelScope.launch {
+            chatRepository.reactToMessage(messageId = safeMessageId, emoji = selectedEmoji)
+                .onSuccess {
+                    onRecentEmojiUsed(selectedEmoji)
+                }
+                .onFailure { error ->
+                    Logger.e("reactToMessage failed: ${error.message}")
+                }
+        }
+    }
+
     private suspend fun sendFirstMessageAndInit(
         recipientId: String,
         senderId: String,
@@ -170,17 +183,32 @@ class ChatViewModel @Inject constructor(
             }
     }
 
-    fun loadMessages() {
-        if (conversationId.isEmpty()) return
-        viewModelScope.launch { connectSocketAndSyncMessages() }
+    private fun loadMessages() {
+        viewModelScope.launch {
+            if (conversationId.isEmpty()) {
+                val recipientId = route.recipientId ?: return@launch
+                val resolvedConversationId = resolveConversationId(recipientId)
+                if (resolvedConversationId.isNullOrEmpty()) return@launch
+                conversationId = resolvedConversationId
+                _activeConversationId.value = resolvedConversationId
+            }
+            connectSocketAndSyncMessages()
+        }
     }
 
-    private fun syncOnResume() {
-        if (conversationId.isEmpty()) return
-        val now = System.currentTimeMillis()
-        if (now - lastSyncAt < SYNC_DEBOUNCE_MS) return
-        lastSyncAt = now
-        viewModelScope.launch { connectSocketAndSyncMessages() }
+    private suspend fun resolveConversationId(recipientId: String): String? {
+        _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = true, error = null)) }
+        var resolvedConversationId: String? = null
+        chatRepository.lookupConversationId(recipientId)
+            .onSuccess { lookedUpConversationId ->
+                resolvedConversationId = lookedUpConversationId
+                _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
+            }
+            .onFailure { error ->
+                Logger.e("lookupConversationId failed: ${error.message}")
+                _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
+            }
+        return resolvedConversationId
     }
 
     private suspend fun connectSocketAndSyncMessages() {
@@ -221,7 +249,7 @@ class ChatViewModel @Inject constructor(
         val state = _uiState.value
         val newestMessageId = state.readTracking.incomingUnread.newestMessageId
         if (newestMessageId != null) {
-            triggerMarkSeen(newestMessageId, System.currentTimeMillis())
+            triggerMarkSeen(newestMessageId, Date())
         }
         _uiState.update { it.copy(readTracking = it.readTracking.copy(incomingUnread = IncomingUnreadState())) }
     }
@@ -232,18 +260,17 @@ class ChatViewModel @Inject constructor(
             delay(MARK_READ_DEBOUNCE_MS)
             val newest = visibleMessages
                 .filter { it.status == null || it.status == MessageStatus.SENT }
-                .maxByOrNull { it.createdAt.time } ?: return@launch
-            val newestEpoch = newest.createdAt.time
-            val myLastReadMs = _uiState.value.readTracking.myLastReadCreatedAtMs
-            if (myLastReadMs == null || newestEpoch > myLastReadMs) {
-                triggerMarkSeen(newest.id, newestEpoch)
+                .maxByOrNull { it.createdAt } ?: return@launch
+            val myLastRead = _uiState.value.readTracking.myLastReadCreatedAt
+            if (myLastRead == null || newest.createdAt.after(myLastRead)) {
+                triggerMarkSeen(newest.id, newest.createdAt)
             }
         }
     }
 
-    private fun triggerMarkSeen(messageId: String, createdAtMs: Long) {
-        markMessageSeenUseCase(conversationId, messageId, createdAtMs)
-        _uiState.update { it.copy(readTracking = it.readTracking.copy(myLastReadCreatedAtMs = createdAtMs)) }
+    private fun triggerMarkSeen(messageId: String, createdAt: Date) {
+        markMessageSeenUseCase(conversationId, messageId, createdAt)
+        _uiState.update { it.copy(readTracking = it.readTracking.copy(myLastReadCreatedAt = createdAt)) }
     }
 
     private fun observeIncomingTypingEvents() {

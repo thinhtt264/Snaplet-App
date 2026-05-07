@@ -66,6 +66,11 @@ data class Conversation(
     val syncUpdatedAt: Date,
 )
 
+data class ConversationLookupResult(
+    @SerializedName("conversationId")
+    val conversationId: String?,
+)
+
 @Keep
 data class ConversationUpdatedEvent(
     @SerializedName("conversationId")
@@ -88,8 +93,8 @@ fun Conversation.toEntity(): ConversationEntity = ConversationEntity(
     lastMessageType = lastMessage?.type,
     isLastMessageDeleted = lastMessage?.isDeleted ?: false,
     lastMessageSenderId = lastMessage?.senderId,
-    lastMessageAt = lastMessage?.createdAt?.time,
-    myLastSeenAt = myLastReadAt?.time,
-    partnerLastSeenAt = partnerLastReadAt?.time,
-    updatedAt = syncUpdatedAt.time,
+    lastMessageAt = lastMessage?.createdAt,
+    myLastSeenAt = myLastReadAt,
+    partnerLastSeenAt = partnerLastReadAt,
+    updatedAt = syncUpdatedAt,
 )

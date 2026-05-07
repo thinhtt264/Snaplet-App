@@ -18,8 +18,11 @@ import com.thinh.snaplet.data.model.PaginatedResponse
 import com.thinh.snaplet.data.model.chat.Conversation
 import com.thinh.snaplet.data.model.chat.ConversationUpdatedEvent
 import com.thinh.snaplet.data.model.chat.Message
+import com.thinh.snaplet.data.model.chat.MessageReaction
+import com.thinh.snaplet.data.model.chat.MessageReactionUpdatedEvent
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
 import com.thinh.snaplet.data.model.chat.MessageType
+import com.thinh.snaplet.data.model.chat.ReactToMessageRequest
 import com.thinh.snaplet.data.model.chat.SendMessageRequest
 import com.thinh.snaplet.data.model.chat.TypingSocketPayload
 import com.thinh.snaplet.data.model.chat.toEntity
@@ -44,6 +47,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.util.Date
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -102,6 +106,17 @@ class ChatRepositoryImpl @Inject constructor(
                 }.getOrNull()
             }
 
+    override val messageReactionUpdates: Flow<MessageReactionUpdatedEvent> =
+        chatSocketManager.messages.filter { it.event == SocketEvent.CHAT_MESSAGE_REACTION_UPDATED }
+            .mapNotNull { message ->
+                val json = message.args ?: return@mapNotNull null
+                runCatching {
+                    gson.fromJson(json, MessageReactionUpdatedEvent::class.java)
+                }.onFailure {
+                    Logger.e("parse chat:message.reaction_updated failed: ${it.message}")
+                }.getOrNull()
+            }
+
     override val conversationUpdates: Flow<ConversationUpdatedEvent> =
         socketManager.messages.filter { it.event == SocketEvent.CHAT_CONVERSATION_UPDATED }
             .mapNotNull { message ->
@@ -118,6 +133,7 @@ class ChatRepositoryImpl @Inject constructor(
         observeConversationDeletedSocket(socketManager)
         routeIncomingMessagesToRoom()
         observeReadReceiptsToDb()
+        observeMessageReactionUpdatesToDb()
     }
 
     private fun observeConversationUpdatedSocket(socketManager: SocketManager) {
@@ -136,7 +152,7 @@ class ChatRepositoryImpl @Inject constructor(
                         updateLastMessageLocal(
                             convId = event.conversationId,
                             lastMessageId = null,
-                            lastMessageAt = event.lastMessageAt.time,
+                            lastMessageAt = event.lastMessageAt,
                             lastMessageSenderId = event.lastMessageSenderId,
                             lastMessageText = event.lastMessageText
                         )
@@ -174,8 +190,16 @@ class ChatRepositoryImpl @Inject constructor(
                 conversationDao.updatePartnerLastSeenAt(
                     id = convId,
                     readerId = event.userId,
-                    seenAt = event.readAt.time,
+                    seenAt = event.readAt,
                 )
+            }
+        }
+    }
+
+    private fun observeMessageReactionUpdatesToDb() {
+        scope.launch {
+            messageReactionUpdates.collect { event ->
+                messageDao.updateReactions(event.messageId, event.reactions)
             }
         }
     }
@@ -233,9 +257,38 @@ class ChatRepositoryImpl @Inject constructor(
             })
     }
 
-    override fun markSeen(conversationId: String, messageId: String, messageCreatedAtMs: Long) {
+    override suspend fun reactToMessage(
+        messageId: String,
+        emoji: String,
+    ): ApiResult<List<MessageReaction>> {
+        val trimmedEmoji = emoji.trim()
+        require(trimmedEmoji.isNotEmpty()) { "emoji must not be blank" }
+        return safeApiCall(
+            apiCall = {
+                apiService.reactToMessage(
+                    messageId = messageId,
+                    body = ReactToMessageRequest(emoji = trimmedEmoji),
+                )
+            },
+            onSuccess = { reactions -> messageDao.updateReactions(messageId, reactions) },
+        )
+    }
+
+    override suspend fun removeMessageReaction(messageId: String): ApiResult<Unit> {
+        return safeApiCall(
+            apiCall = { apiService.removeMessageReaction(messageId = messageId) },
+        )
+    }
+
+    override suspend fun getMessageReactions(messageId: String): ApiResult<List<MessageReaction>> {
+        return safeApiCall(
+            apiCall = { apiService.getMessageReactions(messageId = messageId) },
+        )
+    }
+
+    override fun markSeen(conversationId: String, messageId: String, messageCreatedAt: Date) {
         scope.launch(NonCancellable) {
-            conversationDao.updateMyLastSeenAt(conversationId, messageCreatedAtMs)
+            conversationDao.updateMyLastSeenAt(conversationId, messageCreatedAt)
             safeApiCall(apiCall = { apiService.markMessageSeen(conversationId, messageId) })
         }
     }
@@ -268,6 +321,13 @@ class ChatRepositoryImpl @Inject constructor(
         )
     }
 
+    override suspend fun lookupConversationId(targetUserId: String): ApiResult<String?> {
+        return safeApiCall(
+            apiCall = { apiService.lookupConversationId(targetUserId = targetUserId) },
+            transform = { it.conversationId },
+        )
+    }
+
     override suspend fun deleteConversationLocal(convId: String) {
         Logger.d("deleteConversationLocal convId=$convId")
         conversationDao.deleteById(convId)
@@ -276,7 +336,7 @@ class ChatRepositoryImpl @Inject constructor(
     override suspend fun updateLastMessageLocal(
         convId: String,
         lastMessageId: String?,
-        lastMessageAt: Long,
+        lastMessageAt: Date,
         lastMessageSenderId: String,
         lastMessageText: String?,
         lastMessageType: String?,
@@ -344,7 +404,7 @@ class ChatRepositoryImpl @Inject constructor(
         conversationDao.updateLastMessage(
             convId = message.conversationId,
             lastMessageId = message.id,
-            lastMessageAt = message.createdAt.time,
+            lastMessageAt = message.createdAt,
             lastMessageSenderId = message.senderId,
             lastMessageText = message.text,
             lastMessageType = message.messageType.name.lowercase(),
@@ -382,7 +442,7 @@ class ChatRepositoryImpl @Inject constructor(
                     conversationDao.updateLastMessage(
                         convId = message.conversationId,
                         lastMessageId = message.id,
-                        lastMessageAt = message.createdAt.time,
+                        lastMessageAt = message.createdAt,
                         lastMessageSenderId = message.senderId,
                         lastMessageText = message.text,
                         lastMessageType = message.messageType.name.lowercase(),
@@ -395,7 +455,7 @@ class ChatRepositoryImpl @Inject constructor(
 
     override suspend fun sendTextMessage(convId: String, senderId: String, text: String) {
         val localId = UUID.randomUUID().toString()
-        val now = System.currentTimeMillis()
+        val now = Date()
         messageDao.insert(
             MessageEntity(
                 id = localId,
@@ -477,12 +537,12 @@ class ChatRepositoryImpl @Inject constructor(
                 localId = localId,
                 serverId = sent.id,
                 status = MessageStatus.SENT,
-                serverCreatedAt = sent.createdAt.time,
+                serverCreatedAt = sent.createdAt,
             )
             conversationDao.updateLastMessage(
                 convId = msg.conversationId,
                 lastMessageId = sent.id,
-                lastMessageAt = sent.createdAt.time,
+                lastMessageAt = sent.createdAt,
                 lastMessageSenderId = msg.senderId,
                 lastMessageText = msg.text,
                 lastMessageType = msg.type,
@@ -508,9 +568,9 @@ class ChatRepositoryImpl @Inject constructor(
             val snapshot = conversationDao.getAllUpdatedAtSnapshot().associateBy { it.id }
             val changed = dedupedIncoming.filter { conv ->
                 val existing = snapshot[conv.id] ?: return@filter true
-                existing.updatedAt != conv.syncUpdatedAt.time ||
-                    existing.partnerLastSeenAt != conv.partnerLastReadAt?.time ||
-                    existing.myLastSeenAt != conv.myLastReadAt?.time
+                existing.updatedAt != conv.syncUpdatedAt ||
+                    existing.partnerLastSeenAt != conv.partnerLastReadAt ||
+                    existing.myLastSeenAt != conv.myLastReadAt
             }
             if (changed.isNotEmpty()) {
                 val entities = changed.map { conv ->
@@ -523,11 +583,11 @@ class ChatRepositoryImpl @Inject constructor(
                             myLastSeenAt = listOfNotNull(
                                 incomingEntity.myLastSeenAt,
                                 existing.myLastSeenAt,
-                            ).maxOrNull(),
+                            ).maxByOrNull { it.time },
                             partnerLastSeenAt = listOfNotNull(
                                 incomingEntity.partnerLastSeenAt,
                                 existing.partnerLastSeenAt,
-                            ).maxOrNull(),
+                            ).maxByOrNull { it.time },
                         )
                     }
                 }
@@ -537,14 +597,15 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     private fun dedupeByPartnerId(incoming: List<Conversation>): List<Conversation> {
+        val epoch = Date(Long.MIN_VALUE)
         return incoming
             .groupBy { it.partner.id }
             .values
             .map { samePartnerConversations ->
                 samePartnerConversations.maxWithOrNull(
-                    compareBy<Conversation> { it.syncUpdatedAt.time }
-                        .thenBy { it.lastMessage?.createdAt?.time ?: Long.MIN_VALUE }
-                        .thenBy { it.createdAt.time }
+                    compareBy<Conversation> { it.syncUpdatedAt }
+                        .thenBy { it.lastMessage?.createdAt ?: epoch }
+                        .thenBy { it.createdAt }
                 ) ?: samePartnerConversations.first()
             }
     }

@@ -48,6 +48,8 @@ data class Message(
     val pinnedAt: Date?,
     @SerializedName("createdAt")
     val createdAt: Date,
+    @SerializedName("reactions")
+    val reactions: List<MessageReaction> = emptyList(),
     // Client-side status — not from server JSON (null for server-sourced messages)
     val status: String? = null,
 ) {
@@ -117,9 +119,10 @@ fun Message.toEntity(): MessageEntity = MessageEntity(
     mediaHeight = media?.height ?: 0,
     status = MessageStatus.SENT,
     isDeleted = isDeleted,
-    createdAt = createdAt.time,
-    serverCreatedAt = createdAt.time,
+    createdAt = createdAt,
+    serverCreatedAt = createdAt,
     localId = clientUuid,
+    reactions = reactions,
 )
 
 @Keep

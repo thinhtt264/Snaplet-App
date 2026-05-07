@@ -1,18 +1,21 @@
 package com.thinh.snaplet.data.repository.chat
 
+import androidx.paging.PagingData
 import com.thinh.snaplet.data.local.entity.ConversationEntity
 import com.thinh.snaplet.data.local.entity.ConversationLastMessageStatusProjection
-import androidx.paging.PagingData
 import com.thinh.snaplet.data.local.entity.MessageEntity
 import com.thinh.snaplet.data.model.PaginatedResponse
 import com.thinh.snaplet.data.model.chat.Conversation
 import com.thinh.snaplet.data.model.chat.ConversationUpdatedEvent
 import com.thinh.snaplet.data.model.chat.Message
+import com.thinh.snaplet.data.model.chat.MessageReaction
+import com.thinh.snaplet.data.model.chat.MessageReactionUpdatedEvent
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
 import com.thinh.snaplet.platform.socket.SocketConnectionState
 import com.thinh.snaplet.utils.network.ApiResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import java.util.Date
 
 data class ChatTypingEvent(
     val userId: String,
@@ -26,6 +29,8 @@ interface ChatRepository {
     val typingEvents: Flow<ChatTypingEvent>
 
     val readReceipts: Flow<MessageReadEvent>
+
+    val messageReactionUpdates: Flow<MessageReactionUpdatedEvent>
 
     val conversationUpdates: Flow<ConversationUpdatedEvent>
 
@@ -48,6 +53,19 @@ interface ChatRepository {
         cursor: String? = null,
     ): ApiResult<PaginatedResponse<Message>>
 
+    suspend fun reactToMessage(
+        messageId: String,
+        emoji: String,
+    ): ApiResult<List<MessageReaction>>
+
+    suspend fun removeMessageReaction(
+        messageId: String,
+    ): ApiResult<Unit>
+
+    suspend fun getMessageReactions(
+        messageId: String,
+    ): ApiResult<List<MessageReaction>>
+
     fun observeConversations(): Flow<List<ConversationEntity>>
     fun observeLastMessageStatuses(): Flow<List<ConversationLastMessageStatusProjection>>
 
@@ -55,18 +73,20 @@ interface ChatRepository {
 
     suspend fun syncConversationById(convId: String): ApiResult<Unit>
 
+    suspend fun lookupConversationId(targetUserId: String): ApiResult<String?>
+
     suspend fun deleteConversationLocal(convId: String)
 
     suspend fun updateLastMessageLocal(
         convId: String,
         lastMessageId: String? = null,
-        lastMessageAt: Long,
+        lastMessageAt: Date,
         lastMessageSenderId: String,
         lastMessageText: String? = null,
         lastMessageType: String? = null,
     )
 
-    fun markSeen(conversationId: String, messageId: String, messageCreatedAtMs: Long)
+    fun markSeen(conversationId: String, messageId: String, messageCreatedAt: Date)
 
     fun sendTypingStart(conversationId: String)
 

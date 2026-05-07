@@ -7,6 +7,8 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
 import com.thinh.snaplet.data.local.entity.MessageEntity
+import com.thinh.snaplet.data.model.chat.MessageReaction
+import java.util.Date
 
 @Dao
 interface MessageDao {
@@ -24,7 +26,7 @@ interface MessageDao {
     suspend fun upsert(message: MessageEntity)
 
     @Query("UPDATE messages SET status = :status, id = :serverId, createdAt = :serverCreatedAt, serverCreatedAt = :serverCreatedAt WHERE localId = :localId")
-    suspend fun updateStatusAfterSend(localId: String, serverId: String, status: String, serverCreatedAt: Long)
+    suspend fun updateStatusAfterSend(localId: String, serverId: String, status: String, serverCreatedAt: Date)
 
     @Query("UPDATE messages SET status = :status WHERE localId = :localId")
     suspend fun updateStatus(localId: String, status: String)
@@ -45,4 +47,7 @@ interface MessageDao {
     // PK conflict when socket fires before the HTTP response updates the optimistic row's id.
     @Query("DELETE FROM messages WHERE localId = :localId AND status = 'PENDING'")
     suspend fun deletePendingByLocalId(localId: String)
+
+    @Query("UPDATE messages SET reactions = :reactions WHERE id = :messageId")
+    suspend fun updateReactions(messageId: String, reactions: List<MessageReaction>)
 }

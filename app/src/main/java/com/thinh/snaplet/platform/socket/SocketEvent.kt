@@ -8,6 +8,7 @@ enum class SocketEvent(val eventName: String) {
     CHAT_TYPING_START("chat:typing.start"),
     CHAT_TYPING_STOP("chat:typing.stop"),
     CHAT_MESSAGE_READ("chat:message.read"),
+    CHAT_MESSAGE_REACTION_UPDATED("chat:message.reaction_updated"),
     CHAT_CONVERSATION_UPDATED("conversation_updated"),
     CHAT_CONVERSATION_DELETED("conversation_deleted"),
     UNKNOWN("unknown");

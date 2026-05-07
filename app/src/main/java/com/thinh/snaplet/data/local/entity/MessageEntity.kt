@@ -4,8 +4,10 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.ColumnInfo
 import com.thinh.snaplet.data.model.chat.Message
 import com.thinh.snaplet.data.model.chat.MessageMedia
+import com.thinh.snaplet.data.model.chat.MessageReaction
 import com.thinh.snaplet.data.model.media.ImageSizes
 import java.util.Date
 
@@ -30,12 +32,14 @@ data class MessageEntity(
     val mediaType: String?,
     val status: String,
     val isDeleted: Boolean,
-    val createdAt: Long,
-    val serverCreatedAt: Long?,
+    val createdAt: Date,
+    val serverCreatedAt: Date?,
     // Stable local UUID — use this as the UI key, never `id`
     val localId: String,
     val mediaWidth: Int = 0,
     val mediaHeight: Int = 0,
+    @ColumnInfo(name = "reactions")
+    val reactions: List<MessageReaction> = emptyList(),
 )
 
 fun MessageEntity.toMessage(): Message = Message(
@@ -53,7 +57,8 @@ fun MessageEntity.toMessage(): Message = Message(
     isDeleted = isDeleted,
     replyTo = null,
     pinnedAt = null,
-    createdAt = Date(createdAt),
+    createdAt = createdAt,
+    reactions = reactions,
     status = status,
 )
 

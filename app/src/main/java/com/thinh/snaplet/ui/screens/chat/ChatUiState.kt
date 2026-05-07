@@ -2,6 +2,7 @@ package com.thinh.snaplet.ui.screens.chat
 
 import com.thinh.snaplet.data.local.entity.MessageEntity
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
+import java.util.Date
 
 data class IncomingUnreadState(
     val count: Int = 0,
@@ -19,15 +20,15 @@ data class MessageListState(
 data class PartnerState(
     val isTyping: Boolean = false,
     val lastReadEvent: MessageReadEvent? = null,
-    val lastReadAtMsFallback: Long? = null,
+    val lastReadAtFallback: Date? = null,
 ) {
-    val readHorizonMs: Long? get() = lastReadEvent?.messageCreatedAt?.time ?: lastReadAtMsFallback
+    val readHorizon: Date? get() = lastReadEvent?.messageCreatedAt ?: lastReadAtFallback
 }
 
 data class ReadTrackingState(
     val isUserAtBottom: Boolean = false,
     val incomingUnread: IncomingUnreadState = IncomingUnreadState(),
-    val myLastReadCreatedAtMs: Long? = null,
+    val myLastReadCreatedAt: Date? = null,
 )
 
 data class ChatUiState(

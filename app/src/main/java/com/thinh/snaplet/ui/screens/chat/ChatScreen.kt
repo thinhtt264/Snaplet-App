@@ -4,7 +4,6 @@ import android.content.ClipData
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
@@ -74,7 +73,6 @@ import com.thinh.snaplet.ui.screens.chat.components.bubbleInspectRoundRect
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.isGreaterWithFallback
 import kotlinx.coroutines.launch
-import java.util.Date
 
 private val ChatBg = Color(0xFF0D0D0D)
 private val SeparatorColor = Color(0xFF1A1C1C)
@@ -109,21 +107,15 @@ fun ChatScreen(
         viewModel.dismissInspect()
     }
 
-    val messageCountState = remember { derivedStateOf { lazyPagingItems.itemCount } }
     LaunchedEffect(listState) {
-        var prevMessageCount = 0
         snapshotFlow {
-            val count = messageCountState.value
             val idx = listState.firstVisibleItemIndex
             val offset = listState.firstVisibleItemScrollOffset
             val viewport =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
-            count to (idx == 0 && (viewport == 0 || offset <= viewport * 0.25f))
-        }.collect { (count, nearBottom) ->
-            if (count > prevMessageCount && nearBottom) {
-                listState.scrollToItem(0)
-            }
-            prevMessageCount = count
+            val nearBottom = idx == 0 && (viewport == 0 || offset <= viewport * 0.25f)
+            nearBottom
+        }.collect { nearBottom ->
             viewModel.onIsAtBottomChanged(nearBottom)
         }
     }
@@ -252,9 +244,7 @@ fun ChatScreen(
                     LazyColumn(
                         state = listState,
                         reverseLayout = true,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .animateContentSize(),
+                        modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
@@ -284,9 +274,9 @@ fun ChatScreen(
                             val position =
                                 bubbleChainPosition(prevSenderSame, nextSenderSame)
 
-                            val partnerReadHorizonMs = uiState.partner.readHorizonMs
+                            val partnerReadHorizon = uiState.partner.readHorizon
                             val isPartnerSeen = isMine && isGreaterWithFallback(
-                                Date(partnerReadHorizonMs ?: 0L), Date(message.createdAt), false
+                                partnerReadHorizon, message.createdAt, false
                             )
 
                             MessageBubble(
@@ -374,7 +364,12 @@ fun ChatScreen(
                         maxHeight = layout.panelMaxHeightDp,
                         isFlipped = layout.flipPanelVertical,
                         recentEmojis = uiState.recentEmojis,
-                        onEmojiClick = viewModel::onRecentEmojiUsed,
+                        onEmojiClick = { emoji ->
+                            viewModel.reactToMessage(
+                                messageId = message.id,
+                                emoji = emoji,
+                            )
+                        },
                         onCopy = { copiedMessage ->
                             val messageText = copiedMessage.text?.trim().orEmpty()
                             if (messageText.isNotEmpty()) {

@@ -448,10 +448,10 @@ private fun lastMessagePreview(conversation: ConversationUiModel): String? {
 }
 
 @Composable
-private fun formatConversationTime(time: Long): String {
-    val diff = kotlin.math.abs(System.currentTimeMillis() - time)
+private fun formatConversationTime(time: Date): String {
+    val diff = kotlin.math.abs(System.currentTimeMillis() - time.time)
     if (diff < 60_000L) return stringResource(R.string.conversation_time_now)
-    return Date(time).toLocalTimeAgo()
+    return time.toLocalTimeAgo()
 }
 
 // ─── New message bottom sheet ─────────────────────────────────────────────────
