@@ -108,14 +108,27 @@ fun ChatScreen(
     }
 
     LaunchedEffect(listState) {
+        var prevNewestLocalId: String? = null
         snapshotFlow {
             val idx = listState.firstVisibleItemIndex
             val offset = listState.firstVisibleItemScrollOffset
             val viewport =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
-            val nearBottom = idx == 0 && (viewport == 0 || offset <= viewport * 0.25f)
-            nearBottom
-        }.collect { nearBottom ->
+            val nearBottom = idx == 0 && (viewport == 0 || offset <= viewport * 0.3f)
+            val newestLocalId = lazyPagingItems.itemSnapshotList.items.firstOrNull()?.localId
+            Triple(nearBottom, newestLocalId, idx)
+        }.collect { (nearBottom, newestLocalId, firstVisibleIndex) ->
+            // auto-scroll only when a truly newer newest-message arrives and user is near bottom.
+            if (
+                nearBottom &&
+                firstVisibleIndex == 0 &&
+                prevNewestLocalId != null &&
+                newestLocalId != null &&
+                newestLocalId != prevNewestLocalId
+            ) {
+                listState.scrollToItem(0)
+            }
+            prevNewestLocalId = newestLocalId
             viewModel.onIsAtBottomChanged(nearBottom)
         }
     }
@@ -291,7 +304,10 @@ fun ChatScreen(
                             )
                         }
 
-                        if (lazyPagingItems.loadState.append is LoadState.Loading) {
+                        if (
+                            lazyPagingItems.loadState.append is LoadState.Loading &&
+                            listState.firstVisibleItemIndex > 0
+                        ) {
                             item(key = "loading_more") {
                                 Box(
                                     modifier = Modifier

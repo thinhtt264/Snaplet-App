@@ -84,7 +84,6 @@ class ChatViewModel @Inject constructor(
         observeIncomingReadReceipts()
         observeNetworkReconnect()
         loadRecentEmojis()
-        loadMessages()
     }
 
     override fun onCleared() {
@@ -197,16 +196,13 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun resolveConversationId(recipientId: String): String? {
-        _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = true, error = null)) }
         var resolvedConversationId: String? = null
         chatRepository.lookupConversationId(recipientId)
             .onSuccess { lookedUpConversationId ->
                 resolvedConversationId = lookedUpConversationId
-                _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
             }
             .onFailure { error ->
                 Logger.e("lookupConversationId failed: ${error.message}")
-                _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
             }
         return resolvedConversationId
     }
