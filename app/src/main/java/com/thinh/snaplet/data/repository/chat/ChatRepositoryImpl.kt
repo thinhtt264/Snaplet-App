@@ -353,14 +353,14 @@ class ChatRepositoryImpl @Inject constructor(
 
     override fun sendTypingStart(conversationId: String) {
         chatSocketManager.emit(
-            eventName = SocketEvent.CHAT_TYPING_START.name,
+            eventName = SocketEvent.CHAT_TYPING_START.eventName,
             data = JSONObject(gson.toJson(TypingSocketPayload(conversationId))),
         )
     }
 
     override fun sendTypingStop(conversationId: String) {
         chatSocketManager.emit(
-            eventName = SocketEvent.CHAT_TYPING_STOP.name,
+            eventName = SocketEvent.CHAT_TYPING_STOP.eventName,
             data = JSONObject(gson.toJson(TypingSocketPayload(conversationId))),
         )
     }
