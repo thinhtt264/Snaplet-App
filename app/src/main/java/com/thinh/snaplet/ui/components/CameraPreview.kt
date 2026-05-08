@@ -389,7 +389,7 @@ private fun observeStreamingState(
 
 private fun captureSnapshot(previewView: PreviewView): Bitmap? {
     return previewView.bitmap ?: run {
-        Logger.e("❌ Failed to capture bitmap - bitmap is null")
+        Logger.w("📸 Failed to capture bitmap - bitmap is null")
         null
     }
 }

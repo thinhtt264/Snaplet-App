@@ -12,6 +12,7 @@ import com.thinh.snaplet.domain.model.FloatDirection
 import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
 import com.thinh.snaplet.navigation.SpotlightPost
 import com.thinh.snaplet.platform.share.ShareManager
+import com.thinh.snaplet.platform.widget.WidgetUpdateManager
 import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
 import com.thinh.snaplet.utils.Logger
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Date
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,6 +36,7 @@ class SpotlightPostViewModel @Inject constructor(
     private val quickChatEmojiRepository: QuickChatEmojiRepository,
     private val userRepository: UserRepository,
     private val shareManager: ShareManager,
+    private val widgetUpdateManager: WidgetUpdateManager,
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -85,6 +88,7 @@ class SpotlightPostViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(isLoading = false, post = post, status = null)
                     }
+                    markPostSeen(post.createdAt)
                     if (post.isOwnPost) {
                         loadPostReactions(postId = post.id, isOwnerViewed = post.isOwnerViewedPost)
                     } else {
@@ -102,6 +106,14 @@ class SpotlightPostViewModel @Inject constructor(
                     }
                 },
             )
+        }
+    }
+
+    private fun markPostSeen(postCreatedAt: Date) {
+        viewModelScope.launch {
+            postRepository.markPostsSeen(postCreatedAt).onSuccess {
+                widgetUpdateManager.scheduleImmediateUpdate()
+            }
         }
     }
 

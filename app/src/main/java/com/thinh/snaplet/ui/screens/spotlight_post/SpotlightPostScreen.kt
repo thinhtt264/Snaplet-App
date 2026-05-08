@@ -1,8 +1,8 @@
 package com.thinh.snaplet.ui.screens.spotlight_post
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -10,12 +10,16 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.CloudOff
@@ -32,11 +36,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -65,25 +70,20 @@ private data class SpotlightStatusContent(
 )
 
 @Composable
-private fun BoxScope.SpotlightPostActivityBar(model: PostActivityBarModel) {
+private fun SpotlightPostActivityBar(model: PostActivityBarModel) {
     PostActivityBar(
         model = model,
         modifier = Modifier
-            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
             .wrapContentWidth()
-            .navigationBarsPadding()
             .padding(horizontal = 64.dp),
     )
 }
 
 @Composable
-private fun BoxScope.SpotlightQuickChatBar(model: QuickChatBarModel) {
+private fun SpotlightQuickChatBar(model: QuickChatBarModel) {
     QuickChatBar(
-        modifier = Modifier
-            .align(Alignment.BottomCenter)
-            .navigationBarsPadding()
-            .imePadding()
-            .padding(horizontal = 32.dp),
+        modifier = Modifier.padding(horizontal = 32.dp),
         messageText = model.messageText,
         quickEmojiSlots = model.quickEmojiSlots,
         onMessageChange = model.onMessageChange,
@@ -93,14 +93,15 @@ private fun BoxScope.SpotlightQuickChatBar(model: QuickChatBarModel) {
 }
 
 @Composable
-private fun BoxScope.SpotlightStatusContent(
+private fun SpotlightStatusContent(
     content: SpotlightStatusContent,
 ) {
     Column(
         modifier = Modifier
-            .align(Alignment.Center)
+            .fillMaxSize()
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Surface(
             modifier = Modifier.padding(bottom = 20.dp),
@@ -212,8 +213,12 @@ fun SpotlightPostScreen(
         null -> null
     }
 
+    val density = LocalDensity.current
+    val imeBottom = WindowInsets.ime.getBottom(density)
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
+            contentWindowInsets = WindowInsets(0),
             topBar = {
                 CenterAlignedTopAppBar(
                     expandedHeight = 72.dp,
@@ -237,8 +242,8 @@ fun SpotlightPostScreen(
         ) { padding ->
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                    .fillMaxWidth()
+                    .padding(padding)
             ) {
                 when {
                     uiState.isLoading && uiState.post == null -> {
@@ -249,12 +254,6 @@ fun SpotlightPostScreen(
                             ) {
                                 CircularProgressIndicator()
                             }
-                            SpotlightPostActivityBar(
-                                model = PostActivityBarModel(
-                                    state = PostReactionsUiState.Loading,
-                                    onClick = viewModel::onPostActivityClick,
-                                ),
-                            )
                         }
                     }
 
@@ -281,12 +280,27 @@ fun SpotlightPostScreen(
                             state = uiState.postReactionsState,
                             onClick = viewModel::onPostActivityClick,
                         )
-                        Box(
+
+                        val scrollState = rememberScrollState()
+
+                        LaunchedEffect(imeBottom) {
+                            if (imeBottom > 0) {
+                                scrollState.animateScrollTo(scrollState.maxValue)
+                            }
+                        }
+
+                        Column(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer { translationY = -56.dp.toPx() },
+                                .imePadding()
+                                .navigationBarsPadding()
+                                .verticalScroll(scrollState)
                         ) {
+                            Spacer(Modifier.height(60.dp))
+
                             MediaPage(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight(),
                                 post = post,
                                 uploadStatus = null,
                                 showBottomContent = false,
@@ -294,8 +308,9 @@ fun SpotlightPostScreen(
                                 bottomAction = bottomAction,
                                 postActivityBar = postActivityBar,
                                 onRetryClick = {},
-                                onDeleteClick = {}
-                            )
+                                onDeleteClick = {})
+
+                            Spacer(Modifier.height(36.dp))
                             if (post.isOwnPost) {
                                 SpotlightPostActivityBar(model = postActivityBar)
                             } else {
