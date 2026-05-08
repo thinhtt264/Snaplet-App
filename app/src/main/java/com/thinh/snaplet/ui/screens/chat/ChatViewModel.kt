@@ -75,6 +75,7 @@ class ChatViewModel @Inject constructor(
 
     private var typingTimeoutJob: Job? = null
     private var markReadJob: Job? = null
+    private var messageReactionsSheetJob: Job? = null
     private val typingThrottler = Throttler(OUT_GOING_TYPING_TIMEOUT_MS)
     private val resumeLoadThrottler = Throttler(RESUME_LOAD_THROTTLE_MS)
 
@@ -155,6 +156,78 @@ class ChatViewModel @Inject constructor(
                 .onFailure { error ->
                     Logger.e("reactToMessage failed: ${error.message}")
                 }
+        }
+    }
+
+    fun onMessageReactionDockClick(messageId: String) {
+        val safeMessageId = messageId.trim()
+        if (safeMessageId.isEmpty()) return
+
+        messageReactionsSheetJob?.cancel()
+        messageReactionsSheetJob = viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    messageReactionsSheet = it.messageReactionsSheet.copy(
+                        isVisible = true,
+                        isLoading = true,
+                        error = null,
+                        messageId = safeMessageId,
+                        reactions = emptyList(),
+                    )
+                )
+            }
+
+            chatRepository.getMessageReactions(messageId = safeMessageId)
+                .onSuccess { reactions ->
+                    _uiState.update {
+                        it.copy(
+                            messageReactionsSheet = it.messageReactionsSheet.copy(
+                                isLoading = false,
+                                error = null,
+                                reactions = reactions,
+                            )
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    Logger.e("getMessageReactions failed: ${error.message}")
+                    _uiState.update {
+                        it.copy(
+                            messageReactionsSheet = it.messageReactionsSheet.copy(
+                                isLoading = false,
+                                error = error.message,
+                                reactions = emptyList(),
+                            )
+                        )
+                    }
+                }
+        }
+    }
+
+    fun dismissMessageReactionsSheet() {
+        messageReactionsSheetJob?.cancel()
+        _uiState.update { it.copy(messageReactionsSheet = MessageReactionsSheetState()) }
+    }
+
+    fun onMyMessageReactionClick(emoji: String) {
+        val sheetMessageId = _uiState.value.messageReactionsSheet.messageId.trim()
+        if (sheetMessageId.isEmpty()) return
+
+        val selectedEmoji = emoji.trim()
+        if (selectedEmoji.isEmpty()) return
+
+        // Close sheet immediately after user taps their own reaction.
+        _uiState.update { it.copy(messageReactionsSheet = MessageReactionsSheetState()) }
+        messageReactionsSheetJob?.cancel()
+        messageReactionsSheetJob = viewModelScope.launch {
+            chatRepository.reactToMessage(
+                messageId = sheetMessageId,
+                emoji = selectedEmoji,
+            ).onSuccess {
+                onRecentEmojiUsed(selectedEmoji)
+            }.onFailure { error ->
+                Logger.e("reactToMessage from bottom sheet failed: ${error.message}")
+            }
         }
     }
 

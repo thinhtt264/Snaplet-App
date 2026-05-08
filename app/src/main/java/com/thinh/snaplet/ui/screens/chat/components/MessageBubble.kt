@@ -55,6 +55,7 @@ import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.theme.MotionTokens
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.to24HourTime
+import pressScaleClickable
 
 private val BubbleTheirs = Color(0xFF1E2020)
 private const val BUBBLE_MAX_WIDTH_FRACTION = 0.70f
@@ -86,6 +87,7 @@ fun MessageBubble(
     modifier: Modifier = Modifier,
     onRetry: (() -> Unit)? = null,
     onClick: ((MessageEntity) -> Unit)? = null,
+    onReactionDockClick: ((String) -> Unit)? = null,
     onBoundsChanged: ((String, Rect) -> Unit)? = null,
 ) {
     val cs = MaterialTheme.colorScheme
@@ -111,7 +113,7 @@ fun MessageBubble(
         modifier = modifier
             .fillMaxWidth()
             .pointerInput(Unit) {
-                detectTapGestures(onLongPress = { onClick?.invoke(message) }, onTap = {})
+                detectTapGestures(onLongPress = { onClick?.invoke(message) })
             },
         horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
     ) {
@@ -288,6 +290,7 @@ fun MessageBubble(
                 if (message.reactions.isNotEmpty()) {
                     MessageReactionDock(
                         reactions = message.reactions,
+                        onClick = { onReactionDockClick?.invoke(message.id) },
                         modifier = Modifier
                             .offset(y = -REACTION_DOCK_OVERLAP)
                             .padding(horizontal = 8.dp),
@@ -303,6 +306,7 @@ fun MessageBubble(
 private fun MessageReactionDock(
     reactions: List<MessageReaction>,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
     val total = reactions.size
     val distinctEmojis = reactions.distinctBy { it.emoji }.map { it.emoji }
@@ -312,7 +316,8 @@ private fun MessageReactionDock(
             .clip(ReactionPillShape)
             .background(ReactionPillBackground)
             .border(width = 1.dp, color = ReactionPillBorderColor, shape = ReactionPillShape)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .pressScaleClickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(1.dp),
     ) {

@@ -130,6 +130,7 @@
         <item quantity="other">%d hoạt động</item>
     </plurals>
     <string name="reactions_sheet_title">Cảm xúc</string>
+    <string name="chat_reaction_unreact_hint">Nhấn để bỏ cảm xúc</string>
 
     <!-- My Profile -->
     <string name="profile_back">Quay lại</string>

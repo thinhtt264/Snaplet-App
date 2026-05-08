@@ -19,6 +19,7 @@ import com.thinh.snaplet.data.model.chat.Conversation
 import com.thinh.snaplet.data.model.chat.ConversationLookupResult
 import com.thinh.snaplet.data.model.chat.Message
 import com.thinh.snaplet.data.model.chat.MessageReaction
+import com.thinh.snaplet.data.model.chat.MessageReactionWithUserInfo
 import com.thinh.snaplet.data.model.chat.ReactToMessageRequest
 import com.thinh.snaplet.data.model.chat.SendMessageRequest
 import com.thinh.snaplet.data.model.media.ConfirmUploadData
@@ -267,5 +268,5 @@ interface ApiService {
     @GET("messages/{messageId}/reactions")
     suspend fun getMessageReactions(
         @Path("messageId") messageId: String,
-    ): Response<BaseResponse<List<MessageReaction>>>
+    ): Response<BaseResponse<List<MessageReactionWithUserInfo>>>
 }

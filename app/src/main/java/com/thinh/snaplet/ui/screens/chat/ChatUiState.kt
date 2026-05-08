@@ -2,6 +2,7 @@ package com.thinh.snaplet.ui.screens.chat
 
 import com.thinh.snaplet.data.local.entity.MessageEntity
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
+import com.thinh.snaplet.data.model.chat.MessageReactionWithUserInfo
 import java.util.Date
 
 data class IncomingUnreadState(
@@ -39,4 +40,13 @@ data class ChatUiState(
     val readTracking: ReadTrackingState = ReadTrackingState(),
     val inspectedMessage: MessageEntity? = null,
     val recentEmojis: List<String> = emptyList(),
+    val messageReactionsSheet: MessageReactionsSheetState = MessageReactionsSheetState(),
+)
+
+data class MessageReactionsSheetState(
+    val isVisible: Boolean = false,
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val messageId: String = "",
+    val reactions: List<MessageReactionWithUserInfo> = emptyList(),
 )

@@ -20,6 +20,7 @@ import com.thinh.snaplet.data.model.chat.ConversationUpdatedEvent
 import com.thinh.snaplet.data.model.chat.Message
 import com.thinh.snaplet.data.model.chat.MessageReaction
 import com.thinh.snaplet.data.model.chat.MessageReactionUpdatedEvent
+import com.thinh.snaplet.data.model.chat.MessageReactionWithUserInfo
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
 import com.thinh.snaplet.data.model.chat.MessageType
 import com.thinh.snaplet.data.model.chat.ReactToMessageRequest
@@ -274,7 +275,7 @@ class ChatRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun getMessageReactions(messageId: String): ApiResult<List<MessageReaction>> {
+    override suspend fun getMessageReactions(messageId: String): ApiResult<List<MessageReactionWithUserInfo>> {
         return safeApiCall(
             apiCall = { apiService.getMessageReactions(messageId = messageId) },
         )

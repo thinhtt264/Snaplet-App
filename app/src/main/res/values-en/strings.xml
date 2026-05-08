@@ -126,6 +126,7 @@
         <item quantity="other">%d activities</item>
     </plurals>
     <string name="reactions_sheet_title">Reactions</string>
+    <string name="chat_reaction_unreact_hint">Tap to remove reaction</string>
 
     <!-- My Profile -->
     <string name="profile_back">Back</string>

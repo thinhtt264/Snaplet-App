@@ -10,6 +10,7 @@ import com.thinh.snaplet.data.model.chat.ConversationUpdatedEvent
 import com.thinh.snaplet.data.model.chat.Message
 import com.thinh.snaplet.data.model.chat.MessageReaction
 import com.thinh.snaplet.data.model.chat.MessageReactionUpdatedEvent
+import com.thinh.snaplet.data.model.chat.MessageReactionWithUserInfo
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
 import com.thinh.snaplet.platform.socket.SocketConnectionState
 import com.thinh.snaplet.utils.network.ApiResult
@@ -60,7 +61,7 @@ interface ChatRepository {
 
     suspend fun getMessageReactions(
         messageId: String,
-    ): ApiResult<List<MessageReaction>>
+    ): ApiResult<List<MessageReactionWithUserInfo>>
 
     fun observeConversations(): Flow<List<ConversationEntity>>
     fun observeLastMessageStatuses(): Flow<List<ConversationLastMessageStatusProjection>>

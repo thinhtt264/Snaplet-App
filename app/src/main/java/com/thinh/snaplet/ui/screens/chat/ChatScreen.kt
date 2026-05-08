@@ -75,6 +75,7 @@ import com.thinh.snaplet.ui.screens.chat.components.ChatHeader
 import com.thinh.snaplet.ui.screens.chat.components.ChatInputBar
 import com.thinh.snaplet.ui.screens.chat.components.MessageBubble
 import com.thinh.snaplet.ui.screens.chat.components.MessageInspectOverlay
+import com.thinh.snaplet.ui.screens.chat.components.MessageReactionsBottomSheet
 import com.thinh.snaplet.ui.screens.chat.components.TypingIndicator
 import com.thinh.snaplet.ui.screens.chat.components.bubbleInspectRoundRect
 import com.thinh.snaplet.ui.theme.MotionTokens
@@ -296,7 +297,7 @@ fun ChatScreen(
                             val isFreshItem = !appeared
 
                             val scale by animateFloatAsState(
-                                targetValue = if (appeared) 1f else 0.85f,
+                                targetValue = if (appeared) 1f else 0.9f,
                                 animationSpec = tween(
                                     if (isFreshItem) MotionTokens.Emphasized else MotionTokens.Normal,
                                     easing = FastOutSlowInEasing
@@ -341,6 +342,7 @@ fun ChatScreen(
                                 showSeenTick = isPartnerSeen,
                                 position = position,
                                 onClick = viewModel::onMessageLongPress,
+                                onReactionDockClick = viewModel::onMessageReactionDockClick,
                                 onBoundsChanged = { key, rect -> bubbleBounds[key] = rect },
                             )
                         }
@@ -462,6 +464,17 @@ fun ChatScreen(
                 coroutineScope.launch { listState.animateScrollToItem(0) }
             },
             onAttach = { /* TODO */ },
+        )
+    }
+
+    if (uiState.messageReactionsSheet.isVisible) {
+        MessageReactionsBottomSheet(
+            reactions = uiState.messageReactionsSheet.reactions,
+            isLoading = uiState.messageReactionsSheet.isLoading,
+            error = uiState.messageReactionsSheet.error,
+            currentUserId = uiState.currentUserId,
+            onDismiss = viewModel::dismissMessageReactionsSheet,
+            onMyReactionClick = viewModel::onMyMessageReactionClick,
         )
     }
 }
