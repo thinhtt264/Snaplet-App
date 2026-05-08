@@ -1,5 +1,12 @@
 package com.thinh.snaplet.ui.screens.chat.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -39,6 +46,7 @@ import com.thinh.snaplet.data.local.entity.MessageEntity
 import com.thinh.snaplet.data.model.chat.MessageReaction
 import com.thinh.snaplet.data.model.chat.MessageType
 import com.thinh.snaplet.ui.components.BaseText
+import com.thinh.snaplet.ui.theme.MotionTokens
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.to24HourTime
 
@@ -204,14 +212,29 @@ fun MessageBubble(
                 }
             }
 
-            if (message.reactions.isNotEmpty()) {
-                MessageReactionDock(
-                    reactions = message.reactions,
-                    modifier = Modifier
-                        .offset(y = -REACTION_DOCK_OVERLAP)
-                        .padding(horizontal = 8.dp),
-                )
+            AnimatedVisibility(
+                visible = message.reactions.isNotEmpty(),
+                enter = fadeIn(tween(MotionTokens.Emphasized, easing = FastOutSlowInEasing)) +
+                        expandVertically(
+                            tween(MotionTokens.Slow, easing = FastOutSlowInEasing),
+                            expandFrom = Alignment.Top
+                        ),
+                exit = fadeOut(tween(MotionTokens.Emphasized, easing = FastOutSlowInEasing)) +
+                        shrinkVertically(
+                            tween(MotionTokens.Slow, easing = FastOutSlowInEasing),
+                            shrinkTowards = Alignment.Top
+                        ),
+            ) {
+                if (message.reactions.isNotEmpty()) {
+                    MessageReactionDock(
+                        reactions = message.reactions,
+                        modifier = Modifier
+                            .offset(y = -REACTION_DOCK_OVERLAP)
+                            .padding(horizontal = 8.dp),
+                    )
+                }
             }
+
         }
     }
 }
@@ -244,7 +267,7 @@ private fun MessageReactionDock(
                 BaseText(
                     text = emoji,
                     color = Color.White,
-                    typography = Typography.labelMedium,
+                    typography = Typography.labelLarge,
                 )
             }
             BaseText(

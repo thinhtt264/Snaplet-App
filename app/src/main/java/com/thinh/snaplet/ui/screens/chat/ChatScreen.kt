@@ -4,6 +4,9 @@ import android.content.ClipData
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
@@ -26,11 +29,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -41,7 +46,9 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -70,6 +77,7 @@ import com.thinh.snaplet.ui.screens.chat.components.MessageBubble
 import com.thinh.snaplet.ui.screens.chat.components.MessageInspectOverlay
 import com.thinh.snaplet.ui.screens.chat.components.TypingIndicator
 import com.thinh.snaplet.ui.screens.chat.components.bubbleInspectRoundRect
+import com.thinh.snaplet.ui.theme.MotionTokens
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.isGreaterWithFallback
 import kotlinx.coroutines.launch
@@ -119,13 +127,7 @@ fun ChatScreen(
             Triple(nearBottom, newestLocalId, idx)
         }.collect { (nearBottom, newestLocalId, firstVisibleIndex) ->
             // auto-scroll only when a truly newer newest-message arrives and user is near bottom.
-            if (
-                nearBottom &&
-                firstVisibleIndex == 0 &&
-                prevNewestLocalId != null &&
-                newestLocalId != null &&
-                newestLocalId != prevNewestLocalId
-            ) {
+            if (nearBottom && firstVisibleIndex == 0 && prevNewestLocalId != null && newestLocalId != null && newestLocalId != prevNewestLocalId) {
                 listState.scrollToItem(0)
             }
             prevNewestLocalId = newestLocalId
@@ -199,8 +201,7 @@ fun ChatScreen(
                     chatAreaWidthPx = coords.size.width
                     chatAreaTopPx = coords.positionInRoot().y
                     chatAreaLeftPx = coords.positionInRoot().x
-                }
-        ) {
+                }) {
             val refreshError = lazyPagingItems.loadState.refresh as? LoadState.Error
             when {
                 uiState.messageList.isLoading -> {
@@ -272,27 +273,65 @@ fun ChatScreen(
                             val isPending = message.status == MessageStatus.PENDING
                             val isError = message.status == MessageStatus.FAILED
 
-                            val prevSenderSame =
-                                if (index + 1 < lazyPagingItems.itemCount) {
-                                    lazyPagingItems.peek(index + 1)?.senderId == message.senderId
-                                } else {
-                                    false
-                                }
-                            val nextSenderSame =
-                                if (index - 1 >= 0) {
-                                    lazyPagingItems.peek(index - 1)?.senderId == message.senderId
-                                } else {
-                                    false
-                                }
-                            val position =
-                                bubbleChainPosition(prevSenderSame, nextSenderSame)
+                            val prevSenderSame = if (index + 1 < lazyPagingItems.itemCount) {
+                                lazyPagingItems.peek(index + 1)?.senderId == message.senderId
+                            } else {
+                                false
+                            }
+                            val nextSenderSame = if (index - 1 >= 0) {
+                                lazyPagingItems.peek(index - 1)?.senderId == message.senderId
+                            } else {
+                                false
+                            }
+                            val position = bubbleChainPosition(prevSenderSame, nextSenderSame)
 
                             val partnerReadHorizon = uiState.partner.readHorizon
                             val isPartnerSeen = isMine && isGreaterWithFallback(
                                 partnerReadHorizon, message.createdAt, false
                             )
 
+                            var appeared by remember(message.localId) { mutableStateOf(false) }
+                            val isFreshItem = !appeared
+
+                            val scale by animateFloatAsState(
+                                targetValue = if (appeared) 1f else 0.85f,
+                                animationSpec = tween(
+                                    if (isFreshItem) MotionTokens.Emphasized else MotionTokens.Normal,
+                                    easing = FastOutSlowInEasing
+                                ),
+                                label = "bubble_scale",
+                            )
+                            val alpha by animateFloatAsState(
+                                targetValue = if (appeared) 1f else 0f,
+                                animationSpec = tween(
+                                    if (isFreshItem) MotionTokens.Emphasized else MotionTokens.Fast,
+                                    easing = FastOutSlowInEasing
+                                ),
+                                label = "bubble_alpha",
+                            )
+
+                            SideEffect { appeared = true }
+
                             MessageBubble(
+                                modifier = Modifier
+                                    .animateItem(
+                                        fadeInSpec = null,
+                                        placementSpec = if (isFreshItem) tween(
+                                            MotionTokens.Emphasized,
+                                            easing = FastOutSlowInEasing,
+                                        ) else null,
+                                        fadeOutSpec = tween(
+                                            MotionTokens.Emphasized, easing = FastOutSlowInEasing
+                                        ),
+                                    )
+                                    .graphicsLayer {
+                                        this.alpha = alpha
+                                        this.scaleX = scale
+                                        this.scaleY = scale
+                                        transformOrigin = if (isMine) TransformOrigin(
+                                            1f, 1f
+                                        ) else TransformOrigin(0f, 1f)
+                                    },
                                 message = message,
                                 isMine = isMine,
                                 isPending = isPending,
@@ -304,10 +343,7 @@ fun ChatScreen(
                             )
                         }
 
-                        if (
-                            lazyPagingItems.loadState.append is LoadState.Loading &&
-                            listState.firstVisibleItemIndex > 0
-                        ) {
+                        if (lazyPagingItems.loadState.append is LoadState.Loading && listState.firstVisibleItemIndex > 0) {
                             item(key = "loading_more") {
                                 Box(
                                     modifier = Modifier
