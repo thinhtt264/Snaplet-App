@@ -13,6 +13,11 @@ enum class MessageType {
     GIF,
 }
 
+enum class MessageMediaStatus {
+    AVAILABLE,
+    SOURCE_DELETED,
+}
+
 data class MessageMedia(
     @SerializedName("urls")
     val urls: ImageSizes?,
@@ -21,7 +26,9 @@ data class MessageMedia(
     @SerializedName("width")
     val width: Int = 0,
     @SerializedName("height")
-    val height: Int = 0
+    val height: Int = 0,
+    @SerializedName("status")
+    val status: MessageMediaStatus = MessageMediaStatus.AVAILABLE,
 )
 
 
@@ -117,6 +124,7 @@ fun Message.toEntity(): MessageEntity = MessageEntity(
     mediaType = media?.mimeType,
     mediaWidth = media?.width ?: 0,
     mediaHeight = media?.height ?: 0,
+    mediaStatus = media?.status ?: MessageMediaStatus.AVAILABLE,
     status = MessageStatus.SENT,
     isDeleted = isDeleted,
     createdAt = createdAt,

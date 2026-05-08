@@ -16,7 +16,7 @@ import com.thinh.snaplet.data.local.entity.MessageRemoteKeyEntity
         MessageEntity::class,
         MessageRemoteKeyEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

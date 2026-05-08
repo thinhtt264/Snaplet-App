@@ -6,6 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.ColumnInfo
 import com.thinh.snaplet.data.model.chat.Message
+import com.thinh.snaplet.data.model.chat.MessageMediaStatus
 import com.thinh.snaplet.data.model.chat.MessageMedia
 import com.thinh.snaplet.data.model.chat.MessageReaction
 import com.thinh.snaplet.data.model.media.ImageSizes
@@ -30,6 +31,7 @@ data class MessageEntity(
     val mediaUrl: String?,
     val mediaLocalUri: String?,
     val mediaType: String?,
+    val mediaStatus: MessageMediaStatus = MessageMediaStatus.AVAILABLE,
     val status: String,
     val isDeleted: Boolean,
     val createdAt: Date,
@@ -52,7 +54,8 @@ fun MessageEntity.toMessage(): Message = Message(
         urls = (mediaUrl ?: mediaLocalUri)?.let { ImageSizes(original = it) },
         mimeType = mediaType,
         width = mediaWidth,
-        height = mediaHeight
+        height = mediaHeight,
+        status = mediaStatus,
     ),
     isDeleted = isDeleted,
     replyTo = null,

@@ -274,12 +274,6 @@ class ChatRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun removeMessageReaction(messageId: String): ApiResult<Unit> {
-        return safeApiCall(
-            apiCall = { apiService.removeMessageReaction(messageId = messageId) },
-        )
-    }
-
     override suspend fun getMessageReactions(messageId: String): ApiResult<List<MessageReaction>> {
         return safeApiCall(
             apiCall = { apiService.getMessageReactions(messageId = messageId) },
@@ -569,8 +563,8 @@ class ChatRepositoryImpl @Inject constructor(
             val changed = dedupedIncoming.filter { conv ->
                 val existing = snapshot[conv.id] ?: return@filter true
                 existing.updatedAt != conv.syncUpdatedAt ||
-                    existing.partnerLastSeenAt != conv.partnerLastReadAt ||
-                    existing.myLastSeenAt != conv.myLastReadAt
+                        existing.partnerLastSeenAt != conv.partnerLastReadAt ||
+                        existing.myLastSeenAt != conv.myLastReadAt
             }
             if (changed.isNotEmpty()) {
                 val entities = changed.map { conv ->

@@ -58,10 +58,6 @@ interface ChatRepository {
         emoji: String,
     ): ApiResult<List<MessageReaction>>
 
-    suspend fun removeMessageReaction(
-        messageId: String,
-    ): ApiResult<Unit>
-
     suspend fun getMessageReactions(
         messageId: String,
     ): ApiResult<List<MessageReaction>>
@@ -112,7 +108,12 @@ interface ChatRepository {
 
     suspend fun sendTextMessage(convId: String, senderId: String, text: String)
 
-    suspend fun sendMediaMessage(convId: String, senderId: String, localUri: String, mediaType: String)
+    suspend fun sendMediaMessage(
+        convId: String,
+        senderId: String,
+        localUri: String,
+        mediaType: String
+    )
 
     suspend fun retryMessage(localId: String)
 

@@ -264,11 +264,6 @@ interface ApiService {
         @Body body: ReactToMessageRequest,
     ): Response<BaseResponse<List<MessageReaction>>>
 
-    @DELETE("messages/{messageId}/reactions")
-    suspend fun removeMessageReaction(
-        @Path("messageId") messageId: String,
-    ): Response<BaseResponse<Unit>>
-
     @GET("messages/{messageId}/reactions")
     suspend fun getMessageReactions(
         @Path("messageId") messageId: String,

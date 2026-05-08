@@ -191,6 +191,7 @@
     <string name="conversation_search_hint">Search…</string>
     <string name="conversation_time_now">Now</string>
     <string name="conversation_image_load_failed">Failed to load image</string>
+    <string name="chat_media_source_deleted">Status has been deleted</string>
     <string name="chat_input_placeholder">Message…</string>
     <string name="chat_message_action_reply">Reply</string>
     <string name="chat_message_action_copy">Copy</string>

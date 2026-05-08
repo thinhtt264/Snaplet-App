@@ -16,12 +16,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.HideImage
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -43,6 +48,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.local.entity.MessageEntity
+import com.thinh.snaplet.data.model.chat.MessageMediaStatus
 import com.thinh.snaplet.data.model.chat.MessageReaction
 import com.thinh.snaplet.data.model.chat.MessageType
 import com.thinh.snaplet.ui.components.BaseText
@@ -60,6 +66,8 @@ internal val BUBBLE_VERTICAL_PADDING = 8.dp
 private val ICON_SIZE = 14.dp
 
 private val REACTION_DOCK_OVERLAP = 2.dp
+
+private val SOURCE_DELETED_DEFAULT_HEIGHT = 300.dp
 
 private val ReactionPillShape = RoundedCornerShape(percent = 50)
 private val ReactionPillBorderColor = Color.White.copy(alpha = 0.35f)
@@ -131,6 +139,8 @@ fun MessageBubble(
                         }
 
                         isImageMessage -> {
+                            val isSourceDeleted =
+                                message.mediaStatus == MessageMediaStatus.SOURCE_DELETED
                             val hasMediaSize = message.mediaWidth > 0 && message.mediaHeight > 0
                             val ratio = if (hasMediaSize) {
                                 message.mediaWidth.toFloat() / message.mediaHeight.toFloat()
@@ -138,16 +148,66 @@ fun MessageBubble(
                                 1f
                             }
 
+                            val clampedRatio = ratio.coerceIn(0.5f, 1.5f)
+
                             Box(modifier = Modifier.padding(bottom = BUBBLE_VERTICAL_PADDING)) {
-                                MessageImageContent(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    imageUrl = message.mediaUrl.orEmpty(),
-                                    ratio = ratio,
-                                    bubbleColor = bubbleColor,
-                                    textColor = textColor,
-                                    caption = message.text,
-                                    onRetry = onRetry,
-                                )
+                                if (isSourceDeleted) {
+                                    val placeholderFrame = if (hasMediaSize && ratio > 0f) {
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(clampedRatio)
+                                    } else {
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .height(SOURCE_DELETED_DEFAULT_HEIGHT)
+                                    }
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        Box(
+                                            modifier = placeholderFrame.background(cs.surface),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center,
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.HideImage,
+                                                    contentDescription = null,
+                                                    tint = cs.onSurface.copy(alpha = 0.8f),
+                                                    modifier = Modifier.size(24.dp),
+                                                )
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                BaseText(
+                                                    text = stringResource(R.string.chat_media_source_deleted),
+                                                    color = cs.onSurface.copy(alpha = 0.8f),
+                                                    typography = Typography.labelMedium,
+                                                )
+                                            }
+                                        }
+                                        message.text?.let {
+                                            BaseText(
+                                                text = it,
+                                                color = textColor,
+                                                typography = Typography.bodyMedium,
+                                                modifier = Modifier.padding(
+                                                    start = 12.dp,
+                                                    end = 6.dp,
+                                                    top = BUBBLE_VERTICAL_PADDING,
+                                                ),
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    MessageImageContent(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        imageUrl = message.mediaUrl.orEmpty(),
+                                        ratio = clampedRatio,
+                                        bubbleColor = bubbleColor,
+                                        textColor = textColor,
+                                        caption = message.text,
+                                        onRetry = onRetry,
+                                    )
+                                }
                                 Row(
                                     modifier = Modifier
                                         .align(Alignment.BottomEnd)
