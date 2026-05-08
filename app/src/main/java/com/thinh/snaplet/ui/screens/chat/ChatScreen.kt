@@ -265,7 +265,9 @@ fun ChatScreen(
                         items(
                             count = lazyPagingItems.itemCount,
                             key = { index ->
-                                lazyPagingItems.peek(index)?.localId ?: "item_$index"
+                                lazyPagingItems.peek(index)?.let { message ->
+                                    "${message.localId}_${message.id}"
+                                } ?: "item_$index"
                             },
                         ) { index ->
                             val message = lazyPagingItems[index] ?: return@items
