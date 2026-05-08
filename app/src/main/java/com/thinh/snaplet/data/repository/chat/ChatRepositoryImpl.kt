@@ -379,7 +379,7 @@ class ChatRepositoryImpl @Inject constructor(
             apiCall = { apiService.getMessages(convId, limit = PAGE_SIZE, cursor = cursor) },
             onSuccess = { data ->
                 appDatabase.withTransaction {
-                    messageDao.upsertAll(data.data.map { it.toEntity() })
+                    messageDao.upsertAllByLocalId(data.data.map { it.toEntity() })
                     messageRemoteKeyDao.upsert(
                         MessageRemoteKeyEntity(
                             conversationId = convId,
@@ -393,10 +393,7 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun onIncomingMessage(message: Message) {
-        // If we have an optimistic PENDING row for this clientUuid, delete it before
-        // upserting the server-confirmed entity to avoid a PRIMARY KEY conflict.
-        messageDao.deletePendingByLocalId(message.clientUuid)
-        messageDao.upsert(message.toEntity())
+        messageDao.upsertAllByLocalId(listOf(message.toEntity()))
         conversationDao.updateLastMessage(
             convId = message.conversationId,
             lastMessageId = message.id,
@@ -444,7 +441,7 @@ class ChatRepositoryImpl @Inject constructor(
                         lastMessageType = message.messageType.name.lowercase(),
                     )
                 }
-                messageDao.upsert(message.toEntity())
+                messageDao.upsertAllByLocalId(listOf(message.toEntity()))
             },
         )
     }

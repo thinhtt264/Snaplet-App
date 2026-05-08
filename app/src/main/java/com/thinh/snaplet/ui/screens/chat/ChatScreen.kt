@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -103,6 +105,10 @@ fun ChatScreen(
     val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val shouldDisablePlacementAnimation =
+        WindowInsets.ime.getBottom(density) > 0 &&
+            !listState.canScrollBackward &&
+            !listState.canScrollForward
     val bubbleBounds = remember { mutableStateMapOf<String, Rect>() }
 
     var chatAreaHeightPx by remember { mutableIntStateOf(0) }
@@ -266,9 +272,7 @@ fun ChatScreen(
                         items(
                             count = lazyPagingItems.itemCount,
                             key = { index ->
-                                lazyPagingItems.peek(index)?.let { message ->
-                                    "${message.localId}_${message.id}"
-                                } ?: "item_$index"
+                                lazyPagingItems.peek(index)?.localId ?: "item_$index"
                             },
                         ) { index ->
                             val message = lazyPagingItems[index] ?: return@items
@@ -299,7 +303,7 @@ fun ChatScreen(
                             val scale by animateFloatAsState(
                                 targetValue = if (appeared) 1f else 0.9f,
                                 animationSpec = tween(
-                                    if (isFreshItem) MotionTokens.Emphasized else MotionTokens.Normal,
+                                    if (isFreshItem) MotionTokens.Slow else MotionTokens.Fast,
                                     easing = FastOutSlowInEasing
                                 ),
                                 label = "bubble_scale",
@@ -315,18 +319,23 @@ fun ChatScreen(
 
                             SideEffect { appeared = true }
 
+                            val bubbleModifier = if (shouldDisablePlacementAnimation) {
+                                Modifier
+                            } else {
+                                Modifier.animateItem(
+                                    fadeInSpec = null,
+                                    placementSpec = tween(
+                                        MotionTokens.Slow,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                    fadeOutSpec = tween(
+                                        MotionTokens.Emphasized, easing = FastOutSlowInEasing
+                                    ),
+                                )
+                            }
+
                             MessageBubble(
-                                modifier = Modifier
-                                    .animateItem(
-                                        fadeInSpec = null,
-                                        placementSpec = if (isFreshItem) tween(
-                                            MotionTokens.Emphasized,
-                                            easing = FastOutSlowInEasing,
-                                        ) else null,
-                                        fadeOutSpec = tween(
-                                            MotionTokens.Emphasized, easing = FastOutSlowInEasing
-                                        ),
-                                    )
+                                modifier = bubbleModifier
                                     .graphicsLayer {
                                         this.alpha = alpha
                                         this.scaleX = scale

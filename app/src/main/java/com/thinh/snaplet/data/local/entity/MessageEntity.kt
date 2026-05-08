@@ -20,7 +20,10 @@ import java.util.Date
         childColumns = ["conversationId"],
         onDelete = ForeignKey.CASCADE
     )],
-    indices = [Index("conversationId")]
+    indices = [
+        Index("conversationId"),
+        Index(value = ["localId"], unique = true),
+    ]
 )
 data class MessageEntity(
     @PrimaryKey val id: String,
