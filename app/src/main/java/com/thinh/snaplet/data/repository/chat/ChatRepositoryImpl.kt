@@ -27,6 +27,7 @@ import com.thinh.snaplet.data.model.chat.ReactToMessageRequest
 import com.thinh.snaplet.data.model.chat.SendMessageRequest
 import com.thinh.snaplet.data.model.chat.TypingSocketPayload
 import com.thinh.snaplet.data.model.chat.toEntity
+import com.thinh.snaplet.platform.socket.ChatSocketEmitEvent
 import com.thinh.snaplet.platform.socket.ChatSocketManager
 import com.thinh.snaplet.platform.socket.SocketConnectionState
 import com.thinh.snaplet.platform.socket.SocketEvent
@@ -348,14 +349,14 @@ class ChatRepositoryImpl @Inject constructor(
 
     override fun sendTypingStart(conversationId: String) {
         chatSocketManager.emit(
-            eventName = SocketEvent.CHAT_TYPING_START.eventName,
+            eventName = ChatSocketEmitEvent.TYPING_START,
             data = JSONObject(gson.toJson(TypingSocketPayload(conversationId))),
         )
     }
 
     override fun sendTypingStop(conversationId: String) {
         chatSocketManager.emit(
-            eventName = SocketEvent.CHAT_TYPING_STOP.eventName,
+            eventName = ChatSocketEmitEvent.TYPING_STOP,
             data = JSONObject(gson.toJson(TypingSocketPayload(conversationId))),
         )
     }

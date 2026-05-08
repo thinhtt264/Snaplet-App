@@ -1,5 +1,18 @@
 package com.thinh.snaplet.platform.socket
 
+/**
+ * Chat socket events emitted by client to server.
+ */
+object ChatSocketEmitEvent {
+    const val JOIN_CONVERSATION = "chat:join"
+    const val LEAVE_CONVERSATION = "chat:leave"
+    const val TYPING_START = "chat:typing_start"
+    const val TYPING_STOP = "chat:typing_stop"
+}
+
+/**
+ * Socket events received from server.
+ */
 enum class SocketEvent(val eventName: String) {
     POSTS_UNREAD_UPDATED("posts_unread_updated"),
     FRIEND_REQUEST_RECEIVED("friend_request_updated"),
