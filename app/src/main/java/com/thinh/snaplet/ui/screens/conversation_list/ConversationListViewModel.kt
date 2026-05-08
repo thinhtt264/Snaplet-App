@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 private const val PAGE_LIMIT = 20
-private const val SYNC_DEBOUNCE_MS = 5_000L
+private const val SYNC_DEBOUNCE_MS = 3_000L
 
 @HiltViewModel
 class ConversationListViewModel @Inject constructor(
