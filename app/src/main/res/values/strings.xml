@@ -201,6 +201,11 @@
     <string name="chat_message_action_reply">Trả lời</string>
     <string name="chat_message_action_copy">Sao chép</string>
     <string name="chat_message_action_recall">Thu hồi</string>
+    <string name="chat_scroll_to_bottom_cd">Cuộn xuống tin nhắn mới nhất</string>
+    <string name="chat_status_online">Đang hoạt động</string>
+    <string name="chat_status_offline">Không hoạt động</string>
+    <string name="chat_status_typing">Đang nhập</string>
+    <string name="chat_partner_typing_cd">Đang nhập tin nhắn</string>
     <string name="new_message_title">Tin nhắn mới</string>
     <string name="new_message_search_hint">Tìm tên hoặc @username…</string>
     <string name="new_message_friends_empty">Chưa có bạn bè nào</string>

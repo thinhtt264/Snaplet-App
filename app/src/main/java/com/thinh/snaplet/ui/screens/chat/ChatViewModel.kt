@@ -36,7 +36,6 @@ import java.util.Date
 import javax.inject.Inject
 
 private const val OUT_GOING_TYPING_TIMEOUT_MS = 1_500L
-private const val IN_COMING_TYPING_TIMEOUT_MS = 3_000L
 private const val MARK_READ_DEBOUNCE_MS = 500L
 private const val RESUME_LOAD_THROTTLE_MS = 1_500L
 private const val CHAT_RECENT_MAX_SLOTS = 4
@@ -83,6 +82,7 @@ class ChatViewModel @Inject constructor(
         loadCurrentUser()
         observeIncomingTypingEvents()
         observeIncomingReadReceipts()
+        observeIncomingUnreadWhileScrolled()
         observeNetworkReconnect()
         loadRecentEmojis()
     }
@@ -350,7 +350,7 @@ class ChatViewModel @Inject constructor(
                     if (event.isTyping) {
                         _uiState.update { it.copy(partner = it.partner.copy(isTyping = true)) }
                         typingTimeoutJob = viewModelScope.launch {
-                            delay(IN_COMING_TYPING_TIMEOUT_MS)
+                            delay(PARTNER_TYPING_IDLE_MS)
                             _uiState.update { it.copy(partner = it.partner.copy(isTyping = false)) }
                         }
                     } else {
@@ -365,6 +365,34 @@ class ChatViewModel @Inject constructor(
             chatRepository.readReceipts.collect { event ->
                 if (_uiState.value.currentUserId == event.userId) return@collect
                 _uiState.update { it.copy(partner = it.partner.copy(lastReadEvent = event)) }
+            }
+        }
+    }
+
+    /**
+     * Counts partner messages received while the user is scrolled away from the bottom
+     * (badge cleared when they scroll back to the latest messages).
+     */
+    private fun observeIncomingUnreadWhileScrolled() {
+        viewModelScope.launch {
+            chatRepository.newMessages.collect { message ->
+                if (conversationId.isEmpty() || message.conversationId != conversationId) return@collect
+                val myId = _uiState.value.currentUserId ?: return@collect
+                if (message.senderId == myId) return@collect
+                _uiState.update { state ->
+                    if (state.readTracking.isUserAtBottom) state
+                    else {
+                        val unread = state.readTracking.incomingUnread
+                        state.copy(
+                            readTracking = state.readTracking.copy(
+                                incomingUnread = unread.copy(
+                                    count = unread.count + 1,
+                                    newestMessageId = message.id,
+                                ),
+                            ),
+                        )
+                    }
+                }
             }
         }
     }

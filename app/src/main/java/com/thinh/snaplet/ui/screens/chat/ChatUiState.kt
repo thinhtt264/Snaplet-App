@@ -1,8 +1,8 @@
 package com.thinh.snaplet.ui.screens.chat
 
 import com.thinh.snaplet.data.local.entity.MessageEntity
-import com.thinh.snaplet.data.model.chat.MessageReadEvent
 import com.thinh.snaplet.data.model.chat.MessageReactionWithUserInfo
+import com.thinh.snaplet.data.model.chat.MessageReadEvent
 import java.util.Date
 
 data class IncomingUnreadState(
@@ -50,3 +50,6 @@ data class MessageReactionsSheetState(
     val messageId: String = "",
     val reactions: List<MessageReactionWithUserInfo> = emptyList(),
 )
+
+/** Hide incoming typing this many ms after the last typing start/stop socket event. */
+const val PARTNER_TYPING_IDLE_MS = 3_000L
