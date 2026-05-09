@@ -38,6 +38,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -263,13 +266,24 @@ fun SpotlightPostScreen(
 
                     uiState.post != null -> {
                         val post = uiState.post!!
-                        val quickChatBar = QuickChatBarModel(
-                            messageText = "",
-                            quickEmojiSlots = uiState.quickChatEmojiSlots,
-                            onMessageChange = {},
-                            onSendMessage = {},
-                            onEmojiSelected = viewModel::onEmojiReaction,
-                        )
+                        var chatMessage by remember(post.id) { mutableStateOf("") }
+                        val quickChatBar = remember(
+                            chatMessage,
+                            uiState.quickChatEmojiSlots,
+                            post.id,
+                            viewModel,
+                        ) {
+                            QuickChatBarModel(
+                                messageText = chatMessage,
+                                quickEmojiSlots = uiState.quickChatEmojiSlots,
+                                onMessageChange = { chatMessage = it },
+                                onSendMessage = {
+                                    viewModel.sendQuickChatFromPost(chatMessage)
+                                    chatMessage = ""
+                                },
+                                onEmojiSelected = viewModel::onEmojiReaction,
+                            )
+                        }
                         val bottomAction = BottomActionModel(
                             onGridClick = {},
                             onCaptureClick = {},

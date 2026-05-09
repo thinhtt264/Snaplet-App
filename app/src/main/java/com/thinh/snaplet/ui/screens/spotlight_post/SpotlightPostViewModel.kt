@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.thinh.snaplet.R
+import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.data.repository.quickchat.QuickChatEmojiRepository
 import com.thinh.snaplet.data.repository.UserRepository
@@ -33,6 +34,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SpotlightPostViewModel @Inject constructor(
     private val postRepository: PostRepository,
+    private val chatRepository: ChatRepository,
     private val quickChatEmojiRepository: QuickChatEmojiRepository,
     private val userRepository: UserRepository,
     private val shareManager: ShareManager,
@@ -144,6 +146,29 @@ class SpotlightPostViewModel @Inject constructor(
     }
 
     private var reactToPostJob: Job? = null
+
+    fun sendQuickChatFromPost(text: String) {
+        val post = _uiState.value.post ?: return
+        if (post.isOwnPost) return
+        val media = post.media.firstOrNull() ?: return
+
+        emojiFloatController.emit("\uD83D\uDCAC")
+
+        viewModelScope.launch {
+            val senderId = userRepository.getCurrentUserProfile()?.id ?: return@launch
+            chatRepository.sendFirstMessage(
+                recipientId = post.userId,
+                senderId = senderId,
+                text = text,
+                mediaKey = media.id,
+                mimeType = media.type,
+                width = media.width,
+                height = media.height,
+            ).onFailure { error ->
+                Logger.e("Failed to send quick chat from spotlight post: ${error.message}")
+            }
+        }
+    }
 
     fun onEmojiReaction(emoji: String) {
         emojiFloatController.emit(emoji)
