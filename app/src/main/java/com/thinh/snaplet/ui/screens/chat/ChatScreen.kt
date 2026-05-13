@@ -73,6 +73,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.local.entity.MessageStatus
@@ -82,7 +83,9 @@ import com.thinh.snaplet.ui.components.CappedCountBadge
 import com.thinh.snaplet.ui.screens.chat.components.BubblePosition
 import com.thinh.snaplet.ui.screens.chat.components.ChatHeader
 import com.thinh.snaplet.ui.screens.chat.components.ChatInputBar
+import com.thinh.snaplet.ui.screens.chat.components.DateSeparatorItem
 import com.thinh.snaplet.ui.screens.chat.components.MessageBubble
+import com.thinh.snaplet.ui.screens.chat.components.MessageBubblePlaceholder
 import com.thinh.snaplet.ui.screens.chat.components.MessageInspectOverlay
 import com.thinh.snaplet.ui.screens.chat.components.MessageReactionsBottomSheet
 import com.thinh.snaplet.ui.screens.chat.components.bubbleInspectRoundRect
@@ -132,7 +135,9 @@ fun ChatScreen(
         var prevNewestLocalId: String? = null
         snapshotFlow {
             val nearBottom = listState.isNearBottomChat()
-            val newestLocalId = lazyPagingItems.itemSnapshotList.items.firstOrNull()?.localId
+            val newestLocalId = lazyPagingItems.itemSnapshotList.items
+                .firstOrNull { it is ChatListItem.MessageItem }
+                ?.let { (it as ChatListItem.MessageItem).message.localId }
             Triple(nearBottom, newestLocalId, listState.firstVisibleItemIndex)
         }.collect { (nearBottom, newestLocalId, firstVisibleIndex) ->
             // auto-scroll only when a truly newer newest-message arrives and user is near bottom.
@@ -147,7 +152,11 @@ fun ChatScreen(
     val visibleMessages by remember {
         derivedStateOf {
             listState.layoutInfo.visibleItemsInfo.mapNotNull { info ->
-                if (info.index < lazyPagingItems.itemCount) lazyPagingItems.peek(info.index) else null
+                if (info.index < lazyPagingItems.itemCount) {
+                    (lazyPagingItems.peek(info.index) as? ChatListItem.MessageItem)?.message
+                } else {
+                    null
+                }
             }
         }
     }
@@ -163,19 +172,14 @@ fun ChatScreen(
     ) {
         derivedStateOf {
             val target = inspectedMessage ?: return@derivedStateOf null
-            val index =
-                (0 until lazyPagingItems.itemCount).firstOrNull { lazyPagingItems.peek(it)?.localId == target.localId }
-                    ?: return@derivedStateOf null
-            val prevSenderSame = if (index + 1 < lazyPagingItems.itemCount) {
-                lazyPagingItems.peek(index + 1)?.senderId == target.senderId
-            } else {
-                false
-            }
-            val nextSenderSame = if (index - 1 >= 0) {
-                lazyPagingItems.peek(index - 1)?.senderId == target.senderId
-            } else {
-                false
-            }
+            val index = (0 until lazyPagingItems.itemCount).firstOrNull { idx ->
+                val item = lazyPagingItems.peek(idx)
+                item is ChatListItem.MessageItem && item.message.localId == target.localId
+            } ?: return@derivedStateOf null
+            val prevSenderSame =
+                lazyPagingItems.adjacentMessageSenderSame(index, direction = 1, target.senderId)
+            val nextSenderSame =
+                lazyPagingItems.adjacentMessageSenderSame(index, direction = -1, target.senderId)
             val position = bubbleChainPosition(prevSenderSame, nextSenderSame)
             val isMine = target.senderId == uiState.currentUserId
             InspectMeta(
@@ -311,88 +315,110 @@ fun ChatScreen(
                             items(
                                 count = lazyPagingItems.itemCount,
                                 key = { index ->
-                                    lazyPagingItems.peek(index)?.localId ?: "item_$index"
+                                    when (val item = lazyPagingItems.peek(index)) {
+                                        is ChatListItem.MessageItem -> item.message.localId
+                                        is ChatListItem.DateSeparator -> "separator_${item.dateMillis}"
+                                        null -> "placeholder_$index"
+                                    }
                                 },
                             ) { index ->
-                                val message = lazyPagingItems[index] ?: return@items
-                                val isMine = message.senderId == uiState.currentUserId
-                                val isPending = message.status == MessageStatus.PENDING
-                                val isError = message.status == MessageStatus.FAILED
+                                when (val item = lazyPagingItems[index]) {
+                                    is ChatListItem.MessageItem -> {
+                                        val message = item.message
+                                        val isMine = message.senderId == uiState.currentUserId
+                                        val isPending = message.status == MessageStatus.PENDING
+                                        val isError = message.status == MessageStatus.FAILED
 
-                                val prevSenderSame = if (index + 1 < lazyPagingItems.itemCount) {
-                                    lazyPagingItems.peek(index + 1)?.senderId == message.senderId
-                                } else {
-                                    false
+                                        val prevSenderSame =
+                                            lazyPagingItems.adjacentMessageSenderSame(
+                                                index = index,
+                                                direction = 1,
+                                                senderId = message.senderId,
+                                            )
+                                        val nextSenderSame =
+                                            lazyPagingItems.adjacentMessageSenderSame(
+                                                index = index,
+                                                direction = -1,
+                                                senderId = message.senderId,
+                                            )
+                                        val position =
+                                            bubbleChainPosition(prevSenderSame, nextSenderSame)
+
+                                        val partnerReadHorizon = uiState.partner.readHorizon
+                                        val isPartnerSeen = isMine && isGreaterWithFallback(
+                                            partnerReadHorizon, message.createdAt, false
+                                        )
+
+                                        var appeared by remember(message.localId) {
+                                            mutableStateOf(
+                                                false
+                                            )
+                                        }
+                                        val isFreshItem = !appeared
+
+                                        val scale by animateFloatAsState(
+                                            targetValue = if (appeared) 1f else 0.9f,
+                                            animationSpec = tween(
+                                                if (isFreshItem) MotionTokens.Slow else MotionTokens.Fast,
+                                                easing = FastOutSlowInEasing
+                                            ),
+                                            label = "bubble_scale",
+                                        )
+                                        val alpha by animateFloatAsState(
+                                            targetValue = if (appeared) 1f else 0f,
+                                            animationSpec = tween(
+                                                if (isFreshItem) MotionTokens.Emphasized else MotionTokens.Fast,
+                                                easing = FastOutSlowInEasing
+                                            ),
+                                            label = "bubble_alpha",
+                                        )
+
+                                        SideEffect { appeared = true }
+
+                                        val bubbleModifier = if (shouldDisablePlacementAnimation) {
+                                            Modifier
+                                        } else {
+                                            Modifier.animateItem(
+                                                fadeInSpec = null,
+                                                placementSpec = tween(
+                                                    MotionTokens.Slow,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                                fadeOutSpec = tween(
+                                                    MotionTokens.Emphasized,
+                                                    easing = FastOutSlowInEasing
+                                                ),
+                                            )
+                                        }
+
+                                        MessageBubble(
+                                            modifier = bubbleModifier
+                                                .graphicsLayer {
+                                                    this.alpha = alpha
+                                                    this.scaleX = scale
+                                                    this.scaleY = scale
+                                                    transformOrigin = if (isMine) TransformOrigin(
+                                                        1f, 1f
+                                                    ) else TransformOrigin(0f, 1f)
+                                                },
+                                            message = message,
+                                            isMine = isMine,
+                                            isPending = isPending,
+                                            isError = isError,
+                                            showSeenTick = isPartnerSeen,
+                                            position = position,
+                                            onClick = viewModel::onMessageLongPress,
+                                            onReactionDockClick = viewModel::onMessageReactionDockClick,
+                                            onBoundsChanged = { key, rect ->
+                                                bubbleBounds[key] = rect
+                                            },
+                                        )
+                                    }
+
+                                    is ChatListItem.DateSeparator -> DateSeparatorItem(item.dateMillis)
+
+                                    null -> MessageBubblePlaceholder()
                                 }
-                                val nextSenderSame = if (index - 1 >= 0) {
-                                    lazyPagingItems.peek(index - 1)?.senderId == message.senderId
-                                } else {
-                                    false
-                                }
-                                val position = bubbleChainPosition(prevSenderSame, nextSenderSame)
-
-                                val partnerReadHorizon = uiState.partner.readHorizon
-                                val isPartnerSeen = isMine && isGreaterWithFallback(
-                                    partnerReadHorizon, message.createdAt, false
-                                )
-
-                                var appeared by remember(message.localId) { mutableStateOf(false) }
-                                val isFreshItem = !appeared
-
-                                val scale by animateFloatAsState(
-                                    targetValue = if (appeared) 1f else 0.9f,
-                                    animationSpec = tween(
-                                        if (isFreshItem) MotionTokens.Slow else MotionTokens.Fast,
-                                        easing = FastOutSlowInEasing
-                                    ),
-                                    label = "bubble_scale",
-                                )
-                                val alpha by animateFloatAsState(
-                                    targetValue = if (appeared) 1f else 0f,
-                                    animationSpec = tween(
-                                        if (isFreshItem) MotionTokens.Emphasized else MotionTokens.Fast,
-                                        easing = FastOutSlowInEasing
-                                    ),
-                                    label = "bubble_alpha",
-                                )
-
-                                SideEffect { appeared = true }
-
-                                val bubbleModifier = if (shouldDisablePlacementAnimation) {
-                                    Modifier
-                                } else {
-                                    Modifier.animateItem(
-                                        fadeInSpec = null,
-                                        placementSpec = tween(
-                                            MotionTokens.Slow,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                        fadeOutSpec = tween(
-                                            MotionTokens.Emphasized, easing = FastOutSlowInEasing
-                                        ),
-                                    )
-                                }
-
-                                MessageBubble(
-                                    modifier = bubbleModifier
-                                        .graphicsLayer {
-                                            this.alpha = alpha
-                                            this.scaleX = scale
-                                            this.scaleY = scale
-                                            transformOrigin = if (isMine) TransformOrigin(
-                                                1f, 1f
-                                            ) else TransformOrigin(0f, 1f)
-                                        },
-                                    message = message,
-                                    isMine = isMine,
-                                    isPending = isPending,
-                                    isError = isError,
-                                    showSeenTick = isPartnerSeen,
-                                    position = position,
-                                    onClick = viewModel::onMessageLongPress,
-                                    onReactionDockClick = viewModel::onMessageReactionDockClick,
-                                    onBoundsChanged = { key, rect -> bubbleBounds[key] = rect },
-                                )
                             }
 
                             if (lazyPagingItems.loadState.append is LoadState.Loading && listState.firstVisibleItemIndex > 0) {
@@ -535,7 +561,22 @@ fun ChatScreen(
     }
 }
 
-/** Bottom ~30% of the viewport when [reverseLayout] list shows newest at index 0. */
+private fun LazyPagingItems<ChatListItem>.adjacentMessageSenderSame(
+    index: Int,
+    direction: Int,
+    senderId: String,
+): Boolean {
+    var cursor = index + direction
+    while (cursor in 0 until itemCount) {
+        when (val item = peek(cursor)) {
+            is ChatListItem.MessageItem -> return item.message.senderId == senderId
+            is ChatListItem.DateSeparator -> cursor += direction
+            null -> return false
+        }
+    }
+    return false
+}
+
 private fun LazyListState.isNearBottomChat(): Boolean {
     val idx = firstVisibleItemIndex
     val offset = firstVisibleItemScrollOffset

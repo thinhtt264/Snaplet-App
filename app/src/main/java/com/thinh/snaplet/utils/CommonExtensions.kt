@@ -1,10 +1,17 @@
 package com.thinh.snaplet.utils
 
+import com.thinh.snaplet.data.local.entity.MessageEntity
+import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 
 private val TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private val SAME_YEAR_DATE_LABEL_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("d 'tháng' M")
+private val OTHER_YEAR_DATE_LABEL_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("d/M/yyyy")
 
 fun formatTimeAgo(createdAt: Date): String = createdAt.toLocalTimeAgo()
 
@@ -34,4 +41,30 @@ fun Date.to24HourTime(): String {
 
 fun <T : Comparable<T>> isGreaterWithFallback(a: T?, b: T?, fallback: Boolean): Boolean {
     return if (a != null && b != null) a >= b else fallback
+}
+
+fun MessageEntity.effectiveDate(myUserId: String?): Date {
+    return if (myUserId != null && senderId == myUserId) {
+        createdAt
+    } else {
+        serverCreatedAt ?: createdAt
+    }
+}
+
+fun Date.toStartOfDayMillis(): Long {
+    return toInstant()
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+        .atStartOfDay(ZoneId.systemDefault())
+        .toInstant()
+        .toEpochMilli()
+}
+
+fun Long.toDateLabel(now: LocalDate = LocalDate.now()): String {
+    val date = Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).toLocalDate()
+    return if (date.year == now.year) {
+        date.format(SAME_YEAR_DATE_LABEL_FORMATTER)
+    } else {
+        date.format(OTHER_YEAR_DATE_LABEL_FORMATTER)
+    }
 }

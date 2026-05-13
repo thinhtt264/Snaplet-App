@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import androidx.paging.insertSeparators
+import androidx.paging.map
 import com.thinh.snaplet.data.local.entity.MessageEntity
 import com.thinh.snaplet.data.local.entity.MessageStatus
 import com.thinh.snaplet.data.model.chat.Message
@@ -17,6 +19,8 @@ import com.thinh.snaplet.navigation.ChatConversation
 import com.thinh.snaplet.platform.network.ConnectivityObserver
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.Throttler
+import com.thinh.snaplet.utils.effectiveDate
+import com.thinh.snaplet.utils.toStartOfDayMillis
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,10 +32,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.ZoneId
 import java.util.Date
 import javax.inject.Inject
 
@@ -67,9 +74,36 @@ class ChatViewModel @Inject constructor(
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val messages: Flow<PagingData<MessageEntity>> = _activeConversationId
-        .filter { it.isNotEmpty() }
-        .flatMapLatest { convId -> chatRepository.getMessagesPager(convId) }
+    val messages: Flow<PagingData<ChatListItem>> = combine(
+        _activeConversationId.filter { it.isNotEmpty() },
+        _uiState.map { it.currentUserId },
+    ) { convId, myUserId -> convId to myUserId }
+        .flatMapLatest { (convId, myUserId) ->
+            chatRepository.getMessagesPager(convId).map { pagingData ->
+                pagingData
+                    .map { ChatListItem.MessageItem(it) }
+                    .insertSeparators { before, after ->
+                        if (before == null || after == null) return@insertSeparators null
+
+                        val beforeDate = before.message.effectiveDate(myUserId)
+                            .toInstant()
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate()
+                        val afterDate = after.message.effectiveDate(myUserId)
+                            .toInstant()
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate()
+
+                        if (beforeDate != afterDate) {
+                            ChatListItem.DateSeparator(
+                                before.message.effectiveDate(myUserId).toStartOfDayMillis(),
+                            )
+                        } else {
+                            null
+                        }
+                    }
+            }
+        }
         .cachedIn(viewModelScope)
 
     private var typingTimeoutJob: Job? = null
