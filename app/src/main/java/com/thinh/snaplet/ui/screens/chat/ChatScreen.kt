@@ -2,9 +2,9 @@ package com.thinh.snaplet.ui.screens.chat
 
 import android.content.ClipData
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
@@ -14,24 +14,36 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -42,7 +54,9 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -59,22 +73,26 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.local.entity.MessageStatus
 import com.thinh.snaplet.data.local.entity.toMessage
 import com.thinh.snaplet.ui.components.BaseText
+import com.thinh.snaplet.ui.components.CappedCountBadge
 import com.thinh.snaplet.ui.screens.chat.components.BubblePosition
 import com.thinh.snaplet.ui.screens.chat.components.ChatHeader
 import com.thinh.snaplet.ui.screens.chat.components.ChatInputBar
+import com.thinh.snaplet.ui.screens.chat.components.DateSeparatorItem
 import com.thinh.snaplet.ui.screens.chat.components.MessageBubble
+import com.thinh.snaplet.ui.screens.chat.components.MessageBubblePlaceholder
 import com.thinh.snaplet.ui.screens.chat.components.MessageInspectOverlay
-import com.thinh.snaplet.ui.screens.chat.components.TypingIndicator
+import com.thinh.snaplet.ui.screens.chat.components.MessageReactionsBottomSheet
 import com.thinh.snaplet.ui.screens.chat.components.bubbleInspectRoundRect
+import com.thinh.snaplet.ui.theme.MotionTokens
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.isGreaterWithFallback
 import kotlinx.coroutines.launch
-import java.util.Date
 
 private val ChatBg = Color(0xFF0D0D0D)
 private val SeparatorColor = Color(0xFF1A1C1C)
@@ -96,6 +114,10 @@ fun ChatScreen(
     val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val shouldDisablePlacementAnimation =
+        WindowInsets.ime.getBottom(density) > 0 &&
+                !listState.canScrollBackward &&
+                !listState.canScrollForward
     val bubbleBounds = remember { mutableStateMapOf<String, Rect>() }
 
     var chatAreaHeightPx by remember { mutableIntStateOf(0) }
@@ -109,21 +131,20 @@ fun ChatScreen(
         viewModel.dismissInspect()
     }
 
-    val messageCountState = remember { derivedStateOf { lazyPagingItems.itemCount } }
     LaunchedEffect(listState) {
-        var prevMessageCount = 0
+        var prevNewestLocalId: String? = null
         snapshotFlow {
-            val count = messageCountState.value
-            val idx = listState.firstVisibleItemIndex
-            val offset = listState.firstVisibleItemScrollOffset
-            val viewport =
-                listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
-            count to (idx == 0 && (viewport == 0 || offset <= viewport * 0.25f))
-        }.collect { (count, nearBottom) ->
-            if (count > prevMessageCount && nearBottom) {
+            val nearBottom = listState.isNearBottomChat()
+            val newestLocalId = lazyPagingItems.itemSnapshotList.items
+                .firstOrNull { it is ChatListItem.MessageItem }
+                ?.let { (it as ChatListItem.MessageItem).message.localId }
+            Triple(nearBottom, newestLocalId, listState.firstVisibleItemIndex)
+        }.collect { (nearBottom, newestLocalId, firstVisibleIndex) ->
+            // auto-scroll only when a truly newer newest-message arrives and user is near bottom.
+            if (nearBottom && firstVisibleIndex == 0 && prevNewestLocalId != null && newestLocalId != null && newestLocalId != prevNewestLocalId) {
                 listState.scrollToItem(0)
             }
-            prevMessageCount = count
+            prevNewestLocalId = newestLocalId
             viewModel.onIsAtBottomChanged(nearBottom)
         }
     }
@@ -131,7 +152,11 @@ fun ChatScreen(
     val visibleMessages by remember {
         derivedStateOf {
             listState.layoutInfo.visibleItemsInfo.mapNotNull { info ->
-                if (info.index < lazyPagingItems.itemCount) lazyPagingItems.peek(info.index) else null
+                if (info.index < lazyPagingItems.itemCount) {
+                    (lazyPagingItems.peek(info.index) as? ChatListItem.MessageItem)?.message
+                } else {
+                    null
+                }
             }
         }
     }
@@ -147,19 +172,14 @@ fun ChatScreen(
     ) {
         derivedStateOf {
             val target = inspectedMessage ?: return@derivedStateOf null
-            val index =
-                (0 until lazyPagingItems.itemCount).firstOrNull { lazyPagingItems.peek(it)?.localId == target.localId }
-                    ?: return@derivedStateOf null
-            val prevSenderSame = if (index + 1 < lazyPagingItems.itemCount) {
-                lazyPagingItems.peek(index + 1)?.senderId == target.senderId
-            } else {
-                false
-            }
-            val nextSenderSame = if (index - 1 >= 0) {
-                lazyPagingItems.peek(index - 1)?.senderId == target.senderId
-            } else {
-                false
-            }
+            val index = (0 until lazyPagingItems.itemCount).firstOrNull { idx ->
+                val item = lazyPagingItems.peek(idx)
+                item is ChatListItem.MessageItem && item.message.localId == target.localId
+            } ?: return@derivedStateOf null
+            val prevSenderSame =
+                lazyPagingItems.adjacentMessageSenderSame(index, direction = 1, target.senderId)
+            val nextSenderSame =
+                lazyPagingItems.adjacentMessageSenderSame(index, direction = -1, target.senderId)
             val position = bubbleChainPosition(prevSenderSame, nextSenderSame)
             val isMine = target.senderId == uiState.currentUserId
             InspectMeta(
@@ -179,6 +199,7 @@ fun ChatScreen(
             name = viewModel.partnerName,
             avatarUrl = viewModel.partnerAvatarUrl,
             isOnline = true,
+            isPartnerTyping = uiState.partner.isTyping,
             onNavigateBack = onNavigateBack,
             onMore = { /* TODO */ },
         )
@@ -194,8 +215,7 @@ fun ChatScreen(
                     chatAreaWidthPx = coords.size.width
                     chatAreaTopPx = coords.positionInRoot().y
                     chatAreaLeftPx = coords.positionInRoot().x
-                }
-        ) {
+                }) {
             val refreshError = lazyPagingItems.loadState.refresh as? LoadState.Error
             when {
                 uiState.messageList.isLoading -> {
@@ -249,73 +269,193 @@ fun ChatScreen(
                 }
 
                 else -> {
-                    LazyColumn(
-                        state = listState,
-                        reverseLayout = true,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .animateContentSize(),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        items(
-                            count = lazyPagingItems.itemCount,
-                            key = { index ->
-                                lazyPagingItems.peek(index)?.localId ?: "item_$index"
-                            },
-                        ) { index ->
-                            val message = lazyPagingItems[index] ?: return@items
-                            val isMine = message.senderId == uiState.currentUserId
-                            val isPending = message.status == MessageStatus.PENDING
-                            val isError = message.status == MessageStatus.FAILED
-
-                            val prevSenderSame =
-                                if (index + 1 < lazyPagingItems.itemCount) {
-                                    lazyPagingItems.peek(index + 1)?.senderId == message.senderId
-                                } else {
-                                    false
-                                }
-                            val nextSenderSame =
-                                if (index - 1 >= 0) {
-                                    lazyPagingItems.peek(index - 1)?.senderId == message.senderId
-                                } else {
-                                    false
-                                }
-                            val position =
-                                bubbleChainPosition(prevSenderSame, nextSenderSame)
-
-                            val partnerReadHorizonMs = uiState.partner.readHorizonMs
-                            val isPartnerSeen = isMine && isGreaterWithFallback(
-                                Date(partnerReadHorizonMs ?: 0L), Date(message.createdAt), false
+                    /** True while user scrolls toward newest (down); reset at bottom or when scrolling back into history. */
+                    var scrollDownTowardLatest by remember { mutableStateOf(false) }
+                    var prevScrollDepth by remember { mutableStateOf<Long?>(null) }
+                    LaunchedEffect(listState) {
+                        snapshotFlow {
+                            Triple(
+                                listState.isNearBottomChat(),
+                                listState.firstVisibleItemIndex,
+                                listState.firstVisibleItemScrollOffset,
                             )
-
-                            MessageBubble(
-                                message = message,
-                                isMine = isMine,
-                                isPending = isPending,
-                                isError = isError,
-                                showSeenTick = isPartnerSeen,
-                                position = position,
-                                onClick = viewModel::onMessageLongPress,
-                                onBoundsChanged = { key, rect -> bubbleBounds[key] = rect },
-                            )
-                        }
-
-                        if (lazyPagingItems.loadState.append is LoadState.Loading) {
-                            item(key = "loading_more") {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(8.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        color = Color.White,
-                                        strokeWidth = 2.dp,
-                                    )
+                        }.collect { (nearBottom, idx, off) ->
+                            val depth = idx.toLong() * 1_000_000L + off
+                            if (nearBottom) {
+                                scrollDownTowardLatest = false
+                                prevScrollDepth = depth
+                                return@collect
+                            }
+                            val prev = prevScrollDepth
+                            if (prev != null) {
+                                val delta = depth - prev
+                                when {
+                                    delta < 0 -> scrollDownTowardLatest = true
+                                    delta > 0 -> scrollDownTowardLatest = false
                                 }
                             }
+                            prevScrollDepth = depth
+                        }
+                    }
+                    val showScrollDownFab by remember {
+                        derivedStateOf {
+                            if (listState.isNearBottomChat()) return@derivedStateOf false
+                            val unread = uiState.readTracking.incomingUnread.count
+                            unread > 0 || scrollDownTowardLatest
+                        }
+                    }
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state = listState,
+                            reverseLayout = true,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            items(
+                                count = lazyPagingItems.itemCount,
+                                key = { index ->
+                                    when (val item = lazyPagingItems.peek(index)) {
+                                        is ChatListItem.MessageItem -> item.message.localId
+                                        is ChatListItem.DateSeparator -> "separator_${item.dateMillis}"
+                                        null -> "placeholder_$index"
+                                    }
+                                },
+                            ) { index ->
+                                when (val item = lazyPagingItems[index]) {
+                                    is ChatListItem.MessageItem -> {
+                                        val message = item.message
+                                        val isMine = message.senderId == uiState.currentUserId
+                                        val isPending = message.status == MessageStatus.PENDING
+                                        val isError = message.status == MessageStatus.FAILED
+
+                                        val prevSenderSame =
+                                            lazyPagingItems.adjacentMessageSenderSame(
+                                                index = index,
+                                                direction = 1,
+                                                senderId = message.senderId,
+                                            )
+                                        val nextSenderSame =
+                                            lazyPagingItems.adjacentMessageSenderSame(
+                                                index = index,
+                                                direction = -1,
+                                                senderId = message.senderId,
+                                            )
+                                        val position =
+                                            bubbleChainPosition(prevSenderSame, nextSenderSame)
+
+                                        val partnerReadHorizon = uiState.partner.readHorizon
+                                        val isPartnerSeen = isMine && isGreaterWithFallback(
+                                            partnerReadHorizon, message.createdAt, false
+                                        )
+
+                                        var appeared by remember(message.localId) {
+                                            mutableStateOf(
+                                                false
+                                            )
+                                        }
+                                        val isFreshItem = !appeared
+
+                                        val scale by animateFloatAsState(
+                                            targetValue = if (appeared) 1f else 0.9f,
+                                            animationSpec = tween(
+                                                if (isFreshItem) MotionTokens.Slow else MotionTokens.Fast,
+                                                easing = FastOutSlowInEasing
+                                            ),
+                                            label = "bubble_scale",
+                                        )
+                                        val alpha by animateFloatAsState(
+                                            targetValue = if (appeared) 1f else 0f,
+                                            animationSpec = tween(
+                                                if (isFreshItem) MotionTokens.Emphasized else MotionTokens.Fast,
+                                                easing = FastOutSlowInEasing
+                                            ),
+                                            label = "bubble_alpha",
+                                        )
+
+                                        SideEffect { appeared = true }
+
+                                        val bubbleModifier = if (shouldDisablePlacementAnimation) {
+                                            Modifier
+                                        } else {
+                                            Modifier.animateItem(
+                                                fadeInSpec = null,
+                                                placementSpec = tween(
+                                                    MotionTokens.Slow,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                                fadeOutSpec = tween(
+                                                    MotionTokens.Emphasized,
+                                                    easing = FastOutSlowInEasing
+                                                ),
+                                            )
+                                        }
+
+                                        MessageBubble(
+                                            modifier = bubbleModifier
+                                                .graphicsLayer {
+                                                    this.alpha = alpha
+                                                    this.scaleX = scale
+                                                    this.scaleY = scale
+                                                    transformOrigin = if (isMine) TransformOrigin(
+                                                        1f, 1f
+                                                    ) else TransformOrigin(0f, 1f)
+                                                },
+                                            message = message,
+                                            isMine = isMine,
+                                            isPending = isPending,
+                                            isError = isError,
+                                            showSeenTick = isPartnerSeen,
+                                            position = position,
+                                            onClick = viewModel::onMessageLongPress,
+                                            onReactionDockClick = viewModel::onMessageReactionDockClick,
+                                            onBoundsChanged = { key, rect ->
+                                                bubbleBounds[key] = rect
+                                            },
+                                        )
+                                    }
+
+                                    is ChatListItem.DateSeparator -> DateSeparatorItem(item.dateMillis)
+
+                                    null -> MessageBubblePlaceholder()
+                                }
+                            }
+
+                            if (lazyPagingItems.loadState.append is LoadState.Loading && listState.firstVisibleItemIndex > 0) {
+                                item(key = "loading_more") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(8.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            color = Color.White,
+                                            strokeWidth = 2.dp,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = showScrollDownFab,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 12.dp, bottom = 8.dp),
+                            enter = fadeIn(animationSpec = tween(MotionTokens.Normal)),
+                            exit = fadeOut(animationSpec = tween(MotionTokens.Fast)),
+                        ) {
+                            ChatScrollToBottomFab(
+                                unreadCount = uiState.readTracking.incomingUnread.count,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        listState.animateScrollToItem(0)
+                                    }
+                                },
+                                scrollToBottomLabel = stringResource(R.string.chat_scroll_to_bottom_cd),
+                            )
                         }
                     }
                 }
@@ -374,7 +514,12 @@ fun ChatScreen(
                         maxHeight = layout.panelMaxHeightDp,
                         isFlipped = layout.flipPanelVertical,
                         recentEmojis = uiState.recentEmojis,
-                        onEmojiClick = viewModel::onRecentEmojiUsed,
+                        onEmojiClick = { emoji ->
+                            viewModel.reactToMessage(
+                                messageId = message.id,
+                                emoji = emoji,
+                            )
+                        },
                         onCopy = { copiedMessage ->
                             val messageText = copiedMessage.text?.trim().orEmpty()
                             if (messageText.isNotEmpty()) {
@@ -393,18 +538,6 @@ fun ChatScreen(
             }
         }
 
-        AnimatedVisibility(
-            visible = uiState.partner.isTyping,
-            enter = fadeIn(),
-            exit = ExitTransition.None,
-        ) {
-            Row(
-                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 4.dp),
-            ) {
-                TypingIndicator()
-            }
-        }
-
         ChatInputBar(
             value = uiState.draftMessage.orEmpty(),
             onValueChange = viewModel::onChangeDraftMessage,
@@ -414,6 +547,81 @@ fun ChatScreen(
             },
             onAttach = { /* TODO */ },
         )
+    }
+
+    if (uiState.messageReactionsSheet.isVisible) {
+        MessageReactionsBottomSheet(
+            reactions = uiState.messageReactionsSheet.reactions,
+            isLoading = uiState.messageReactionsSheet.isLoading,
+            error = uiState.messageReactionsSheet.error,
+            currentUserId = uiState.currentUserId,
+            onDismiss = viewModel::dismissMessageReactionsSheet,
+            onMyReactionClick = viewModel::onMyMessageReactionClick,
+        )
+    }
+}
+
+private fun LazyPagingItems<ChatListItem>.adjacentMessageSenderSame(
+    index: Int,
+    direction: Int,
+    senderId: String,
+): Boolean {
+    var cursor = index + direction
+    while (cursor in 0 until itemCount) {
+        when (val item = peek(cursor)) {
+            is ChatListItem.MessageItem -> return item.message.senderId == senderId
+            is ChatListItem.DateSeparator -> cursor += direction
+            null -> return false
+        }
+    }
+    return false
+}
+
+private fun LazyListState.isNearBottomChat(): Boolean {
+    val idx = firstVisibleItemIndex
+    val offset = firstVisibleItemScrollOffset
+    val viewport = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+    return idx == 0 && (viewport == 0 || offset <= viewport * 0.3f)
+}
+
+@Composable
+private fun ChatScrollToBottomFab(
+    unreadCount: Int,
+    onClick: () -> Unit,
+    scrollToBottomLabel: String,
+) {
+    Box(modifier = Modifier.wrapContentSize()) {
+        FloatingActionButton(
+            onClick = onClick,
+            modifier = Modifier.size(44.dp),
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 8.dp,
+            ),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.KeyboardArrowDown,
+                contentDescription = scrollToBottomLabel,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        if (unreadCount > 0) {
+            CappedCountBadge(
+                count = unreadCount,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = (-12).dp),
+                backgroundColor = MaterialTheme.colorScheme.surfaceTint,
+                contentColor = Color.Black,
+                shape = CircleShape,
+                typography = Typography.labelSmall,
+                contentPadding = PaddingValues(horizontal = 5.dp, vertical = 2.dp),
+                minSize = 20.dp,
+            )
+        }
     }
 }
 

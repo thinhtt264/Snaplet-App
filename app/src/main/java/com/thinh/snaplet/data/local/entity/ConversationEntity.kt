@@ -3,6 +3,7 @@ package com.thinh.snaplet.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.thinh.snaplet.ui.screens.conversation_list.ConversationUiModel
+import java.util.Date
 
 @Entity(tableName = "conversations")
 data class ConversationEntity(
@@ -15,17 +16,17 @@ data class ConversationEntity(
     val lastMessageType: String?,
     val isLastMessageDeleted: Boolean,
     val lastMessageSenderId: String?,
-    val lastMessageAt: Long?,
-    val myLastSeenAt: Long?,
-    val partnerLastSeenAt: Long?,
-    val updatedAt: Long,
+    val lastMessageAt: Date?,
+    val myLastSeenAt: Date?,
+    val partnerLastSeenAt: Date?,
+    val updatedAt: Date,
 )
 
 data class ConversationUpdatedAtProjection(
     val id: String,
-    val updatedAt: Long,
-    val myLastSeenAt: Long?,
-    val partnerLastSeenAt: Long?,
+    val updatedAt: Date,
+    val myLastSeenAt: Date?,
+    val partnerLastSeenAt: Date?,
 )
 
 data class ConversationLastMessageStatusProjection(
@@ -37,10 +38,12 @@ fun ConversationEntity.toUiModel(
     myUserId: String?,
     lastMessageStatus: String? = null,
 ): ConversationUiModel {
-    val hasUnread = lastMessageSenderId != myUserId &&
-            (lastMessageAt ?: 0L) > (myLastSeenAt ?: 0L)
+    val lastMessageMs = lastMessageAt?.time ?: 0L
+    val myLastSeenMs = myLastSeenAt?.time ?: 0L
+    val partnerLastSeenMs = partnerLastSeenAt?.time ?: 0L
+    val hasUnread = lastMessageSenderId != myUserId && lastMessageMs > myLastSeenMs
     val isLastMessageMine = lastMessageSenderId == myUserId
-    val partnerHasSeen = (partnerLastSeenAt ?: 0L) >= (lastMessageAt ?: 1L)
+    val partnerHasSeen = partnerLastSeenMs >= (lastMessageAt?.time ?: 1L)
     return ConversationUiModel(
         id = id,
         participantName = participantName,

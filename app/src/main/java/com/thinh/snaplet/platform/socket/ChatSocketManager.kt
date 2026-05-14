@@ -29,6 +29,7 @@ private val CHAT_SOCKET_EVENTS = listOf(
     SocketEvent.CHAT_TYPING_START,
     SocketEvent.CHAT_TYPING_STOP,
     SocketEvent.CHAT_MESSAGE_READ,
+    SocketEvent.CHAT_MESSAGE_REACTION_UPDATED,
 )
 
 @Singleton

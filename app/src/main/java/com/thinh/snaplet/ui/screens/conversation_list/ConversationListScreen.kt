@@ -1,5 +1,7 @@
 package com.thinh.snaplet.ui.screens.conversation_list
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,6 +69,7 @@ import com.thinh.snaplet.ui.components.IconDecoration
 import com.thinh.snaplet.ui.components.IconSpec
 import com.thinh.snaplet.ui.components.PrimaryButton
 import com.thinh.snaplet.ui.screens.chat.components.MessageStatusIcon
+import com.thinh.snaplet.ui.theme.MotionTokens
 import com.thinh.snaplet.ui.theme.Typography
 import com.thinh.snaplet.utils.toLocalTimeAgo
 import pressScaleClickable
@@ -304,15 +307,26 @@ private fun ConversationContent(
                     contentPadding = PaddingValues(vertical = 8.dp),
                 ) {
                     items(displayList, key = { it.id }) { item ->
-                        ConversationCard(
-                            conversation = item,
-                            onClick = { onConversationClick(item) },
-                        )
-                        HorizontalDivider(
-                            color = Color(0xFF161818),
-                            thickness = 1.dp,
-                            modifier = Modifier.padding(start = 76.dp),
-                        )
+                        Column(
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = null,
+                                fadeOutSpec = null,
+                                placementSpec = tween(
+                                    durationMillis = MotionTokens.Slow,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                            ),
+                        ) {
+                            ConversationCard(
+                                conversation = item,
+                                onClick = { onConversationClick(item) },
+                            )
+                            HorizontalDivider(
+                                color = Color(0xFF161818),
+                                thickness = 1.dp,
+                                modifier = Modifier.padding(start = 76.dp),
+                            )
+                        }
                     }
 
                     if (uiState.canLoadMore) {
@@ -448,10 +462,10 @@ private fun lastMessagePreview(conversation: ConversationUiModel): String? {
 }
 
 @Composable
-private fun formatConversationTime(time: Long): String {
-    val diff = kotlin.math.abs(System.currentTimeMillis() - time)
+private fun formatConversationTime(time: Date): String {
+    val diff = kotlin.math.abs(System.currentTimeMillis() - time.time)
     if (diff < 60_000L) return stringResource(R.string.conversation_time_now)
-    return Date(time).toLocalTimeAgo()
+    return time.toLocalTimeAgo()
 }
 
 // ─── New message bottom sheet ─────────────────────────────────────────────────

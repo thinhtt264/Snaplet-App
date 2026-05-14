@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.thinh.snaplet.R
+import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.data.repository.post.PostRepository
 import com.thinh.snaplet.data.repository.quickchat.QuickChatEmojiRepository
 import com.thinh.snaplet.data.repository.UserRepository
@@ -12,6 +13,7 @@ import com.thinh.snaplet.domain.model.FloatDirection
 import com.thinh.snaplet.domain.post.MapPostReactionUsersUseCase
 import com.thinh.snaplet.navigation.SpotlightPost
 import com.thinh.snaplet.platform.share.ShareManager
+import com.thinh.snaplet.platform.widget.WidgetUpdateManager
 import com.thinh.snaplet.ui.components.EmojiFloatController
 import com.thinh.snaplet.ui.screens.home.PostReactionsUiState
 import com.thinh.snaplet.utils.Logger
@@ -26,14 +28,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Date
 import javax.inject.Inject
 
 @HiltViewModel
 class SpotlightPostViewModel @Inject constructor(
     private val postRepository: PostRepository,
+    private val chatRepository: ChatRepository,
     private val quickChatEmojiRepository: QuickChatEmojiRepository,
     private val userRepository: UserRepository,
     private val shareManager: ShareManager,
+    private val widgetUpdateManager: WidgetUpdateManager,
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -85,6 +90,7 @@ class SpotlightPostViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(isLoading = false, post = post, status = null)
                     }
+                    markPostSeen(post.createdAt)
                     if (post.isOwnPost) {
                         loadPostReactions(postId = post.id, isOwnerViewed = post.isOwnerViewedPost)
                     } else {
@@ -102,6 +108,14 @@ class SpotlightPostViewModel @Inject constructor(
                     }
                 },
             )
+        }
+    }
+
+    private fun markPostSeen(postCreatedAt: Date) {
+        viewModelScope.launch {
+            postRepository.markPostsSeen(postCreatedAt).onSuccess {
+                widgetUpdateManager.scheduleImmediateUpdate()
+            }
         }
     }
 
@@ -132,6 +146,29 @@ class SpotlightPostViewModel @Inject constructor(
     }
 
     private var reactToPostJob: Job? = null
+
+    fun sendQuickChatFromPost(text: String) {
+        val post = _uiState.value.post ?: return
+        if (post.isOwnPost) return
+        val media = post.media.firstOrNull() ?: return
+
+        emojiFloatController.emit("\uD83D\uDCAC")
+
+        viewModelScope.launch {
+            val senderId = userRepository.getCurrentUserProfile()?.id ?: return@launch
+            chatRepository.sendFirstMessage(
+                recipientId = post.userId,
+                senderId = senderId,
+                text = text,
+                mediaKey = media.id,
+                mimeType = media.type,
+                width = media.width,
+                height = media.height,
+            ).onFailure { error ->
+                Logger.e("Failed to send quick chat from spotlight post: ${error.message}")
+            }
+        }
+    }
 
     fun onEmojiReaction(emoji: String) {
         emojiFloatController.emit(emoji)

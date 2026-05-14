@@ -1,15 +1,12 @@
 package com.thinh.snaplet.data.datasource.remote
 
 import com.thinh.snaplet.data.model.BaseResponse
-import com.thinh.snaplet.data.model.PaginatedResponse
-import com.thinh.snaplet.data.model.chat.Conversation
-import com.thinh.snaplet.data.model.chat.Message
-import com.thinh.snaplet.data.model.chat.SendMessageRequest
 import com.thinh.snaplet.data.model.CompleteOnboardRequest
 import com.thinh.snaplet.data.model.EmailAvailabilityData
 import com.thinh.snaplet.data.model.LoginRequest
 import com.thinh.snaplet.data.model.LoginResponse
 import com.thinh.snaplet.data.model.LoginWithGoogleRequest
+import com.thinh.snaplet.data.model.PaginatedResponse
 import com.thinh.snaplet.data.model.RefreshTokenRequest
 import com.thinh.snaplet.data.model.RegisterRequest
 import com.thinh.snaplet.data.model.Relationship
@@ -18,6 +15,13 @@ import com.thinh.snaplet.data.model.RelationshipWithUserDto
 import com.thinh.snaplet.data.model.TokenResponse
 import com.thinh.snaplet.data.model.UpdateRelationshipRequest
 import com.thinh.snaplet.data.model.UsernameAvailabilityData
+import com.thinh.snaplet.data.model.chat.Conversation
+import com.thinh.snaplet.data.model.chat.ConversationLookupResult
+import com.thinh.snaplet.data.model.chat.Message
+import com.thinh.snaplet.data.model.chat.MessageReaction
+import com.thinh.snaplet.data.model.chat.MessageReactionWithUserInfo
+import com.thinh.snaplet.data.model.chat.ReactToMessageRequest
+import com.thinh.snaplet.data.model.chat.SendMessageRequest
 import com.thinh.snaplet.data.model.media.ConfirmUploadData
 import com.thinh.snaplet.data.model.media.MediaConfirmUploadRequest
 import com.thinh.snaplet.data.model.media.RequestUploadRequest
@@ -237,6 +241,11 @@ interface ApiService {
         @Path("conversationId") conversationId: String
     ): Response<BaseResponse<Conversation>>
 
+    @GET("conversations/lookup/id")
+    suspend fun lookupConversationId(
+        @Query("targetUserId") targetUserId: String,
+    ): Response<BaseResponse<ConversationLookupResult>>
+
     @PATCH("conversations/{conversationId}/messages/{messageId}/seen")
     suspend fun markMessageSeen(
         @Path("conversationId") conversationId: String,
@@ -250,4 +259,14 @@ interface ApiService {
         @Query("cursor") cursor: String? = null
     ): Response<BaseResponse<PaginatedResponse<Message>>>
 
+    @POST("messages/{messageId}/reactions")
+    suspend fun reactToMessage(
+        @Path("messageId") messageId: String,
+        @Body body: ReactToMessageRequest,
+    ): Response<BaseResponse<List<MessageReaction>>>
+
+    @GET("messages/{messageId}/reactions")
+    suspend fun getMessageReactions(
+        @Path("messageId") messageId: String,
+    ): Response<BaseResponse<List<MessageReactionWithUserInfo>>>
 }

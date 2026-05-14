@@ -2,6 +2,7 @@ package com.thinh.snaplet.ui.screens.conversation_list
 
 import com.thinh.snaplet.data.model.RelationshipWithUser
 import com.thinh.snaplet.data.model.user.UserProfile
+import java.util.Date
 
 data class ConversationUiModel(
     val id: String,
@@ -10,9 +11,9 @@ data class ConversationUiModel(
     val lastMessageText: String?,
     val lastMessageType: String?,
     val isLastMessageDeleted: Boolean,
-    val lastMessageAt: Long?,
-    val myLastSeenAt: Long?,
-    val partnerLastSeenAt: Long?,
+    val lastMessageAt: Date?,
+    val myLastSeenAt: Date?,
+    val partnerLastSeenAt: Date?,
     val lastMessageStatus: String?,
     val hasUnread: Boolean,
     val isLastMessageMine: Boolean,

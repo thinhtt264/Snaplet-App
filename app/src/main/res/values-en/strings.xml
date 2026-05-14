@@ -126,6 +126,7 @@
         <item quantity="other">%d activities</item>
     </plurals>
     <string name="reactions_sheet_title">Reactions</string>
+    <string name="chat_reaction_unreact_hint">Tap to remove reaction</string>
 
     <!-- My Profile -->
     <string name="profile_back">Back</string>
@@ -191,10 +192,16 @@
     <string name="conversation_search_hint">Search…</string>
     <string name="conversation_time_now">Now</string>
     <string name="conversation_image_load_failed">Failed to load image</string>
+    <string name="chat_media_source_deleted">Status has been deleted</string>
     <string name="chat_input_placeholder">Message…</string>
     <string name="chat_message_action_reply">Reply</string>
     <string name="chat_message_action_copy">Copy</string>
     <string name="chat_message_action_recall">Recall</string>
+    <string name="chat_scroll_to_bottom_cd">Scroll to latest messages</string>
+    <string name="chat_status_online">Active</string>
+    <string name="chat_status_offline">Inactive</string>
+    <string name="chat_status_typing">Typing</string>
+    <string name="chat_partner_typing_cd">Typing a message</string>
     <string name="new_message_title">New message</string>
     <string name="new_message_search_hint">Search by name or @username…</string>
     <string name="new_message_friends_empty">No friends yet</string>

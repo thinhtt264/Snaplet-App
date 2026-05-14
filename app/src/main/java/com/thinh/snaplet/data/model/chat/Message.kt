@@ -13,6 +13,11 @@ enum class MessageType {
     GIF,
 }
 
+enum class MessageMediaStatus {
+    AVAILABLE,
+    SOURCE_DELETED,
+}
+
 data class MessageMedia(
     @SerializedName("urls")
     val urls: ImageSizes?,
@@ -21,7 +26,9 @@ data class MessageMedia(
     @SerializedName("width")
     val width: Int = 0,
     @SerializedName("height")
-    val height: Int = 0
+    val height: Int = 0,
+    @SerializedName("status")
+    val status: MessageMediaStatus = MessageMediaStatus.AVAILABLE,
 )
 
 
@@ -48,6 +55,8 @@ data class Message(
     val pinnedAt: Date?,
     @SerializedName("createdAt")
     val createdAt: Date,
+    @SerializedName("reactions")
+    val reactions: List<MessageReaction> = emptyList(),
     // Client-side status — not from server JSON (null for server-sourced messages)
     val status: String? = null,
 ) {
@@ -115,11 +124,13 @@ fun Message.toEntity(): MessageEntity = MessageEntity(
     mediaType = media?.mimeType,
     mediaWidth = media?.width ?: 0,
     mediaHeight = media?.height ?: 0,
+    mediaStatus = media?.status ?: MessageMediaStatus.AVAILABLE,
     status = MessageStatus.SENT,
     isDeleted = isDeleted,
-    createdAt = createdAt.time,
-    serverCreatedAt = createdAt.time,
+    createdAt = createdAt,
+    serverCreatedAt = createdAt,
     localId = clientUuid,
+    reactions = reactions,
 )
 
 @Keep

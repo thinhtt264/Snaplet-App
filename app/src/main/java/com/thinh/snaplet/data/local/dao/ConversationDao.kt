@@ -7,6 +7,7 @@ import com.thinh.snaplet.data.local.entity.ConversationEntity
 import com.thinh.snaplet.data.local.entity.ConversationLastMessageStatusProjection
 import com.thinh.snaplet.data.local.entity.ConversationUpdatedAtProjection
 import kotlinx.coroutines.flow.Flow
+import java.util.Date
 
 @Dao
 interface ConversationDao {
@@ -46,7 +47,7 @@ interface ConversationDao {
         WHERE id = :id
         """
     )
-    suspend fun updateMyLastSeenAt(id: String, seenAt: Long)
+    suspend fun updateMyLastSeenAt(id: String, seenAt: Date)
 
     // Backend có thể bắn read receipts cho cả room.
     // `participantId` trong conversations đang lưu id của partner, vì vậy:
@@ -75,7 +76,7 @@ interface ConversationDao {
         WHERE id = :id
         """
     )
-    suspend fun updatePartnerLastSeenAt(id: String, readerId: String, seenAt: Long)
+    suspend fun updatePartnerLastSeenAt(id: String, readerId: String, seenAt: Date)
 
     @Query("DELETE FROM conversations WHERE id = :id")
     suspend fun deleteById(id: String)
@@ -98,7 +99,7 @@ interface ConversationDao {
     suspend fun updateLastMessage(
         convId: String,
         lastMessageId: String?,
-        lastMessageAt: Long,
+        lastMessageAt: Date,
         lastMessageSenderId: String,
         lastMessageText: String?,
         lastMessageType: String?,

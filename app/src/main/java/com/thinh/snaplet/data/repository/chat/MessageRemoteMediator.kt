@@ -50,7 +50,7 @@ class MessageRemoteMediator(
             val nextCursor = body.pagination.nextCursor
 
             db.withTransaction {
-                db.messageDao().upsertAll(body.data.map { it.toEntity() })
+                db.messageDao().upsertAllByLocalId(body.data.map { it.toEntity() })
                 db.messageRemoteKeyDao().upsert(
                     MessageRemoteKeyEntity(
                         conversationId = convId,

@@ -25,7 +25,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "snaplet.db",
         )
-            .fallbackToDestructiveMigration(false)
+            .fallbackToDestructiveMigration(true)
             .build()
     }
 
