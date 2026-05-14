@@ -212,4 +212,11 @@
     <string name="new_message_friends_empty_subtitle">Kết bạn với mọi người để bắt đầu nhắn tin</string>
     <string name="new_message_find_friends">Tìm kiếm bạn bè</string>
     <string name="new_message_friends_load_failed">Không tải được danh sách bạn bè</string>
+
+    <!-- Push notifications (chat) -->
+    <string name="notification_action_open_chat">Mở chat</string>
+    <string name="chat_notification_channel_description">Tin nhắn và phản ứng mới</string>
+    <string name="chat_notification_photo_only">📷 Ảnh</string>
+    <string name="chat_notification_photo_with_caption">📷 Ảnh • %1$s</string>
+    <string name="chat_notification_message_reaction">Đã thả %1$s cho tin nhắn của bạn</string>
 </resources>

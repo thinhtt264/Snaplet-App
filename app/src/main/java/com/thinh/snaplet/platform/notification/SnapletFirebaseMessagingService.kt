@@ -62,6 +62,44 @@ class SnapletFirebaseMessagingService : FirebaseMessagingService() {
                     widgetUpdateManager.scheduleImmediateUpdate(requireGlanceIds = true)
                 }
 
+                PushNotificationType.NEW_CHAT_MESSAGE -> {
+                    val conversationId =
+                        data[NotificationHelper.KEY_CONVERSATION_ID] ?: return@launch
+                    val messageId = data[NotificationHelper.KEY_MESSAGE_ID] ?: return@launch
+                    val senderName = data[NotificationHelper.KEY_SENDER_NAME] ?: return@launch
+                    val senderAvatarUrl = data[NotificationHelper.KEY_SENDER_AVATAR_URL]
+                    val text = data[NotificationHelper.KEY_TEXT]
+                    val hasImage = data[NotificationHelper.KEY_HAS_IMAGE] == "true"
+
+                    notificationHelper.showChatMessageNotification(
+                        conversationId = conversationId,
+                        messageId = messageId,
+                        senderName = senderName,
+                        senderAvatarUrl = senderAvatarUrl,
+                        text = text,
+                        hasImage = hasImage,
+                    )
+                    ChatSyncWorker.enqueue(this@SnapletFirebaseMessagingService, conversationId)
+                }
+
+                PushNotificationType.NEW_MESSAGE_REACTION -> {
+                    val conversationId =
+                        data[NotificationHelper.KEY_CONVERSATION_ID] ?: return@launch
+                    val messageId = data[NotificationHelper.KEY_MESSAGE_ID] ?: return@launch
+                    val reactorName = data[NotificationHelper.KEY_REACTOR_NAME] ?: return@launch
+                    val reactorAvatarUrl = data[NotificationHelper.KEY_REACTOR_AVATAR_URL]
+                    val emoji = data[NotificationHelper.KEY_EMOJI] ?: return@launch
+
+                    notificationHelper.showMessageReactionNotification(
+                        conversationId = conversationId,
+                        messageId = messageId,
+                        reactorName = reactorName,
+                        reactorAvatarUrl = reactorAvatarUrl,
+                        emoji = emoji,
+                    )
+                    ChatSyncWorker.enqueue(this@SnapletFirebaseMessagingService, conversationId)
+                }
+
                 else -> {
                     Logger.d("FCM type ignored in service: %s", pushType.name)
                 }

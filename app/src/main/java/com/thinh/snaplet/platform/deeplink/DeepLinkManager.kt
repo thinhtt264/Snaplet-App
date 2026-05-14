@@ -16,6 +16,7 @@ class DeepLinkManager @Inject constructor() {
     companion object {
         private const val APP_SCHEME = "snaplet"
         private const val APP_HOST = "app"
+        private const val CHAT_HOST = "chat"
         private const val WEB_SCHEME = "https"
         private const val WEB_HOST = "snaplet-cam.netlify.app"
         private const val SPOTLIGHT_PATH = "spotlight"
@@ -39,11 +40,20 @@ class DeepLinkManager @Inject constructor() {
 
     private suspend fun handleUri(uri: Uri?): Boolean {
         if (uri == null) return false
-        val isAppScheme = uri.scheme == APP_SCHEME && uri.host == APP_HOST
+        val isAppScheme = uri.scheme == APP_SCHEME &&
+            (uri.host == APP_HOST || uri.host == CHAT_HOST)
         val isWebScheme = uri.scheme == WEB_SCHEME && uri.host == WEB_HOST
         if (!isAppScheme && !isWebScheme) return false
 
         Logger.d("🔗 DeepLink received: $uri")
+
+        if (uri.scheme == APP_SCHEME && uri.host == CHAT_HOST) {
+            val conversationId = uri.pathSegments.firstOrNull()?.takeIf { it.isNotBlank() }
+            if (!conversationId.isNullOrBlank()) {
+                _events.emit(DeepLinkEvent.OpenChat(conversationId = conversationId))
+                return true
+            }
+        }
 
         val userName = uri.getQueryParameter("userName")
         if (!userName.isNullOrBlank()) {

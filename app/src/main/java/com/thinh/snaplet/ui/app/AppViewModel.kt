@@ -10,6 +10,7 @@ import com.thinh.snaplet.navigation.AuthGraph
 import com.thinh.snaplet.navigation.HomeGraph
 import com.thinh.snaplet.platform.deeplink.DeepLinkEvent
 import com.thinh.snaplet.platform.deeplink.DeepLinkManager
+import com.thinh.snaplet.platform.notification.FcmTokenRegistrar
 import com.thinh.snaplet.platform.socket.SocketManager
 import com.thinh.snaplet.platform.widget.WidgetUpdateManager
 import com.thinh.snaplet.ui.overlay.ModalContent
@@ -39,6 +40,7 @@ class AppViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val socketManager: SocketManager,
     private val widgetUpdateManager: WidgetUpdateManager,
+    private val fcmTokenRegistrar: FcmTokenRegistrar,
 ) : ViewModel() {
 
     private val _uiState: MutableStateFlow<AppUiState> = MutableStateFlow(AppUiState())
@@ -59,6 +61,9 @@ class AppViewModel @Inject constructor(
 
     /** Pending post id from notification tap before auth completes. */
     private var pendingSpotlightPostId: String? = null
+
+    /** Pending chat open from notification / deep link before auth completes. */
+    private var pendingChatNavigation: Pair<String, String>? = null
 
     init {
         initializeApp()
@@ -130,6 +135,7 @@ class AppViewModel @Inject constructor(
             when (authState) {
                 is AuthState.Authenticated -> {
                     isAuthenticated.value = true
+                    fcmTokenRegistrar.syncCurrentTokenToBackend()
                     _uiEvent.emit(AppUiEvent.NavigateToHomeGraph)
                     pendingFriendRequestUserName?.let { userName ->
                         pendingFriendRequestUserName = null
@@ -141,11 +147,23 @@ class AppViewModel @Inject constructor(
                             _uiEvent.emit(AppUiEvent.NavigateToSpotlightPost(postId))
                         }
                     }
+                    pendingChatNavigation?.let { (conversationId, partnerName) ->
+                        pendingChatNavigation = null
+                        viewModelScope.launch {
+                            _uiEvent.emit(
+                                AppUiEvent.NavigateToChat(
+                                    conversationId = conversationId,
+                                    partnerName = partnerName,
+                                )
+                            )
+                        }
+                    }
                 }
 
                 is AuthState.Unauthenticated -> {
                     isAuthenticated.value = false
                     pendingSpotlightPostId = null
+                    pendingChatNavigation = null
                     _uiEvent.emit(AppUiEvent.NavigateToAuthGraph)
                 }
             }
@@ -163,6 +181,10 @@ class AppViewModel @Inject constructor(
                 when (event) {
                     is DeepLinkEvent.FriendRequest -> handleFriendRequestDeepLink(event.userName)
                     is DeepLinkEvent.OpenSpotlightPost -> handleOpenSpotlightPostDeepLink(event.postId)
+                    is DeepLinkEvent.OpenChat -> handleOpenChatDeepLink(
+                        conversationId = event.conversationId,
+                        partnerName = event.partnerName,
+                    )
                 }
             }
         }
@@ -174,6 +196,19 @@ class AppViewModel @Inject constructor(
             return
         }
         _uiEvent.emit(AppUiEvent.NavigateToSpotlightPost(postId))
+    }
+
+    private suspend fun handleOpenChatDeepLink(conversationId: String, partnerName: String) {
+        if (!authRepository.isAuthenticated()) {
+            pendingChatNavigation = conversationId to partnerName
+            return
+        }
+        _uiEvent.emit(
+            AppUiEvent.NavigateToChat(
+                conversationId = conversationId,
+                partnerName = partnerName,
+            )
+        )
     }
 
     private suspend fun handleFriendRequestDeepLink(userName: String) {

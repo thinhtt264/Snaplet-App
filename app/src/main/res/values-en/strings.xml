@@ -208,4 +208,11 @@
     <string name="new_message_friends_empty_subtitle">Add friends to start messaging</string>
     <string name="new_message_find_friends">Find friends</string>
     <string name="new_message_friends_load_failed">Failed to load friends</string>
+
+    <!-- Push notifications (chat) -->
+    <string name="notification_action_open_chat">Open chat</string>
+    <string name="chat_notification_channel_description">New messages and reactions</string>
+    <string name="chat_notification_photo_only">📷 Photo</string>
+    <string name="chat_notification_photo_with_caption">📷 Photo • %1$s</string>
+    <string name="chat_notification_message_reaction">Reacted %1$s to your message</string>
 </resources>

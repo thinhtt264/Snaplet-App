@@ -6,4 +6,9 @@ sealed interface AppUiEvent {
     object NavigateToHomeGraph : AppUiEvent
 
     data class NavigateToSpotlightPost(val postId: String) : AppUiEvent
+
+    data class NavigateToChat(
+        val conversationId: String,
+        val partnerName: String = "",
+    ) : AppUiEvent
 }

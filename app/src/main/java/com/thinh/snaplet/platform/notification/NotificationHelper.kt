@@ -29,7 +29,7 @@ class NotificationHelper @Inject constructor(
 ) {
 
     init {
-        createNotificationChannel()
+        createNotificationChannels()
     }
 
     suspend fun showReactionNotification(
@@ -67,16 +67,103 @@ class NotificationHelper @Inject constructor(
 
         val notification = notificationBuilder.build()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
+        if (!canPostNotifications()) return
 
         NotificationManagerCompat.from(context).notify(postId.hashCode(), notification)
+    }
+
+    suspend fun showChatMessageNotification(
+        conversationId: String,
+        @Suppress("UNUSED_PARAMETER") messageId: String,
+        senderName: String,
+        senderAvatarUrl: String?,
+        text: String?,
+        hasImage: Boolean,
+    ) {
+        if (!canPostNotifications()) return
+
+        val deepLinkUri = DeepLinkUtils.buildChatDeepLink(conversationId)
+        val tapIntent = buildChatMainActivityIntent(deepLinkUri, TYPE_CHAT_MESSAGE)
+        val expandIntent = buildChatMainActivityIntent(deepLinkUri, TYPE_CHAT_MESSAGE)
+
+        val tapPendingIntent = PendingIntent.getActivity(
+            context,
+            conversationId.hashCode(),
+            tapIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val expandPendingIntent = PendingIntent.getActivity(
+            context,
+            conversationId.hashCode() + OPEN_CHAT_ACTION_REQUEST_OFFSET,
+            expandIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val body = when {
+            hasImage && text.isNullOrBlank() ->
+                context.getString(R.string.chat_notification_photo_only)
+            hasImage ->
+                context.getString(R.string.chat_notification_photo_with_caption, text)
+            else -> text.orEmpty()
+        }
+
+        val notificationBuilder = NotificationCompat.Builder(context, CHAT_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher_round)
+            .setContentTitle(senderName)
+            .setContentText(body)
+            .setAutoCancel(true)
+            .setContentIntent(tapPendingIntent)
+            .addAction(
+                0,
+                context.getString(R.string.notification_action_open_chat),
+                expandPendingIntent,
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setGroup(CHAT_GROUP_PREFIX + conversationId)
+
+        val largeIconBitmap = loadAvatarBitmap(senderAvatarUrl) ?: loadLogoBitmap()
+        largeIconBitmap?.let(notificationBuilder::setLargeIcon)
+
+        NotificationManagerCompat.from(context)
+            .notify(conversationId.hashCode(), notificationBuilder.build())
+    }
+
+    suspend fun showMessageReactionNotification(
+        conversationId: String,
+        messageId: String,
+        reactorName: String,
+        reactorAvatarUrl: String?,
+        emoji: String,
+    ) {
+        if (!canPostNotifications()) return
+
+        val deepLinkUri = DeepLinkUtils.buildChatDeepLink(conversationId)
+        val tapIntent = buildChatMainActivityIntent(deepLinkUri, TYPE_MESSAGE_REACTION)
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            (conversationId + messageId).hashCode(),
+            tapIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val notificationBuilder = NotificationCompat.Builder(context, CHAT_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher_round)
+            .setContentTitle(reactorName)
+            .setContentText(
+                context.getString(R.string.chat_notification_message_reaction, emoji),
+            )
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setGroup(CHAT_GROUP_PREFIX + conversationId)
+
+        val largeIconBitmap = loadAvatarBitmap(reactorAvatarUrl) ?: loadLogoBitmap()
+        largeIconBitmap?.let(notificationBuilder::setLargeIcon)
+
+        NotificationManagerCompat.from(context).notify(
+            (conversationId + messageId).hashCode(),
+            notificationBuilder.build(),
+        )
     }
 
     /** Dismisses every notification posted by this app (e.g. when user opens the app). */
@@ -84,16 +171,47 @@ class NotificationHelper @Inject constructor(
         NotificationManagerCompat.from(context).cancelAll()
     }
 
-    private fun createNotificationChannel() {
-        val channel = android.app.NotificationChannel(
+    private fun buildChatMainActivityIntent(
+        deepLinkUri: android.net.Uri,
+        notificationType: String,
+    ): Intent =
+        Intent(Intent.ACTION_VIEW, deepLinkUri, context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_DEEP_LINK_URI, deepLinkUri.toString())
+            putExtra(EXTRA_NOTIFICATION_TYPE, notificationType)
+        }
+
+    private fun canPostNotifications(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return false
+        }
+        return true
+    }
+
+    private fun createNotificationChannels() {
+        val manager = context.getSystemService(android.app.NotificationManager::class.java)
+        val reactions = android.app.NotificationChannel(
             CHANNEL_ID,
             CHANNEL_NAME,
             android.app.NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
             description = "Notifications when someone reacts to your post"
         }
-        val manager = context.getSystemService(android.app.NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+        val chat = android.app.NotificationChannel(
+            CHAT_CHANNEL_ID,
+            CHAT_CHANNEL_NAME,
+            android.app.NotificationManager.IMPORTANCE_HIGH,
+        ).apply {
+            description = context.getString(R.string.chat_notification_channel_description)
+            enableVibration(true)
+        }
+        manager.createNotificationChannel(reactions)
+        manager.createNotificationChannel(chat)
     }
 
     private suspend fun loadAvatarBitmap(url: String?): Bitmap? {
@@ -133,5 +251,22 @@ class NotificationHelper @Inject constructor(
         const val EXTRA_DEEP_LINK_URI = "deepLinkUri"
         const val EXTRA_NOTIFICATION_TYPE = "notificationType"
         const val TYPE_POST_REACTION = "post_reaction"
+        const val TYPE_CHAT_MESSAGE = "chat_message"
+        const val TYPE_MESSAGE_REACTION = "message_reaction"
+
+        const val KEY_CONVERSATION_ID = "conversationId"
+        const val KEY_MESSAGE_ID = "messageId"
+        const val KEY_SENDER_NAME = "senderName"
+        const val KEY_SENDER_AVATAR_URL = "senderAvatarUrl"
+        const val KEY_TEXT = "text"
+        const val KEY_HAS_IMAGE = "hasImage"
+        const val KEY_REACTOR_NAME = "reactorName"
+        const val KEY_REACTOR_AVATAR_URL = "reactorAvatarUrl"
+        const val KEY_EMOJI = "emoji"
+
+        private const val CHAT_CHANNEL_ID = "chat_messages"
+        private const val CHAT_CHANNEL_NAME = "Messages"
+        private const val CHAT_GROUP_PREFIX = "chat_group_"
+        private const val OPEN_CHAT_ACTION_REQUEST_OFFSET = 31
     }
 }

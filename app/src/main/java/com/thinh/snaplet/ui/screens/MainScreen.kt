@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.thinh.snaplet.navigation.AuthGraph
+import com.thinh.snaplet.navigation.ChatConversation
 import com.thinh.snaplet.navigation.HomeGraph
 import com.thinh.snaplet.navigation.NavGraph
 import com.thinh.snaplet.navigation.SpotlightPost
@@ -54,6 +55,15 @@ fun MainScreen(
 
                     is AppUiEvent.NavigateToSpotlightPost -> {
                         navController.navigate(SpotlightPost(postId = event.postId))
+                    }
+
+                    is AppUiEvent.NavigateToChat -> {
+                        navController.navigate(
+                            ChatConversation(
+                                conversationId = event.conversationId,
+                                partnerName = event.partnerName,
+                            )
+                        )
                     }
                 }
             }
