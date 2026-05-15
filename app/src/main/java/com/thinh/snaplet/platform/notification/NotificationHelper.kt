@@ -131,7 +131,7 @@ class NotificationHelper @Inject constructor(
         // Load avatar first — needed for both ShortcutInfo and MessagingStyle person icon
         val avatarIcon = loadAvatarBitmap(senderAvatarUrl)
             ?.let { IconCompat.createWithBitmap(toCircularBitmap(it)) }
-            ?: IconCompat.createWithResource(context, R.mipmap.ic_launcher_round)
+            ?: IconCompat.createWithBitmap(createInitialBitmap(senderName))
 
         // Push conversation shortcut — Android uses its icon as the notification icon (like Messenger)
         val senderPerson = Person.Builder()
@@ -333,6 +333,27 @@ class NotificationHelper @Inject constructor(
         }
         manager.createNotificationChannel(reactions)
         manager.createNotificationChannel(chat)
+    }
+
+    private fun createInitialBitmap(name: String): Bitmap {
+        val size = 128
+        val output = createBitmap(size, size)
+        val canvas = Canvas(output)
+        val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.BLACK
+        }
+        canvas.drawCircle(size / 2f, size / 2f, size / 2f, bgPaint)
+        val initial = name.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.WHITE
+            textSize = size * 0.4f
+            textAlign = Paint.Align.CENTER
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+        val textBounds = android.graphics.Rect()
+        textPaint.getTextBounds(initial, 0, initial.length, textBounds)
+        canvas.drawText(initial, size / 2f, size / 2f - (textBounds.top + textBounds.bottom) / 2f, textPaint)
+        return output
     }
 
     private fun toCircularBitmap(src: Bitmap): Bitmap {

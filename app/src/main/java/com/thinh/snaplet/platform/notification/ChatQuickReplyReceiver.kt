@@ -11,6 +11,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
 import com.thinh.snaplet.R
 import com.thinh.snaplet.domain.chat.SendMessageUseCase
+import com.thinh.snaplet.utils.network.ApiResult
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -64,44 +65,49 @@ class ChatQuickReplyReceiver : BroadcastReceiver() {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         scope.launch {
             try {
-                withTimeout(QUICK_REPLY_SEND_TIMEOUT_MS) {
+                val result = withTimeout(QUICK_REPLY_SEND_TIMEOUT_MS) {
                     sendMessageUseCase(conversationId, replyText)
                 }
-                dismissQuickReplySending(context, nm, notificationId)
+                when (result) {
+                    is ApiResult.Success -> dismissQuickReplySending(context, nm, notificationId)
+                    is ApiResult.Failure -> showFailureNotification(
+                        context,
+                        nm,
+                        notificationId,
+                        conversationId
+                    )
+                }
             } catch (_: TimeoutCancellationException) {
                 dismissQuickReplySending(context, nm, notificationId)
             } catch (e: CancellationException) {
                 dismissQuickReplySending(context, nm, notificationId)
                 throw e
-            } catch (_: Exception) {
-                if (ActivityCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.POST_NOTIFICATIONS,
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    nm.notify(
-                        notificationId,
-                        NotificationCompat.Builder(
-                            context,
-                            NotificationHelper.CHAT_CHANNEL_ID,
-                        )
-                            .setSmallIcon(R.mipmap.ic_launcher_round)
-                            .setContentText(
-                                context.getString(R.string.notification_reply_failed),
-                            )
-                            .setContentIntent(
-                                notificationHelper.openChatContentPendingIntent(
-                                    conversationId,
-                                ),
-                            )
-                            .setAutoCancel(true)
-                            .build(),
-                    )
-                }
             } finally {
                 pendingResult.finish()
             }
         }
+    }
+
+    private fun showFailureNotification(
+        context: Context,
+        nm: NotificationManagerCompat,
+        notificationId: Int,
+        conversationId: String,
+    ) {
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) return
+        nm.notify(
+            notificationId,
+            NotificationCompat.Builder(context, NotificationHelper.CHAT_CHANNEL_ID)
+                .setSmallIcon(R.mipmap.ic_launcher_round)
+                .setContentText(context.getString(R.string.notification_reply_failed))
+                .setContentIntent(notificationHelper.openChatContentPendingIntent(conversationId))
+                .setAutoCancel(true)
+                .build(),
+        )
     }
 
     /**

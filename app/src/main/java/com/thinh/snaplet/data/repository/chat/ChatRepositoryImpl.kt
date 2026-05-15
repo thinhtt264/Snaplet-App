@@ -44,6 +44,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -492,7 +493,7 @@ class ChatRepositoryImpl @Inject constructor(
             text,
             MessageType.TEXT.name.lowercase()
         )
-        return executeSend(localId)
+        return withContext(NonCancellable) { executeSend(localId) }
     }
 
     override suspend fun sendMediaMessage(

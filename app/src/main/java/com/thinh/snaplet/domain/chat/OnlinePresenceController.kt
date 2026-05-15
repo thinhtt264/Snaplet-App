@@ -3,11 +3,10 @@ package com.thinh.snaplet.domain.chat
 import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.utils.network.ApiResult
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,7 +19,7 @@ class OnlinePresenceController @Inject constructor(
     private val _onlineUserIds = MutableStateFlow<Set<String>>(emptySet())
     val onlineUserIds: StateFlow<Set<String>> = _onlineUserIds.asStateFlow()
 
-    private var isObservingRealtime = false
+    private var realtimeJob: Job? = null
 
     fun refresh(scope: CoroutineScope) {
         scope.launch {
@@ -32,20 +31,19 @@ class OnlinePresenceController @Inject constructor(
     }
 
     fun startRealtimeUpdates(scope: CoroutineScope) {
-        if (isObservingRealtime) return
-        isObservingRealtime = true
-
-        chatRepository.observePartnerOnline()
-            .onEach { payload ->
-                _onlineUserIds.update { it + payload.userId }
+        if (realtimeJob?.isActive == true) return
+        realtimeJob = scope.launch {
+            launch {
+                chatRepository.observePartnerOnline().collect { payload ->
+                    _onlineUserIds.update { it + payload.userId }
+                }
             }
-            .launchIn(scope)
-
-        chatRepository.observePartnerOffline()
-            .onEach { payload ->
-                _onlineUserIds.update { it - payload.userId }
+            launch {
+                chatRepository.observePartnerOffline().collect { payload ->
+                    _onlineUserIds.update { it - payload.userId }
+                }
             }
-            .launchIn(scope)
+        }
     }
 
     fun clear() {
