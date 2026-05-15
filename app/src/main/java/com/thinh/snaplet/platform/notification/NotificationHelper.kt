@@ -6,6 +6,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapShader
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Shader
 import android.os.Build
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
@@ -13,7 +17,12 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
 import androidx.core.app.RemoteInput
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.drawable.IconCompat
 import androidx.core.graphics.drawable.toBitmap
+import androidx.core.graphics.scale
 import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
@@ -77,7 +86,11 @@ class NotificationHelper @Inject constructor(
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
-        loadAvatarBitmap(actorAvatarUrl)?.let(notificationBuilder::setLargeIcon)
+        loadAvatarBitmap(actorAvatarUrl)?.let { avatar ->
+            notificationBuilder
+                .setSmallIcon(IconCompat.createWithBitmap(avatar))
+                .setLargeIcon(avatar)
+        }
 
         val notification = notificationBuilder.build()
 
@@ -114,6 +127,29 @@ class NotificationHelper @Inject constructor(
             body = body,
         )
         val latest = merged.last()
+
+        // Load avatar first — needed for both ShortcutInfo and MessagingStyle person icon
+        val avatarIcon = loadAvatarBitmap(senderAvatarUrl)
+            ?.let { IconCompat.createWithBitmap(toCircularBitmap(it)) }
+            ?: IconCompat.createWithResource(context, R.mipmap.ic_launcher_round)
+
+        // Push conversation shortcut — Android uses its icon as the notification icon (like Messenger)
+        val senderPerson = Person.Builder()
+            .setName(senderName)
+            .setIcon(avatarIcon)
+            .setImportant(true)
+            .build()
+        val shortcutId = CONV_SHORTCUT_PREFIX + conversationId
+        val shortcut = ShortcutInfoCompat.Builder(context, shortcutId)
+            .setLongLived(true)
+            .setIntent(Intent(context, MainActivity::class.java).apply {
+                action = Intent.ACTION_DEFAULT
+            })
+            .setShortLabel(senderName)
+            .setIcon(avatarIcon)
+            .setPerson(senderPerson)
+            .build()
+        ShortcutManagerCompat.pushDynamicShortcut(context, shortcut)
 
         val deepLinkUri = DeepLinkUtils.buildChatDeepLink(conversationId)
         val tapIntent = buildChatMainActivityIntent(
@@ -166,12 +202,13 @@ class NotificationHelper @Inject constructor(
             Person.Builder().setName(context.getString(R.string.notification_me)).build()
         val messagingStyle = NotificationCompat.MessagingStyle(selfPerson)
         for (entry in merged) {
-            val senderPerson = Person.Builder().setName(entry.senderName).build()
-            messagingStyle.addMessage(entry.body, entry.timestamp, senderPerson)
+            val person = Person.Builder().setName(entry.senderName).setIcon(avatarIcon).build()
+            messagingStyle.addMessage(entry.body, entry.timestamp, person)
         }
 
         val notificationBuilder = NotificationCompat.Builder(context, CHAT_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_round)
+            .setShortcutId(shortcutId)
             .setContentTitle(latest.senderName)
             .setContentText(latest.body)
             .setStyle(messagingStyle)
@@ -185,8 +222,6 @@ class NotificationHelper @Inject constructor(
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setGroup(CHAT_GROUP_PREFIX + conversationId)
-
-        loadAvatarBitmap(senderAvatarUrl)?.let(notificationBuilder::setLargeIcon)
 
         NotificationManagerCompat.from(context)
             .notify(conversationId.hashCode(), notificationBuilder.build())
@@ -226,38 +261,13 @@ class NotificationHelper @Inject constructor(
         reactorAvatarUrl: String?,
         emoji: String,
     ) {
-        if (!canPostNotifications()) return
-
-        val deepLinkUri = DeepLinkUtils.buildChatDeepLink(conversationId)
-        val tapIntent = buildChatMainActivityIntent(
-            deepLinkUri = deepLinkUri,
-            notificationType = TYPE_MESSAGE_REACTION,
-            partnerName = reactorName,
-            partnerAvatarUrl = reactorAvatarUrl,
-        )
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            (conversationId + messageId).hashCode(),
-            tapIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-
-        val notificationBuilder = NotificationCompat.Builder(context, CHAT_CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher_round)
-            .setContentTitle(reactorName)
-            .setContentText(
-                context.getString(R.string.chat_notification_message_reaction, emoji),
-            )
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setGroup(CHAT_GROUP_PREFIX + conversationId)
-
-        loadAvatarBitmap(reactorAvatarUrl)?.let(notificationBuilder::setLargeIcon)
-
-        NotificationManagerCompat.from(context).notify(
-            (conversationId + messageId).hashCode(),
-            notificationBuilder.build(),
+        showChatMessageNotification(
+            conversationId = conversationId,
+            messageId = messageId,
+            senderName = reactorName,
+            senderAvatarUrl = reactorAvatarUrl,
+            text = context.getString(R.string.chat_notification_message_reaction, emoji),
+            hasImage = false,
         )
     }
 
@@ -325,6 +335,17 @@ class NotificationHelper @Inject constructor(
         manager.createNotificationChannel(chat)
     }
 
+    private fun toCircularBitmap(src: Bitmap): Bitmap {
+        val size = 128
+        val output = createBitmap(size, size)
+        val scaled = src.scale(size, size)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = BitmapShader(scaled, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        }
+        Canvas(output).drawCircle(size / 2f, size / 2f, size / 2f, paint)
+        return output
+    }
+
     private suspend fun loadAvatarBitmap(url: String?): Bitmap? {
         if (url.isNullOrBlank()) return null
 
@@ -353,13 +374,12 @@ class NotificationHelper @Inject constructor(
         const val EXTRA_POST_ID = "postId"
         const val EXTRA_DEEP_LINK_URI = "deepLinkUri"
         const val EXTRA_NOTIFICATION_TYPE = "notificationType"
-        /** Shown in [ChatConversation] header when opening chat from a notification tap. */
+
+        /** Shown in [com.thinh.snaplet.navigation.ChatConversation] header when opening chat from a notification tap. */
         const val EXTRA_CHAT_PARTNER_NAME = "chatPartnerName"
         const val EXTRA_CHAT_PARTNER_AVATAR_URL = "chatPartnerAvatarUrl"
         const val TYPE_POST_REACTION = "post_reaction"
         const val TYPE_CHAT_MESSAGE = "chat_message"
-        const val TYPE_MESSAGE_REACTION = "message_reaction"
-
         const val KEY_CONVERSATION_ID = "conversationId"
         const val KEY_MESSAGE_ID = "messageId"
         const val KEY_SENDER_NAME = "senderName"
@@ -379,5 +399,6 @@ class NotificationHelper @Inject constructor(
         private const val CHAT_NOTIF_MAX_MERGED_MESSAGES = 3
         private const val OPEN_CHAT_ACTION_REQUEST_OFFSET = 31
         private const val QUICK_REPLY_REQUEST_OFFSET = 73
+        private const val CONV_SHORTCUT_PREFIX = "conv_"
     }
 }
