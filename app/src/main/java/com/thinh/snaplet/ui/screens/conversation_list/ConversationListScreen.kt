@@ -377,6 +377,7 @@ private fun ConversationCard(
             avatarUrl = conversation.participantAvatarUrl,
             firstName = conversation.participantName,
             size = 48.dp,
+            isOnline = conversation.isPartnerOnline,
         )
 
         Spacer(Modifier.width(12.dp))

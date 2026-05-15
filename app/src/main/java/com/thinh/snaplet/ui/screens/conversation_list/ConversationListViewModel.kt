@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.data.local.entity.toUiModel
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.chat.ChatRepository
+import com.thinh.snaplet.domain.chat.OnlinePresenceController
 import com.thinh.snaplet.platform.network.ConnectivityObserver
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.onFailure
@@ -30,6 +31,7 @@ class ConversationListViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val userRepository: UserRepository,
     private val connectivityObserver: ConnectivityObserver,
+    private val onlinePresenceController: OnlinePresenceController,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ConversationListUiState())
@@ -40,7 +42,8 @@ class ConversationListViewModel @Inject constructor(
         userRepository.observeMyUserProfile().distinctUntilChanged(),
         chatRepository.observeConversations(),
         chatRepository.observeLastMessageStatuses(),
-    ) { state, profileUi, entities, lastMessageStatuses ->
+        onlinePresenceController.onlineUserIds,
+    ) { state, profileUi, entities, lastMessageStatuses, onlineUserIds ->
         val myUserId = profileUi?.id
         val lastStatusByConversationId = lastMessageStatuses.associate { it.conversationId to it.status }
         state.copy(
@@ -49,6 +52,7 @@ class ConversationListViewModel @Inject constructor(
                 entity.toUiModel(
                     myUserId = myUserId,
                     lastMessageStatus = lastStatusByConversationId[entity.id],
+                    isPartnerOnline = onlineUserIds.contains(entity.participantId),
                 )
             },
         )

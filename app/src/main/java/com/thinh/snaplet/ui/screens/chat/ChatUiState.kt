@@ -34,6 +34,7 @@ data class ReadTrackingState(
 
 data class ChatUiState(
     val currentUserId: String? = null,
+    val isPartnerOnline: Boolean = false,
     val draftMessage: String? = null,
     val messageList: MessageListState = MessageListState(),
     val partner: PartnerState = PartnerState(),

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.auth.AuthRepository
 import com.thinh.snaplet.data.repository.device.DeviceRepository
+import com.thinh.snaplet.domain.chat.OnlinePresenceController
 import com.thinh.snaplet.navigation.AuthGraph
 import com.thinh.snaplet.navigation.HomeGraph
 import com.thinh.snaplet.platform.deeplink.DeepLinkEvent
@@ -41,7 +42,10 @@ class AppViewModel @Inject constructor(
     private val socketManager: SocketManager,
     private val widgetUpdateManager: WidgetUpdateManager,
     private val fcmTokenRegistrar: FcmTokenRegistrar,
+    private val onlinePresenceController: OnlinePresenceController,
 ) : ViewModel() {
+
+    val onlineUserIds = onlinePresenceController.onlineUserIds
 
     private val _uiState: MutableStateFlow<AppUiState> = MutableStateFlow(AppUiState())
     val uiState = _uiState.asStateFlow()
@@ -52,6 +56,7 @@ class AppViewModel @Inject constructor(
     val uiEvent = _uiEvent.asSharedFlow()
 
     private var isInitialized = false
+    private var isPresenceInitialized = false
     private val isAuthenticated = MutableStateFlow(false)
     private val isForegrounded = MutableStateFlow(false)
 
@@ -75,6 +80,7 @@ class AppViewModel @Inject constructor(
         initializeApp()
         observeAuthState()
         observeSocketSync()
+        observePresenceSync()
         observerIsAuthenticated()
     }
 
@@ -105,6 +111,27 @@ class AppViewModel @Inject constructor(
                 }
             } else {
                 socketManager.disconnect()
+            }
+        }.launchIn(viewModelScope)
+    }
+
+    private fun observePresenceSync() {
+        combine(isAuthenticated, isForegrounded) { authenticated, foregrounded ->
+            authenticated && foregrounded
+        }.onEach { shouldSync ->
+            if (shouldSync) {
+                if (!isPresenceInitialized) {
+                    isPresenceInitialized = true
+                    onlinePresenceController.startRealtimeUpdates(viewModelScope)
+                }
+                onlinePresenceController.refresh(viewModelScope)
+            }
+        }.launchIn(viewModelScope)
+
+        isAuthenticated.onEach { authenticated ->
+            if (!authenticated) {
+                isPresenceInitialized = false
+                onlinePresenceController.clear()
             }
         }.launchIn(viewModelScope)
     }

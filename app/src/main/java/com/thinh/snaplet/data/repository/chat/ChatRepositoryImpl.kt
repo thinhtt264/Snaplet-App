@@ -22,6 +22,7 @@ import com.thinh.snaplet.data.model.chat.MessageReaction
 import com.thinh.snaplet.data.model.chat.MessageReactionUpdatedEvent
 import com.thinh.snaplet.data.model.chat.MessageReactionWithUserInfo
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
+import com.thinh.snaplet.data.model.chat.PartnerPresencePayload
 import com.thinh.snaplet.data.model.chat.MessageType
 import com.thinh.snaplet.data.model.chat.ReactToMessageRequest
 import com.thinh.snaplet.data.model.chat.SendMessageRequest
@@ -65,7 +66,7 @@ class ChatRepositoryImpl @Inject constructor(
     private val messageRemoteKeyDao: MessageRemoteKeyDao,
     private val appDatabase: AppDatabase,
     private val chatSocketManager: ChatSocketManager,
-    socketManager: SocketManager,
+    private val socketManager: SocketManager,
 ) : ChatRepository {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -212,6 +213,18 @@ class ChatRepositoryImpl @Inject constructor(
 
     override fun observeUnreadCount(myUserId: String): Flow<Int> =
         conversationDao.observeUnreadCount(myUserId).distinctUntilChanged()
+
+    override suspend fun fetchOnlineFriends(): ApiResult<List<String>> =
+        safeApiCall(apiCall = { apiService.getOnlineFriends() })
+
+    override fun observePartnerOnline(): Flow<PartnerPresencePayload> =
+        socketManager.observePartnerOnline()
+
+    override fun observePartnerOffline(): Flow<PartnerPresencePayload> =
+        socketManager.observePartnerOffline()
+
+    override suspend fun getParticipantId(conversationId: String): String? =
+        conversationDao.getById(conversationId)?.participantId
 
     @Volatile
     private var activeConversationId: String = ""

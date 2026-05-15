@@ -22,3 +22,9 @@ data class TypingSocketPayload(
     @SerializedName("conversationId")
     val conversationId: String,
 )
+
+@Keep
+data class PartnerPresencePayload(
+    @SerializedName("userId")
+    val userId: String,
+)

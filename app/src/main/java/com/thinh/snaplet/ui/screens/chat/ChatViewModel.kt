@@ -15,6 +15,7 @@ import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.data.repository.quickchat.QuickChatEmojiRepository
 import com.thinh.snaplet.domain.chat.MarkMessageSeenUseCase
+import com.thinh.snaplet.domain.chat.OnlinePresenceController
 import com.thinh.snaplet.navigation.ChatConversation
 import com.thinh.snaplet.platform.network.ConnectivityObserver
 import com.thinh.snaplet.utils.Logger
@@ -33,9 +34,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.ZoneId
@@ -55,10 +60,12 @@ class ChatViewModel @Inject constructor(
     private val quickChatEmojiRepository: QuickChatEmojiRepository,
     private val markMessageSeenUseCase: MarkMessageSeenUseCase,
     private val connectivityObserver: ConnectivityObserver,
+    private val onlinePresenceController: OnlinePresenceController,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ChatConversation>()
+    private val partnerId = MutableStateFlow(route.recipientId)
     val partnerName: String = route.partnerName
     val partnerAvatarUrl: String? = route.partnerAvatarUrl
 
@@ -118,6 +125,7 @@ class ChatViewModel @Inject constructor(
         observeIncomingReadReceipts()
         observeIncomingUnreadWhileScrolled()
         observeNetworkReconnect()
+        observePartnerOnlineStatus()
         loadRecentEmojis()
     }
 
@@ -301,8 +309,25 @@ class ChatViewModel @Inject constructor(
                 conversationId = resolvedConversationId
                 _activeConversationId.value = resolvedConversationId
             }
+            resolvePartnerIdIfNeeded()
             connectSocketAndSyncMessages()
         }
+    }
+
+    private suspend fun resolvePartnerIdIfNeeded() {
+        if (partnerId.value != null || conversationId.isEmpty()) return
+        partnerId.value = chatRepository.getParticipantId(conversationId)
+    }
+
+    private fun observePartnerOnlineStatus() {
+        combine(partnerId, onlinePresenceController.onlineUserIds) { id, onlineIds ->
+            id != null && onlineIds.contains(id)
+        }
+            .distinctUntilChanged()
+            .onEach { isOnline ->
+                _uiState.update { state -> state.copy(isPartnerOnline = isOnline) }
+            }
+            .launchIn(viewModelScope)
     }
 
     private suspend fun resolveConversationId(recipientId: String): String? {

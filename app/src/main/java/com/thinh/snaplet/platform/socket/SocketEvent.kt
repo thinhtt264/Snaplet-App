@@ -24,6 +24,8 @@ enum class SocketEvent(val eventName: String) {
     CHAT_MESSAGE_REACTION_UPDATED("chat:message.reaction_updated"),
     CHAT_CONVERSATION_UPDATED("conversation_updated"),
     CHAT_CONVERSATION_DELETED("conversation_deleted"),
+    PARTNER_ONLINE("partner_online"),
+    PARTNER_OFFLINE("partner_offline"),
     UNKNOWN("unknown");
 
     companion object {

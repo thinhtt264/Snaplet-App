@@ -28,10 +28,12 @@ import com.thinh.snaplet.ui.components.image.ImageSize
 import com.thinh.snaplet.ui.components.image.LoadingStateConfig
 
 private val DEFAULT_AVATAR_BORDER_WIDTH = 2.dp
+private val ONLINE_PRESENCE_DOT_SIZE = 11.dp
+private val ONLINE_PRESENCE_RING_WIDTH = 1.5.dp
 
 // ─── LEVEL 1 ──────────────────────────────────────────────────
 @Composable
-fun Avatar(
+private fun AvatarCore(
     avatarUrl: String?,
     firstName: String,
     modifier: Modifier = Modifier,
@@ -42,7 +44,8 @@ fun Avatar(
     Box(
         modifier = modifier
             .size(size)
-            .clip(CircleShape), contentAlignment = Alignment.Center
+            .clip(CircleShape),
+        contentAlignment = Alignment.Center,
     ) {
         if (showInitial) {
             AvatarInitial(firstName = firstName)
@@ -52,7 +55,42 @@ fun Avatar(
     }
 }
 
-// ─── LEVEL 2 ──────────────────────────────────────────────────
+// ─── LEVEL 2 — optional online presence dot (isOnline = null hides dot) ───
+@Composable
+fun Avatar(
+    avatarUrl: String?,
+    firstName: String,
+    modifier: Modifier = Modifier,
+    size: Dp = 48.dp,
+    isOnline: Boolean? = null,
+    presenceRingColor: Color = MaterialTheme.colorScheme.background,
+) {
+    if (isOnline == null) {
+        AvatarCore(
+            avatarUrl = avatarUrl,
+            firstName = firstName,
+            modifier = modifier,
+            size = size,
+        )
+        return
+    }
+
+    Box(modifier = modifier.size(size)) {
+        AvatarCore(
+            avatarUrl = avatarUrl,
+            firstName = firstName,
+            modifier = Modifier.fillMaxSize(),
+            size = size,
+        )
+        AvatarOnlinePresenceDot(
+            isOnline = isOnline,
+            ringColor = presenceRingColor,
+            modifier = Modifier.align(Alignment.BottomEnd),
+        )
+    }
+}
+
+// ─── LEVEL 3 — connected-user ring ────────────────────────────
 @Composable
 fun Avatar(
     avatarUrl: String?,
@@ -79,7 +117,7 @@ fun Avatar(
     )
 }
 
-// ─── LEVEL 3 ──────────────────────────────────────────────────
+// ─── LEVEL 4 — connected-user ring + upload overlay ─────────────
 @Composable
 fun Avatar(
     avatarUrl: String?,
@@ -139,6 +177,24 @@ private fun AvatarImage(avatarUrl: String, size: Dp) {
                 painter = painterResource(CommonImages.ProfilePlaceholder), size = size
             )
         )
+    )
+}
+
+@Composable
+private fun AvatarOnlinePresenceDot(
+    isOnline: Boolean,
+    ringColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = Modifier
+            .size(ONLINE_PRESENCE_DOT_SIZE)
+            .clip(CircleShape)
+            .background(
+                if (isOnline) Color.Green else MaterialTheme.colorScheme.surfaceVariant,
+            )
+            .border(ONLINE_PRESENCE_RING_WIDTH, ringColor, CircleShape)
+            .then(modifier),
     )
 }
 
