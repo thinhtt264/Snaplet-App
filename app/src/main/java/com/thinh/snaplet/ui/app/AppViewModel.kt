@@ -63,7 +63,13 @@ class AppViewModel @Inject constructor(
     private var pendingSpotlightPostId: String? = null
 
     /** Pending chat open from notification / deep link before auth completes. */
-    private var pendingChatNavigation: Pair<String, String>? = null
+    private var pendingChatNavigation: PendingChatNav? = null
+
+    private data class PendingChatNav(
+        val conversationId: String,
+        val partnerName: String,
+        val partnerAvatarUrl: String?,
+    )
 
     init {
         initializeApp()
@@ -147,13 +153,14 @@ class AppViewModel @Inject constructor(
                             _uiEvent.emit(AppUiEvent.NavigateToSpotlightPost(postId))
                         }
                     }
-                    pendingChatNavigation?.let { (conversationId, partnerName) ->
+                    pendingChatNavigation?.let { pending ->
                         pendingChatNavigation = null
                         viewModelScope.launch {
                             _uiEvent.emit(
                                 AppUiEvent.NavigateToChat(
-                                    conversationId = conversationId,
-                                    partnerName = partnerName,
+                                    conversationId = pending.conversationId,
+                                    partnerName = pending.partnerName,
+                                    partnerAvatarUrl = pending.partnerAvatarUrl,
                                 )
                             )
                         }
@@ -184,6 +191,7 @@ class AppViewModel @Inject constructor(
                     is DeepLinkEvent.OpenChat -> handleOpenChatDeepLink(
                         conversationId = event.conversationId,
                         partnerName = event.partnerName,
+                        partnerAvatarUrl = event.partnerAvatarUrl,
                     )
                 }
             }
@@ -198,15 +206,24 @@ class AppViewModel @Inject constructor(
         _uiEvent.emit(AppUiEvent.NavigateToSpotlightPost(postId))
     }
 
-    private suspend fun handleOpenChatDeepLink(conversationId: String, partnerName: String) {
+    private suspend fun handleOpenChatDeepLink(
+        conversationId: String,
+        partnerName: String,
+        partnerAvatarUrl: String?,
+    ) {
         if (!authRepository.isAuthenticated()) {
-            pendingChatNavigation = conversationId to partnerName
+            pendingChatNavigation = PendingChatNav(
+                conversationId = conversationId,
+                partnerName = partnerName,
+                partnerAvatarUrl = partnerAvatarUrl,
+            )
             return
         }
         _uiEvent.emit(
             AppUiEvent.NavigateToChat(
                 conversationId = conversationId,
                 partnerName = partnerName,
+                partnerAvatarUrl = partnerAvatarUrl,
             )
         )
     }

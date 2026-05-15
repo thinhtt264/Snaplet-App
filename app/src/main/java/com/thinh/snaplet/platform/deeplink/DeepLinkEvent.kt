@@ -9,6 +9,7 @@ sealed class DeepLinkEvent {
     data class OpenChat(
         val conversationId: String,
         val partnerName: String = "",
+        val partnerAvatarUrl: String? = null,
     ) : DeepLinkEvent()
 }
 

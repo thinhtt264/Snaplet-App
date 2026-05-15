@@ -210,6 +210,11 @@
     <string name="new_message_friends_load_failed">Failed to load friends</string>
 
     <!-- Push notifications (chat) -->
+    <string name="notification_action_reply">Reply</string>
+    <string name="notification_reply_hint">Reply…</string>
+    <string name="notification_reply_sending">Sending…</string>
+    <string name="notification_reply_failed">Failed to send</string>
+    <string name="notification_me">You</string>
     <string name="notification_action_open_chat">Open chat</string>
     <string name="chat_notification_channel_description">New messages and reactions</string>
     <string name="chat_notification_photo_only">📷 Photo</string>

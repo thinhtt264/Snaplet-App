@@ -1,5 +1,6 @@
 package com.thinh.snaplet.platform.notification
 
+import androidx.annotation.RequiresPermission
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.thinh.snaplet.domain.notification.PushNotificationType
@@ -34,6 +35,7 @@ class SnapletFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
+    @RequiresPermission(android.Manifest.permission.POST_NOTIFICATIONS)
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
         scope.launch {
@@ -69,7 +71,8 @@ class SnapletFirebaseMessagingService : FirebaseMessagingService() {
                     val senderName = data[NotificationHelper.KEY_SENDER_NAME] ?: return@launch
                     val senderAvatarUrl = data[NotificationHelper.KEY_SENDER_AVATAR_URL]
                     val text = data[NotificationHelper.KEY_TEXT]
-                    val hasImage = data[NotificationHelper.KEY_HAS_IMAGE] == "true"
+                    val hasImage =
+                        data[NotificationHelper.KEY_HAS_IMAGE]?.toBoolean() ?: false
 
                     notificationHelper.showChatMessageNotification(
                         conversationId = conversationId,

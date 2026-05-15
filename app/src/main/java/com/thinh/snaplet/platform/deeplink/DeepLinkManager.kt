@@ -31,14 +31,36 @@ class DeepLinkManager @Inject constructor() {
 
     suspend fun handleIntent(intent: Intent?) {
         if (intent == null) return
-        if (intent.action == Intent.ACTION_VIEW && handleUri(intent.data)) return
+        val partnerName =
+            intent.getStringExtra(NotificationHelper.EXTRA_CHAT_PARTNER_NAME).orEmpty()
+        val partnerAvatarUrl =
+            intent.getStringExtra(NotificationHelper.EXTRA_CHAT_PARTNER_AVATAR_URL)
+        if (intent.action == Intent.ACTION_VIEW && handleUri(
+                intent.data,
+                partnerName = partnerName,
+                partnerAvatarUrl = partnerAvatarUrl,
+            )
+        ) {
+            return
+        }
 
         val deepLinkString = intent.getStringExtra(NotificationHelper.EXTRA_DEEP_LINK_URI)
             ?: intent.extras?.getString(NotificationHelper.EXTRA_DEEP_LINK_URI)
-        if (!deepLinkString.isNullOrBlank() && handleUri(deepLinkString.toUri())) return
+        if (!deepLinkString.isNullOrBlank() && handleUri(
+                deepLinkString.toUri(),
+                partnerName = partnerName,
+                partnerAvatarUrl = partnerAvatarUrl,
+            )
+        ) {
+            return
+        }
     }
 
-    private suspend fun handleUri(uri: Uri?): Boolean {
+    private suspend fun handleUri(
+        uri: Uri?,
+        partnerName: String = "",
+        partnerAvatarUrl: String? = null,
+    ): Boolean {
         if (uri == null) return false
         val isAppScheme = uri.scheme == APP_SCHEME &&
             (uri.host == APP_HOST || uri.host == CHAT_HOST)
@@ -50,7 +72,16 @@ class DeepLinkManager @Inject constructor() {
         if (uri.scheme == APP_SCHEME && uri.host == CHAT_HOST) {
             val conversationId = uri.pathSegments.firstOrNull()?.takeIf { it.isNotBlank() }
             if (!conversationId.isNullOrBlank()) {
-                _events.emit(DeepLinkEvent.OpenChat(conversationId = conversationId))
+                _events.emit(
+                    DeepLinkEvent.OpenChat(
+                        conversationId = conversationId,
+                        partnerName = partnerName.ifBlank {
+                            uri.getQueryParameter("partnerName").orEmpty()
+                        },
+                        partnerAvatarUrl = partnerAvatarUrl
+                            ?: uri.getQueryParameter("partnerAvatarUrl"),
+                    ),
+                )
                 return true
             }
         }

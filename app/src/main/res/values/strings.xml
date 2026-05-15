@@ -214,6 +214,11 @@
     <string name="new_message_friends_load_failed">Không tải được danh sách bạn bè</string>
 
     <!-- Push notifications (chat) -->
+    <string name="notification_action_reply">Trả lời</string>
+    <string name="notification_reply_hint">Trả lời…</string>
+    <string name="notification_reply_sending">Đang gửi…</string>
+    <string name="notification_reply_failed">Gửi thất bại</string>
+    <string name="notification_me">Bạn</string>
     <string name="notification_action_open_chat">Mở chat</string>
     <string name="chat_notification_channel_description">Tin nhắn và phản ứng mới</string>
     <string name="chat_notification_photo_only">📷 Ảnh</string>

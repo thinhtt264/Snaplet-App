@@ -62,6 +62,7 @@ fun MainScreen(
                             ChatConversation(
                                 conversationId = event.conversationId,
                                 partnerName = event.partnerName,
+                                partnerAvatarUrl = event.partnerAvatarUrl,
                             )
                         )
                     }

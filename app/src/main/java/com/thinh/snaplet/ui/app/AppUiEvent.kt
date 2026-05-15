@@ -10,5 +10,6 @@ sealed interface AppUiEvent {
     data class NavigateToChat(
         val conversationId: String,
         val partnerName: String = "",
+        val partnerAvatarUrl: String? = null,
     ) : AppUiEvent
 }

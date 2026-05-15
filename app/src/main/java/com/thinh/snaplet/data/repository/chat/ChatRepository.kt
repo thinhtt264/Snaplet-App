@@ -107,7 +107,11 @@ interface ChatRepository {
         height: Int = 0,
     ): ApiResult<Message>
 
-    suspend fun sendTextMessage(convId: String, senderId: String, text: String)
+    suspend fun sendTextMessage(
+        convId: String,
+        senderId: String,
+        text: String,
+    ): ApiResult<Unit>
 
     suspend fun sendMediaMessage(
         convId: String,

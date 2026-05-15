@@ -156,6 +156,9 @@ class ChatViewModel @Inject constructor(
                 sendFirstMessageAndInit(recipientId, currentUserId, trimmed)
             } else {
                 chatRepository.sendTextMessage(conversationId, currentUserId, trimmed)
+                    .onFailure { error ->
+                        Logger.e("sendTextMessage failed: ${error.message}")
+                    }
                 chatRepository.sendTypingStop(conversationId)
             }
         }
