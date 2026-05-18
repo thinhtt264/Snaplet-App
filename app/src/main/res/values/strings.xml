@@ -224,4 +224,14 @@
     <string name="chat_notification_photo_only">📷 Ảnh</string>
     <string name="chat_notification_photo_with_caption">📷 Ảnh • %1$s</string>
     <string name="chat_notification_message_reaction">Đã thả %1$s cho tin nhắn của bạn</string>
+
+    <!-- Maintenance screen -->
+    <string name="maintenance_status_label">Đang bảo trì</string>
+    <string name="maintenance_title">Snaplet đang nâng cấp</string>
+    <string name="maintenance_body">Hệ thống đang được bảo trì để mang lại trải nghiệm tốt hơn.\nVui lòng quay lại sau.</string>
+    <string name="maintenance_card_label">DỰ KIẾN HOÀN THÀNH</string>
+    <string name="maintenance_no_time">Sẽ thông báo sớm</string>
+    <string name="maintenance_card_footer">Dữ liệu của bạn được bảo toàn hoàn toàn.\nỨng dụng sẽ tự mở lại khi hoàn tất.</string>
+    <string name="maintenance_status_update">Cập nhật tình trạng tại</string>
+    <string name="maintenance_handle" translatable="false">@snaplet.app</string>
 </resources>

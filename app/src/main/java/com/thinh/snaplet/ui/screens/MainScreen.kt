@@ -19,6 +19,7 @@ import com.thinh.snaplet.navigation.SpotlightPost
 import com.thinh.snaplet.ui.app.AppUiEvent
 import com.thinh.snaplet.ui.app.AppViewModel
 import com.thinh.snaplet.ui.overlay.OverlayHost
+import com.thinh.snaplet.ui.screens.maintenance.MaintenanceScreen
 import com.thinh.snaplet.ui.theme.SnapletTheme
 import com.thinh.snaplet.utils.CrashlyticsLogger
 
@@ -28,6 +29,11 @@ fun MainScreen(
 ) {
     SnapletTheme {
         val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()
+
+        if (appUiState.isMaintenance) {
+            MaintenanceScreen(estimatedEndTime = appUiState.maintenanceEndTime)
+            return@SnapletTheme
+        }
 
         val navController = rememberNavController()
 

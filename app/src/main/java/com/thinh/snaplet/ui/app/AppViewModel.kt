@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.auth.AuthRepository
 import com.thinh.snaplet.data.repository.device.DeviceRepository
+import com.thinh.snaplet.data.repository.remoteconfig.RemoteConfigRepository
 import com.thinh.snaplet.domain.chat.OnlinePresenceController
 import com.thinh.snaplet.navigation.AuthGraph
 import com.thinh.snaplet.navigation.HomeGraph
@@ -37,6 +38,7 @@ import javax.inject.Inject
 class AppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val deviceRepository: DeviceRepository,
+    private val remoteConfigRepository: RemoteConfigRepository,
     private val deepLinkManager: DeepLinkManager,
     private val userRepository: UserRepository,
     private val socketManager: SocketManager,
@@ -139,6 +141,18 @@ class AppViewModel @Inject constructor(
     private fun initializeApp() {
         viewModelScope.launch {
             try {
+                val maintenanceConfig = remoteConfigRepository.fetchMaintenanceConfig()
+                if (maintenanceConfig.isEnabled) {
+                    _uiState.update {
+                        it.copy(
+                            isMaintenance = true,
+                            maintenanceEndTime = maintenanceConfig.estimatedEndTime,
+                            isLoading = false,
+                        )
+                    }
+                    return@launch
+                }
+
                 deviceRepository.getOrCreateFingerprint()
 
                 val authenticated = authRepository.isAuthenticated()
@@ -153,11 +167,12 @@ class AppViewModel @Inject constructor(
             } catch (_: Exception) {
                 _uiState.update { it.copy(startDestination = AuthGraph) }
             } finally {
-                _uiState.update { it.copy(isLoading = false) }
-                isInitialized = true
-
-                CrashlyticsLogger.setUser(userRepository.getCurrentUserProfile()?.id.orEmpty())
-                observeDeepLinkEvents()
+                if (!_uiState.value.isMaintenance) {
+                    _uiState.update { it.copy(isLoading = false) }
+                    isInitialized = true
+                    CrashlyticsLogger.setUser(userRepository.getCurrentUserProfile()?.id.orEmpty())
+                    observeDeepLinkEvents()
+                }
             }
         }
     }
