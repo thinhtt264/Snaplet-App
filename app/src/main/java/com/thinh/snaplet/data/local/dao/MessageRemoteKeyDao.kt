@@ -16,4 +16,7 @@ interface MessageRemoteKeyDao {
 
     @Query("DELETE FROM message_remote_keys WHERE conversationId = :convId")
     suspend fun deleteByConvId(convId: String)
+
+    @Query("DELETE FROM message_remote_keys")
+    suspend fun deleteAll()
 }

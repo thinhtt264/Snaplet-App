@@ -150,4 +150,7 @@ interface MessageDao {
 
     @Query("UPDATE messages SET reactions = :reactions WHERE id = :messageId")
     suspend fun updateReactions(messageId: String, reactions: List<MessageReaction>)
+
+    @Query("DELETE FROM messages")
+    suspend fun deleteAll()
 }

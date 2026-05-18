@@ -45,6 +45,8 @@ class DataStoreManager @Inject constructor(
 
     private val userProfileKey = stringPreferencesKey(DataStoreKeys.UserProfileKeys.PROFILE)
     private val fingerprintKey = stringPreferencesKey(DataStoreKeys.DeviceKeys.FINGERPRINT)
+    private val localChatOwnerUserIdKey =
+        stringPreferencesKey(DataStoreKeys.ChatKeys.LOCAL_OWNER_USER_ID)
 
     private val currentAccessToken = AtomicReference<String?>(null)
     private val currentRefreshToken = AtomicReference<String?>(null)
@@ -204,6 +206,27 @@ class DataStoreManager @Inject constructor(
     suspend fun clearQuickChatRecentEmojis() {
         dataStore.edit { preferences ->
             preferences.remove(quickChatRecentEmojisKey)
+        }
+    }
+
+    suspend fun saveLocalChatOwnerUserId(userId: String) {
+        dataStore.edit { preferences ->
+            preferences[localChatOwnerUserIdKey] = userId
+        }
+    }
+
+    suspend fun loadLocalChatOwnerUserId(): String? {
+        return try {
+            val preferences = dataStore.data.first()
+            preferences[localChatOwnerUserIdKey]
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    suspend fun clearLocalChatOwnerUserId() {
+        dataStore.edit { preferences ->
+            preferences.remove(localChatOwnerUserIdKey)
         }
     }
 

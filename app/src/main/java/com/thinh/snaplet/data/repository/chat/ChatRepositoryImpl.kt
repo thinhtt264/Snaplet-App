@@ -5,6 +5,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.room.withTransaction
+import com.thinh.snaplet.data.datasource.local.datastore.DataStoreManager
 import com.thinh.snaplet.data.datasource.remote.ApiService
 import com.thinh.snaplet.data.local.dao.ConversationDao
 import com.thinh.snaplet.data.local.dao.MessageDao
@@ -22,8 +23,8 @@ import com.thinh.snaplet.data.model.chat.MessageReaction
 import com.thinh.snaplet.data.model.chat.MessageReactionUpdatedEvent
 import com.thinh.snaplet.data.model.chat.MessageReactionWithUserInfo
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
-import com.thinh.snaplet.data.model.chat.PartnerPresencePayload
 import com.thinh.snaplet.data.model.chat.MessageType
+import com.thinh.snaplet.data.model.chat.PartnerPresencePayload
 import com.thinh.snaplet.data.model.chat.ReactToMessageRequest
 import com.thinh.snaplet.data.model.chat.SendMessageRequest
 import com.thinh.snaplet.data.model.chat.TypingSocketPayload
@@ -38,19 +39,18 @@ import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.ApiResult
 import com.thinh.snaplet.utils.network.GsonHolder.gson
 import com.thinh.snaplet.utils.network.onFailure
-import com.thinh.snaplet.utils.network.onSuccess
 import com.thinh.snaplet.utils.network.safeApiCall
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.util.Date
 import java.util.UUID
@@ -68,6 +68,7 @@ class ChatRepositoryImpl @Inject constructor(
     private val appDatabase: AppDatabase,
     private val chatSocketManager: ChatSocketManager,
     private val socketManager: SocketManager,
+    private val dataStoreManager: DataStoreManager,
 ) : ChatRepository {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -630,5 +631,22 @@ class ChatRepositoryImpl @Inject constructor(
                         .thenBy { it.createdAt }
                 ) ?: samePartnerConversations.first()
             }
+    }
+
+    override suspend fun prepareLocalChatForLogin(userId: String) = withContext(Dispatchers.IO) {
+        val storedOwner = dataStoreManager.loadLocalChatOwnerUserId()
+        if (storedOwner != null && storedOwner != userId) {
+            clearLocalChatDataInternal()
+        }
+        dataStoreManager.saveLocalChatOwnerUserId(userId)
+    }
+
+    private suspend fun clearLocalChatDataInternal() {
+        chatSocketManager.disconnect()
+        appDatabase.withTransaction {
+            messageRemoteKeyDao.deleteAll()
+            messageDao.deleteAll()
+            conversationDao.deleteAll()
+        }
     }
 }

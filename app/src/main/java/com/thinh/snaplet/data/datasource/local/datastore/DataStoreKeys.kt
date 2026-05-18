@@ -20,5 +20,9 @@ object DataStoreKeys {
     object QuickChatKeys {
         const val RECENT_EMOJIS = "quick_chat_recent_emojis"
     }
+
+    object ChatKeys {
+        const val LOCAL_OWNER_USER_ID = "chat_local_owner_user_id"
+    }
 }
 

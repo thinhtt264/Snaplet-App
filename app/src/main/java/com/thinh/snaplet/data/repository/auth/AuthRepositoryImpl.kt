@@ -11,6 +11,7 @@ import com.thinh.snaplet.data.model.RefreshTokenRequest
 import com.thinh.snaplet.data.model.RegisterRequest
 import com.thinh.snaplet.data.model.TokenResponse
 import com.thinh.snaplet.data.model.user.UserProfile
+import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.di.AuthApiService
 import com.thinh.snaplet.network.SessionController
 import com.thinh.snaplet.utils.network.ApiError
@@ -29,6 +30,7 @@ class AuthRepositoryImpl @Inject constructor(
     @AuthApiService private val authApiService: ApiService,
     private val dataStoreManager: DataStoreManager,
     private val sessionController: SessionController,
+    private val chatRepository: ChatRepository,
 ) : AuthRepository {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
@@ -41,6 +43,7 @@ class AuthRepositoryImpl @Inject constructor(
         return safeApiCall(apiCall = {
             authApiService.login(body = LoginRequest(email, password))
         }, onSuccess = { result ->
+            chatRepository.prepareLocalChatForLogin(result.user.id)
             dataStoreManager.saveTokens(
                 result.token.accessToken, result.token.refreshToken
             )
@@ -60,6 +63,7 @@ class AuthRepositoryImpl @Inject constructor(
                 )
             )
         }, onSuccess = { result ->
+            chatRepository.prepareLocalChatForLogin(result.user.id)
             dataStoreManager.saveTokens(
                 result.token.accessToken, result.token.refreshToken
             )
@@ -107,6 +111,7 @@ class AuthRepositoryImpl @Inject constructor(
         return safeApiCall(apiCall = {
             authApiService.register(body = request)
         }, onSuccess = { result ->
+            chatRepository.prepareLocalChatForLogin(result.user.id)
             dataStoreManager.saveTokens(
                 accessToken = result.token.accessToken, refreshToken = result.token.refreshToken
             )
