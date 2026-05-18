@@ -35,10 +35,10 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private val BASE_URL = if (BuildConfig.DEBUG) "https://api-stg.snaplet.site/api/v1/"
+    private val BASE_URL = if (BuildConfig.DEBUG) "https://api.snaplet.site/api/v1/"
     else "https://api.snaplet.site/api/v1/"
 
-    private val SOCKET_BASE_URL = if (BuildConfig.DEBUG) "https://api-stg.snaplet.site"
+    private val SOCKET_BASE_URL = if (BuildConfig.DEBUG) "https://api.snaplet.site"
     else "https://api.snaplet.site"
 
     @Provides
