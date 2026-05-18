@@ -80,6 +80,7 @@ fun MainScreen(
             navController.currentBackStackEntryFlow.collect { entry ->
                 val route = entry.destination.route ?: return@collect
                 CrashlyticsLogger.screen(route)
+                appViewModel.trackScreen(route)
             }
         }
 

@@ -22,7 +22,7 @@ object RemoteConfigProviderModule {
         return FirebaseRemoteConfig.getInstance().apply {
             setConfigSettingsAsync(
                 FirebaseRemoteConfigSettings.Builder()
-                    .setMinimumFetchIntervalInSeconds(3600L)
+                    .setMinimumFetchIntervalInSeconds(900L)
                     .build()
             )
             setDefaultsAsync(R.xml.remote_config_defaults)

@@ -20,6 +20,7 @@ import com.thinh.snaplet.ui.overlay.OverlayEventBus
 import com.thinh.snaplet.ui.screens.friend_request.FriendRequestUiState
 import com.thinh.snaplet.utils.CrashlyticsLogger
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.analytics.AnalyticsTracker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,6 +46,7 @@ class AppViewModel @Inject constructor(
     private val widgetUpdateManager: WidgetUpdateManager,
     private val fcmTokenRegistrar: FcmTokenRegistrar,
     private val onlinePresenceController: OnlinePresenceController,
+    private val analyticsTracker: AnalyticsTracker,
 ) : ViewModel() {
 
     val onlineUserIds = onlinePresenceController.onlineUserIds
@@ -170,7 +172,9 @@ class AppViewModel @Inject constructor(
                 if (!_uiState.value.isMaintenance) {
                     _uiState.update { it.copy(isLoading = false) }
                     isInitialized = true
-                    CrashlyticsLogger.setUser(userRepository.getCurrentUserProfile()?.id.orEmpty())
+                    val userId = userRepository.getCurrentUserProfile()?.id
+                    CrashlyticsLogger.setUser(userId.orEmpty())
+                    analyticsTracker.setUserId(userId)
                     observeDeepLinkEvents()
                 }
             }
@@ -183,6 +187,7 @@ class AppViewModel @Inject constructor(
             when (authState) {
                 is AuthState.Authenticated -> {
                     isAuthenticated.value = true
+                    analyticsTracker.setUserId(userRepository.getCurrentUserProfile()?.id)
                     fcmTokenRegistrar.syncCurrentTokenToBackend()
                     _uiEvent.emit(AppUiEvent.NavigateToHomeGraph)
                     pendingFriendRequestUserName?.let { userName ->
@@ -211,6 +216,7 @@ class AppViewModel @Inject constructor(
 
                 is AuthState.Unauthenticated -> {
                     isAuthenticated.value = false
+                    analyticsTracker.setUserId(null)
                     pendingSpotlightPostId = null
                     pendingChatNavigation = null
                     _uiEvent.emit(AppUiEvent.NavigateToAuthGraph)
@@ -268,6 +274,10 @@ class AppViewModel @Inject constructor(
                 partnerAvatarUrl = partnerAvatarUrl,
             )
         )
+    }
+
+    fun trackScreen(route: String) {
+        analyticsTracker.trackScreen(route)
     }
 
     private suspend fun handleFriendRequestDeepLink(userName: String) {

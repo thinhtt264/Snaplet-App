@@ -70,6 +70,7 @@ import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.CrashlyticsLogger
 import com.thinh.snaplet.utils.FileUtils
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.analytics.AnalyticsTracker
 import com.thinh.snaplet.utils.network.ApiErrorCode
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
@@ -136,6 +137,7 @@ class HomeViewModel @Inject constructor(
     private val syncConversationsUseCase: SyncConversationsUseCase,
     private val chatRepository: ChatRepository,
     private val quickChatEmojiRepository: QuickChatEmojiRepository,
+    private val analyticsTracker: AnalyticsTracker,
 ) : ViewModel() {
     val emojiFloatController: EmojiFloatController by lazy { EmojiFloatController() }
 
@@ -797,7 +799,12 @@ class HomeViewModel @Inject constructor(
                 mimeType = media.type,
                 width = media.width,
                 height = media.height,
-            ).onFailure { error ->
+            ).onSuccess { message ->
+                analyticsTracker.trackMessageSent(
+                    conversationId = message.conversationId,
+                    messageType = "from_post",
+                )
+            }.onFailure { error ->
                 _uiState.update {
                     it.copy(
                         snackbarMessage = UiText.DynamicString(

@@ -30,7 +30,36 @@ platform :android do
       firebase_cli_token: ENV["FIREBASE_CLI_TOKEN"]
     )
   end
+
+  desc "Build production release and distribute to Firebase App Distribution"
+  lane :build_prod do |options|
+    release_notes = options[:release_notes] || ENV["RELEASE_NOTES"] || "Production release"
+
+    gradle(
+      task: "assembleProductionRelease",
+      project_dir: "."
+    )
+
+    apk_path = lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
+
+    unless apk_path && File.exist?(apk_path)
+      apk_path = "app/build/outputs/apk/production/release/app-production-release.apk"
+
+      unless File.exist?(apk_path)
+        UI.user_error!("Could not find APK file. Expected at #{apk_path}")
+      end
+    end
+
+    firebase_app_distribution(
+      app: "1:1030168532004:android:5524dc19fd99cb5b5bb4b1",
+      apk_path: apk_path,
+      groups: "testers",
+      release_notes: release_notes,
+      firebase_cli_token: ENV["FIREBASE_CLI_TOKEN"]
+    )
+  end
 end
 
 
 ## fastlane android build_test release_notes:"Notes"
+## fastlane android build_prod release_notes:"Notes"
