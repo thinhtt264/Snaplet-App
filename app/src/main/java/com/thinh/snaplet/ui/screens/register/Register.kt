@@ -38,14 +38,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import animateVisibility
 import com.thinh.snaplet.R
 import com.thinh.snaplet.platform.widget.launchSnapletWidgetPicker
+import kotlinx.coroutines.launch
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.components.StepAnimatedContent
 import com.thinh.snaplet.ui.screens.post_register_widget.PostRegisterWidgetPromoScreen
 import com.thinh.snaplet.ui.screens.register.components.RegisterEmailPage
 import com.thinh.snaplet.ui.screens.register.components.RegisterPasswordPage
 import com.thinh.snaplet.ui.screens.register.components.RegisterUsernamePage
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -91,12 +90,7 @@ fun Register(
             PostRegisterWidgetPromoScreen(
                 modifier = Modifier.animateVisibility(true),
                 onAddWidget = {
-                    context.launchSnapletWidgetPicker {
-                        scope.launch {
-                            delay(500L)
-                            viewModel.finishRegistrationPromo()
-                        }
-                    }
+                    context.launchSnapletWidgetPicker()
                 },
                 onSkip = {
                     scope.launch { viewModel.finishRegistrationPromo() }

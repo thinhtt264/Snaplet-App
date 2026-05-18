@@ -134,4 +134,10 @@ interface ChatRepository {
     suspend fun retryPendingMessages(convId: String)
 
     suspend fun syncOnReconnect(convId: String)
+
+    /**
+     * Keeps local chat when [userId] matches the stored/DB owner; clears when switching accounts.
+     * Call during login before marking the session authenticated.
+     */
+    suspend fun prepareLocalChatForLogin(userId: String)
 }
