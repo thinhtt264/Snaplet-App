@@ -112,6 +112,15 @@ fun Home(
         }
     }
 
+    LaunchedEffect(uiState.showGalleryPicker) {
+        if (uiState.showGalleryPicker) {
+            viewModel.onGalleryPickerRequestHandled()
+            pickMediaLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        }
+    }
+
     val pageCount = 1 + if (uiState.posts.isEmpty()) 1 else uiState.posts.size
     val pagerState = rememberPagerState(
         initialPage = CAMERA_PAGE_INDEX, pageCount = { pageCount })
@@ -132,11 +141,7 @@ fun Home(
         CameraActions(
             onImageCaptureReady = viewModel::setImageCapture,
             onSnapshotHandlerReady = { snapshotHandler = it },
-            onPickFromGallery = {
-                pickMediaLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                )
-            },
+            onPickFromGallery = viewModel::onPickFromGallery,
             onCapturePhoto = { viewModel.onCapturePhoto(context) },
             onSwitchCamera = viewModel::onSwitchCamera,
             onCancelCapture = viewModel::onCancelCapture,

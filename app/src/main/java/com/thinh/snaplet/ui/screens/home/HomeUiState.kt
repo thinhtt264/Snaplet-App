@@ -65,6 +65,8 @@ data class HomeUiState(
 
     val showFriendSheet: Boolean = false,
 
+    val showGalleryPicker: Boolean = false,
+
     val chatUnreadCount: Int = 0
 ) {
     /** Returns true if more data can be loaded (nextCursor is not null and not currently loading) */

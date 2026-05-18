@@ -8,7 +8,6 @@ import androidx.navigation.toRoute
 import com.thinh.snaplet.R
 import com.thinh.snaplet.data.repository.auth.AuthRepository
 import com.thinh.snaplet.navigation.Register
-import com.thinh.snaplet.platform.notification.FcmTokenRegistrar
 import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.utils.ValidationConstants
 import com.thinh.snaplet.utils.network.ApiErrorCode
@@ -27,7 +26,6 @@ import javax.inject.Inject
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val fcmTokenRegistrar: FcmTokenRegistrar,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -311,7 +309,6 @@ class RegisterViewModel @Inject constructor(
 
             result.fold(
                 onSuccess = {
-                    fcmTokenRegistrar.syncCurrentTokenToBackend()
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -344,7 +341,6 @@ class RegisterViewModel @Inject constructor(
 
             result.fold(
                 onSuccess = {
-                    fcmTokenRegistrar.syncCurrentTokenToBackend()
                     _uiState.update {
                         it.copy(
                             isLoading = false,

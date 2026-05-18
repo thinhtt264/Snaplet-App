@@ -6,6 +6,7 @@ import java.util.Date
 
 data class ConversationUiModel(
     val id: String,
+    val participantId: String,
     val participantName: String,
     val participantAvatarUrl: String?,
     val lastMessageText: String?,
@@ -18,6 +19,7 @@ data class ConversationUiModel(
     val hasUnread: Boolean,
     val isLastMessageMine: Boolean,
     val partnerHasSeen: Boolean,
+    val isPartnerOnline: Boolean = false,
 )
 
 data class ConversationListUiState(

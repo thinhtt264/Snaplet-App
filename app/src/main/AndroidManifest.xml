@@ -57,6 +57,10 @@
             android:name=".platform.widget.WidgetPinnedReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".platform.notification.ChatQuickReplyReceiver"
+            android:exported="false" />
+
         <service
             android:name=".platform.notification.SnapletFirebaseMessagingService"
             android:exported="false">
@@ -100,6 +104,18 @@
                 <data 
                     android:scheme="snaplet"
                     android:host="app" />
+            </intent-filter>
+
+            <!-- Deep link: snaplet://chat/{conversationId} (FCM chat notifications) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="snaplet"
+                    android:host="chat" />
             </intent-filter>
             
             <!-- HTTPS deep link so shared URLs are clickable in chat apps -->

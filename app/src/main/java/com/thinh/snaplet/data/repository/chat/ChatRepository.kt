@@ -12,6 +12,7 @@ import com.thinh.snaplet.data.model.chat.MessageReaction
 import com.thinh.snaplet.data.model.chat.MessageReactionUpdatedEvent
 import com.thinh.snaplet.data.model.chat.MessageReactionWithUserInfo
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
+import com.thinh.snaplet.data.model.chat.PartnerPresencePayload
 import com.thinh.snaplet.platform.socket.SocketConnectionState
 import com.thinh.snaplet.utils.network.ApiResult
 import kotlinx.coroutines.flow.Flow
@@ -38,6 +39,14 @@ interface ChatRepository {
     val chatSocketConnectionState: StateFlow<SocketConnectionState>
 
     fun observeUnreadCount(myUserId: String): Flow<Int>
+
+    suspend fun fetchOnlineFriends(): ApiResult<List<String>>
+
+    fun observePartnerOnline(): Flow<PartnerPresencePayload>
+
+    fun observePartnerOffline(): Flow<PartnerPresencePayload>
+
+    suspend fun getParticipantId(conversationId: String): String?
 
     suspend fun connectChatSocket(conversationId: String)
 
@@ -107,7 +116,11 @@ interface ChatRepository {
         height: Int = 0,
     ): ApiResult<Message>
 
-    suspend fun sendTextMessage(convId: String, senderId: String, text: String)
+    suspend fun sendTextMessage(
+        convId: String,
+        senderId: String,
+        text: String,
+    ): ApiResult<Unit>
 
     suspend fun sendMediaMessage(
         convId: String,

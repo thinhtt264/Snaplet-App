@@ -15,14 +15,15 @@ import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.chat.ChatRepository
 import com.thinh.snaplet.data.repository.quickchat.QuickChatEmojiRepository
 import com.thinh.snaplet.domain.chat.MarkMessageSeenUseCase
+import com.thinh.snaplet.domain.chat.OnlinePresenceController
 import com.thinh.snaplet.navigation.ChatConversation
 import com.thinh.snaplet.platform.network.ConnectivityObserver
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.Throttler
 import com.thinh.snaplet.utils.effectiveDate
-import com.thinh.snaplet.utils.toStartOfDayMillis
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
+import com.thinh.snaplet.utils.toStartOfDayMillis
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -31,11 +32,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.ZoneId
@@ -46,6 +50,7 @@ private const val OUT_GOING_TYPING_TIMEOUT_MS = 1_500L
 private const val MARK_READ_DEBOUNCE_MS = 500L
 private const val RESUME_LOAD_THROTTLE_MS = 1_500L
 private const val CHAT_RECENT_MAX_SLOTS = 4
+private const val INITIAL_LOAD_DEBOUNCE_MS = 150L
 private val CHAT_RECENT_DEFAULT_EMOJIS = listOf("😀", "😂", "😮", "👍")
 
 @HiltViewModel
@@ -55,10 +60,12 @@ class ChatViewModel @Inject constructor(
     private val quickChatEmojiRepository: QuickChatEmojiRepository,
     private val markMessageSeenUseCase: MarkMessageSeenUseCase,
     private val connectivityObserver: ConnectivityObserver,
+    private val onlinePresenceController: OnlinePresenceController,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ChatConversation>()
+    private val partnerId = MutableStateFlow(route.recipientId)
     val partnerName: String = route.partnerName
     val partnerAvatarUrl: String? = route.partnerAvatarUrl
 
@@ -118,6 +125,7 @@ class ChatViewModel @Inject constructor(
         observeIncomingReadReceipts()
         observeIncomingUnreadWhileScrolled()
         observeNetworkReconnect()
+        observePartnerOnlineStatus()
         loadRecentEmojis()
     }
 
@@ -156,6 +164,9 @@ class ChatViewModel @Inject constructor(
                 sendFirstMessageAndInit(recipientId, currentUserId, trimmed)
             } else {
                 chatRepository.sendTextMessage(conversationId, currentUserId, trimmed)
+                    .onFailure { error ->
+                        Logger.e("sendTextMessage failed: ${error.message}")
+                    }
                 chatRepository.sendTypingStop(conversationId)
             }
         }
@@ -298,8 +309,31 @@ class ChatViewModel @Inject constructor(
                 conversationId = resolvedConversationId
                 _activeConversationId.value = resolvedConversationId
             }
+            resolvePartnerIdIfNeeded()
+            val loadingJob = launch {
+                delay(INITIAL_LOAD_DEBOUNCE_MS)
+                _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = true)) }
+            }
             connectSocketAndSyncMessages()
+            loadingJob.cancel()
+            _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
         }
+    }
+
+    private suspend fun resolvePartnerIdIfNeeded() {
+        if (partnerId.value != null || conversationId.isEmpty()) return
+        partnerId.value = chatRepository.getParticipantId(conversationId)
+    }
+
+    private fun observePartnerOnlineStatus() {
+        combine(partnerId, onlinePresenceController.onlineUserIds) { id, onlineIds ->
+            id != null && onlineIds.contains(id)
+        }
+            .distinctUntilChanged()
+            .onEach { isOnline ->
+                _uiState.update { state -> state.copy(isPartnerOnline = isOnline) }
+            }
+            .launchIn(viewModelScope)
     }
 
     private suspend fun resolveConversationId(recipientId: String): String? {
@@ -316,11 +350,7 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun connectSocketAndSyncMessages() {
         if (conversationId.isEmpty()) return
-        _uiState.update {
-            it.copy(
-                messageList = it.messageList.copy(isLoading = false, error = null),
-            )
-        }
+        _uiState.update { it.copy(messageList = it.messageList.copy(error = null)) }
         chatRepository.connectChatSocket(conversationId)
         chatRepository.syncOnReconnect(conversationId)
     }

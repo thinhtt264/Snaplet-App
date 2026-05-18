@@ -37,6 +37,7 @@ data class ConversationLastMessageStatusProjection(
 fun ConversationEntity.toUiModel(
     myUserId: String?,
     lastMessageStatus: String? = null,
+    isPartnerOnline: Boolean = false,
 ): ConversationUiModel {
     val lastMessageMs = lastMessageAt?.time ?: 0L
     val myLastSeenMs = myLastSeenAt?.time ?: 0L
@@ -46,6 +47,7 @@ fun ConversationEntity.toUiModel(
     val partnerHasSeen = partnerLastSeenMs >= (lastMessageAt?.time ?: 1L)
     return ConversationUiModel(
         id = id,
+        participantId = participantId,
         participantName = participantName,
         participantAvatarUrl = participantAvatarUrl,
         lastMessageText = lastMessageText,
@@ -58,5 +60,6 @@ fun ConversationEntity.toUiModel(
         hasUnread = hasUnread,
         isLastMessageMine = isLastMessageMine,
         partnerHasSeen = partnerHasSeen,
+        isPartnerOnline = isPartnerOnline,
     )
 }

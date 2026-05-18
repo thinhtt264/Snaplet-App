@@ -1,5 +1,6 @@
 package com.thinh.snaplet.platform.notification
 
+import androidx.annotation.RequiresPermission
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.thinh.snaplet.domain.notification.PushNotificationType
@@ -34,6 +35,7 @@ class SnapletFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
+    @RequiresPermission(android.Manifest.permission.POST_NOTIFICATIONS)
     override fun onMessageReceived(message: RemoteMessage) {
         super.onMessageReceived(message)
         scope.launch {
@@ -60,6 +62,45 @@ class SnapletFirebaseMessagingService : FirebaseMessagingService() {
 
                 PushNotificationType.WIDGET_REFRESH -> {
                     widgetUpdateManager.scheduleImmediateUpdate(requireGlanceIds = true)
+                }
+
+                PushNotificationType.NEW_CHAT_MESSAGE -> {
+                    val conversationId =
+                        data[NotificationHelper.KEY_CONVERSATION_ID] ?: return@launch
+                    val messageId = data[NotificationHelper.KEY_MESSAGE_ID] ?: return@launch
+                    val senderName = data[NotificationHelper.KEY_SENDER_NAME] ?: return@launch
+                    val senderAvatarUrl = data[NotificationHelper.KEY_SENDER_AVATAR_URL]
+                    val text = data[NotificationHelper.KEY_TEXT]
+                    val hasImage =
+                        data[NotificationHelper.KEY_HAS_IMAGE]?.toBoolean() ?: false
+
+                    notificationHelper.showChatMessageNotification(
+                        conversationId = conversationId,
+                        messageId = messageId,
+                        senderName = senderName,
+                        senderAvatarUrl = senderAvatarUrl,
+                        text = text,
+                        hasImage = hasImage,
+                    )
+                    ChatSyncWorker.enqueue(this@SnapletFirebaseMessagingService, conversationId)
+                }
+
+                PushNotificationType.NEW_MESSAGE_REACTION -> {
+                    val conversationId =
+                        data[NotificationHelper.KEY_CONVERSATION_ID] ?: return@launch
+                    val messageId = data[NotificationHelper.KEY_MESSAGE_ID] ?: return@launch
+                    val reactorName = data[NotificationHelper.KEY_REACTOR_NAME] ?: return@launch
+                    val reactorAvatarUrl = data[NotificationHelper.KEY_REACTOR_AVATAR_URL]
+                    val emoji = data[NotificationHelper.KEY_EMOJI] ?: return@launch
+
+                    notificationHelper.showMessageReactionNotification(
+                        conversationId = conversationId,
+                        messageId = messageId,
+                        reactorName = reactorName,
+                        reactorAvatarUrl = reactorAvatarUrl,
+                        emoji = emoji,
+                    )
+                    ChatSyncWorker.enqueue(this@SnapletFirebaseMessagingService, conversationId)
                 }
 
                 else -> {

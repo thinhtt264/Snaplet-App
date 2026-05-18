@@ -9,12 +9,17 @@ import io.socket.client.Socket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import com.thinh.snaplet.data.model.chat.PartnerPresencePayload
+import com.thinh.snaplet.utils.network.GsonHolder.gson
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.util.UUID
@@ -168,6 +173,22 @@ class SocketManager @Inject constructor(
                 }
             }
     }
+
+    fun observePartnerOnline(): Flow<PartnerPresencePayload> =
+        observePartnerPresence(SocketEvent.PARTNER_ONLINE)
+
+    fun observePartnerOffline(): Flow<PartnerPresencePayload> =
+        observePartnerPresence(SocketEvent.PARTNER_OFFLINE)
+
+    private fun observePartnerPresence(event: SocketEvent): Flow<PartnerPresencePayload> =
+        messages.filter { it.event == event }.mapNotNull { message ->
+            val json = message.args ?: return@mapNotNull null
+            runCatching {
+                gson.fromJson(json, PartnerPresencePayload::class.java)
+            }.onFailure {
+                Logger.e("$LOG_TAG: parse ${event.eventName} failed: ${it.message}")
+            }.getOrNull()
+        }
 
     fun emit(eventName: String, data: org.json.JSONObject? = null) {
         val s = socket

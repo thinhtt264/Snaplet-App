@@ -7,7 +7,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,20 +43,17 @@ import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.components.IconDecoration
 import com.thinh.snaplet.ui.components.IconSpec
 import com.thinh.snaplet.ui.screens.chat.PARTNER_TYPING_IDLE_MS
-import com.thinh.snaplet.ui.theme.MotionTokens
 import com.thinh.snaplet.ui.theme.Typography
 import kotlin.math.PI
 import kotlin.math.sin
 
 private val ChatBg = Color(0xFF0D0D0D)
-
 private val TypingDotLayoutSize = 6.dp
 
 /**
  * One full wave across the three dots; derived from [PARTNER_TYPING_IDLE_MS] so UI timing stays tied to chat typing rules.
  */
-private val TypingDotsCycleMillis =
-    (PARTNER_TYPING_IDLE_MS / 4).toInt().coerceAtLeast(MotionTokens.Normal)
+private const val TypingDotsCycleMillis = 500
 
 @Composable
 fun ChatHeader(
@@ -86,24 +82,13 @@ fun ChatHeader(
             iconDecoration = IconDecoration(padding = 12.dp),
         )
 
-        // Avatar with online presence dot
-        Box(modifier = Modifier.size(42.dp)) {
-            Avatar(
-                avatarUrl = avatarUrl,
-                firstName = name,
-                size = 42.dp,
-            )
-            if (isOnline) {
-                Box(
-                    modifier = Modifier
-                        .size(11.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.tertiary)
-                        .border(1.5.dp, ChatBg, CircleShape)
-                        .align(Alignment.BottomEnd),
-                )
-            }
-        }
+        Avatar(
+            avatarUrl = avatarUrl,
+            firstName = name,
+            size = 42.dp,
+            isOnline = isOnline,
+            presenceRingColor = ChatBg,
+        )
 
         Spacer(Modifier.width(10.dp))
 
@@ -140,8 +125,7 @@ private fun ChatPartnerPresenceLabel(
     isOnline: Boolean,
     isPartnerTyping: Boolean,
 ) {
-    val tertiary = MaterialTheme.colorScheme.tertiary
-    val offlineMuted = Color.White.copy(alpha = 0.4f)
+    val offlineMuted = MaterialTheme.colorScheme.surfaceVariant
     val onlineText = stringResource(R.string.chat_status_online)
     val offlineText = stringResource(R.string.chat_status_offline)
     val typingPrefix = stringResource(R.string.chat_status_typing)
@@ -154,7 +138,7 @@ private fun ChatPartnerPresenceLabel(
             BaseText(
                 text = onlineText,
                 typography = Typography.labelSmall,
-                color = tertiary,
+                color = Color.Green,
             )
         }.first().measure(loose)
 
@@ -168,7 +152,7 @@ private fun ChatPartnerPresenceLabel(
 
         val typingPlaceable = subcompose("measure_typing") {
             ChatPartnerTypingRowContent(
-                tertiary = tertiary,
+                color = Color.Green,
                 typingPrefix = typingPrefix,
                 typingCd = typingCd,
                 progress = 0f,
@@ -190,7 +174,7 @@ private fun ChatPartnerPresenceLabel(
         val contentMeasurable = subcompose("visible") {
             when {
                 isPartnerTyping -> ChatPartnerTypingRow(
-                    tertiary = tertiary,
+                    color = Color.Green,
                     typingPrefix = typingPrefix,
                     typingCd = typingCd,
                 )
@@ -198,7 +182,7 @@ private fun ChatPartnerPresenceLabel(
                 isOnline -> BaseText(
                     text = onlineText,
                     typography = Typography.labelSmall,
-                    color = tertiary,
+                    color = Color.Green,
                 )
 
                 else -> BaseText(
@@ -228,7 +212,7 @@ private fun ChatPartnerPresenceLabel(
 
 @Composable
 private fun ChatPartnerTypingRow(
-    tertiary: Color,
+    color: Color,
     typingPrefix: String,
     typingCd: String,
 ) {
@@ -246,7 +230,7 @@ private fun ChatPartnerTypingRow(
         label = "typing_wave",
     )
     ChatPartnerTypingRowContent(
-        tertiary = tertiary,
+        color = color,
         typingPrefix = typingPrefix,
         typingCd = typingCd,
         progress = progress,
@@ -255,10 +239,10 @@ private fun ChatPartnerTypingRow(
 
 @Composable
 private fun ChatPartnerTypingRowContent(
-    tertiary: Color,
     typingPrefix: String,
     typingCd: String,
     progress: Float,
+    color: Color,
     includeSemantics: Boolean = true,
 ) {
     Row(
@@ -284,7 +268,7 @@ private fun ChatPartnerTypingRowContent(
                         .padding(horizontal = 1.dp, vertical = 3.dp)
                         .size(TypingDotLayoutSize)
                         .clip(CircleShape)
-                        .background(tertiary.copy(alpha = dotAlpha))
+                        .background(color.copy(alpha = dotAlpha))
                         .graphicsLayer {
                             scaleX = scalePulse
                             scaleY = scalePulse
@@ -297,7 +281,7 @@ private fun ChatPartnerTypingRowContent(
         BaseText(
             text = typingPrefix,
             typography = Typography.labelSmall,
-            color = tertiary,
+            color = color,
         )
     }
 }

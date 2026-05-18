@@ -6,10 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.thinh.snaplet.data.repository.UserRepository
 import com.thinh.snaplet.data.repository.auth.AuthRepository
 import com.thinh.snaplet.data.repository.device.DeviceRepository
+import com.thinh.snaplet.domain.chat.OnlinePresenceController
 import com.thinh.snaplet.navigation.AuthGraph
 import com.thinh.snaplet.navigation.HomeGraph
 import com.thinh.snaplet.platform.deeplink.DeepLinkEvent
 import com.thinh.snaplet.platform.deeplink.DeepLinkManager
+import com.thinh.snaplet.platform.notification.FcmTokenRegistrar
 import com.thinh.snaplet.platform.socket.SocketManager
 import com.thinh.snaplet.platform.widget.WidgetUpdateManager
 import com.thinh.snaplet.ui.overlay.ModalContent
@@ -39,7 +41,11 @@ class AppViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val socketManager: SocketManager,
     private val widgetUpdateManager: WidgetUpdateManager,
+    private val fcmTokenRegistrar: FcmTokenRegistrar,
+    private val onlinePresenceController: OnlinePresenceController,
 ) : ViewModel() {
+
+    val onlineUserIds = onlinePresenceController.onlineUserIds
 
     private val _uiState: MutableStateFlow<AppUiState> = MutableStateFlow(AppUiState())
     val uiState = _uiState.asStateFlow()
@@ -50,6 +56,7 @@ class AppViewModel @Inject constructor(
     val uiEvent = _uiEvent.asSharedFlow()
 
     private var isInitialized = false
+    private var isPresenceInitialized = false
     private val isAuthenticated = MutableStateFlow(false)
     private val isForegrounded = MutableStateFlow(false)
 
@@ -60,10 +67,20 @@ class AppViewModel @Inject constructor(
     /** Pending post id from notification tap before auth completes. */
     private var pendingSpotlightPostId: String? = null
 
+    /** Pending chat open from notification / deep link before auth completes. */
+    private var pendingChatNavigation: PendingChatNav? = null
+
+    private data class PendingChatNav(
+        val conversationId: String,
+        val partnerName: String,
+        val partnerAvatarUrl: String?,
+    )
+
     init {
         initializeApp()
         observeAuthState()
         observeSocketSync()
+        observePresenceSync()
         observerIsAuthenticated()
     }
 
@@ -94,6 +111,27 @@ class AppViewModel @Inject constructor(
                 }
             } else {
                 socketManager.disconnect()
+            }
+        }.launchIn(viewModelScope)
+    }
+
+    private fun observePresenceSync() {
+        combine(isAuthenticated, isForegrounded) { authenticated, foregrounded ->
+            authenticated && foregrounded
+        }.onEach { shouldSync ->
+            if (shouldSync) {
+                if (!isPresenceInitialized) {
+                    isPresenceInitialized = true
+                    onlinePresenceController.startRealtimeUpdates(viewModelScope)
+                }
+                onlinePresenceController.refresh(viewModelScope)
+            }
+        }.launchIn(viewModelScope)
+
+        isAuthenticated.onEach { authenticated ->
+            if (!authenticated) {
+                isPresenceInitialized = false
+                onlinePresenceController.clear()
             }
         }.launchIn(viewModelScope)
     }
@@ -130,6 +168,7 @@ class AppViewModel @Inject constructor(
             when (authState) {
                 is AuthState.Authenticated -> {
                     isAuthenticated.value = true
+                    fcmTokenRegistrar.syncCurrentTokenToBackend()
                     _uiEvent.emit(AppUiEvent.NavigateToHomeGraph)
                     pendingFriendRequestUserName?.let { userName ->
                         pendingFriendRequestUserName = null
@@ -141,11 +180,24 @@ class AppViewModel @Inject constructor(
                             _uiEvent.emit(AppUiEvent.NavigateToSpotlightPost(postId))
                         }
                     }
+                    pendingChatNavigation?.let { pending ->
+                        pendingChatNavigation = null
+                        viewModelScope.launch {
+                            _uiEvent.emit(
+                                AppUiEvent.NavigateToChat(
+                                    conversationId = pending.conversationId,
+                                    partnerName = pending.partnerName,
+                                    partnerAvatarUrl = pending.partnerAvatarUrl,
+                                )
+                            )
+                        }
+                    }
                 }
 
                 is AuthState.Unauthenticated -> {
                     isAuthenticated.value = false
                     pendingSpotlightPostId = null
+                    pendingChatNavigation = null
                     _uiEvent.emit(AppUiEvent.NavigateToAuthGraph)
                 }
             }
@@ -163,6 +215,11 @@ class AppViewModel @Inject constructor(
                 when (event) {
                     is DeepLinkEvent.FriendRequest -> handleFriendRequestDeepLink(event.userName)
                     is DeepLinkEvent.OpenSpotlightPost -> handleOpenSpotlightPostDeepLink(event.postId)
+                    is DeepLinkEvent.OpenChat -> handleOpenChatDeepLink(
+                        conversationId = event.conversationId,
+                        partnerName = event.partnerName,
+                        partnerAvatarUrl = event.partnerAvatarUrl,
+                    )
                 }
             }
         }
@@ -174,6 +231,28 @@ class AppViewModel @Inject constructor(
             return
         }
         _uiEvent.emit(AppUiEvent.NavigateToSpotlightPost(postId))
+    }
+
+    private suspend fun handleOpenChatDeepLink(
+        conversationId: String,
+        partnerName: String,
+        partnerAvatarUrl: String?,
+    ) {
+        if (!authRepository.isAuthenticated()) {
+            pendingChatNavigation = PendingChatNav(
+                conversationId = conversationId,
+                partnerName = partnerName,
+                partnerAvatarUrl = partnerAvatarUrl,
+            )
+            return
+        }
+        _uiEvent.emit(
+            AppUiEvent.NavigateToChat(
+                conversationId = conversationId,
+                partnerName = partnerName,
+                partnerAvatarUrl = partnerAvatarUrl,
+            )
+        )
     }
 
     private suspend fun handleFriendRequestDeepLink(userName: String) {

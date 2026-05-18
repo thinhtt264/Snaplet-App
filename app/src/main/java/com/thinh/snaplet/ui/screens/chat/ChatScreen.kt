@@ -198,7 +198,7 @@ fun ChatScreen(
         ChatHeader(
             name = viewModel.partnerName,
             avatarUrl = viewModel.partnerAvatarUrl,
-            isOnline = true,
+            isOnline = uiState.isPartnerOnline,
             isPartnerTyping = uiState.partner.isTyping,
             onNavigateBack = onNavigateBack,
             onMore = { /* TODO */ },

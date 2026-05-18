@@ -68,7 +68,9 @@ Main data flow: `ApiService` → `RepositoryImpl` (`safeApiCall`) → `UseCase` 
 
 **Auth lifecycle:** `AuthRepository` manages token state. `TokenAuthenticator` (OkHttp) handles 401 refresh automatically. `SessionController` coordinates force-logout events.
 
-**Real-time socket:** `SocketManager` wraps Socket.io for app-level events (friend requests, new post notifications). Chat uses its own `ChatSocketManager` on the `/chat` namespace with conversation-scoped auth.
+**Real-time socket:** `SocketManager` wraps Socket.io for app-level events (friend requests, new post notifications). Chat uses its own `ChatSocketManager` on the `/chat` namespace with conversation-scoped auth. `SocketReconnectController` handles reconnect logic separately.
+
+**Local database (Room):** Chat messages and conversations are persisted locally in `AppDatabase`. `MessageRemoteMediator` bridges Paging3 with the remote API — chat pagination reads from the local DB as the single source of truth.
 
 ## Package Map
 
@@ -90,9 +92,10 @@ Main data flow: `ApiService` → `RepositoryImpl` (`safeApiCall`) → `UseCase` 
 | **ui/screens/friend_request/components/** | `UserProfileCard`, `ActionButtons` | friend request UI |
 | **ui/screens/spotlight_post/** | SpotlightPost + ViewModel + UiState | spotlight post detail, deeplink/notification open |
 | **ui/screens/post_register_widget/** | `PostRegisterWidgetPromoScreen` | post-register widget promo/upsell |
-| **ui/screens/chat/** | `ChatScreen`, `ChatViewModel`, `ChatUiState` + components | chat screen, messaging |
-| **ui/screens/chat/components/** | `ChatHeader`, `ChatInputBar`, `MessageBubble`, `TypingIndicator` | chat UI components |
-| **ui/components/** | `BaseText`, `BaseTextField`, `Avatar`, `AvatarGroup`, `PrimaryButton`, `FormTextField`, `CameraPreview`, `PermissionHandler`, `AppIconButton`, `StepAnimatedContent`, `CappedCountBadge`, `EmojiFloatCanvas`, `EmojiFloatController` | shared UI components, emoji float animation |
+| **ui/screens/chat/** | `ChatScreen`, `ChatViewModel`, `ChatUiState`, `ChatListItem` + components | chat screen, messaging |
+| **ui/screens/chat/components/** | `ChatHeader`, `ChatInputBar`, `MessageBubble`, `TypingIndicator`, `DateSeparatorItem`, `MessageBubblePlaceholder`, `MessageImageContent`, `MessageImageShimmer`, `MessageInspectOverlay`, `MessageReactionsBottomSheet`, `MessageStatusIcon` | chat UI components |
+| **ui/screens/conversation_list/** | `ConversationListScreen`, `ConversationListViewModel`, `ConversationListUiState` | conversation list / inbox screen |
+| **ui/components/** | `BaseText`, `BaseTextField`, `Avatar`, `AvatarGroup`, `PrimaryButton`, `FormTextField`, `CameraPreview`, `PermissionHandler`, `AppIconButton`, `StepAnimatedContent`, `CappedCountBadge`, `EmojiFloatCanvas`, `EmojiFloatController`, `EmojiTabGrid` | shared UI components, emoji float animation, emoji picker grid |
 | **ui/components/image/** | `AsyncImage`, `AsyncImageConfig` | image loading (Coil) |
 | **ui/theme/** | Theme, Color, Typo, MotionTokens | theme, colors, typography, animation tokens |
 | **ui/overlay/** | `OverlayHost`, `OverlayViewModel`, `OverlayState`, `OverlayEvent`, `OverlayEventBus` | global overlay, dialogs, bottom sheets |
@@ -101,25 +104,27 @@ Main data flow: `ApiService` → `RepositoryImpl` (`safeApiCall`) → `UseCase` 
 | **ui/common/** | `UiText`, `CommonImages`, `ComposableExt` | UI common utilities |
 | **ui/widget/** | `SnapletWidget`, `SnapletWidgetContent`, `SnapletWidgetReceiver`, `SnapletWidgetStateKeys`, `WidgetDisplayData`, `WidgetImageLoader` | home screen widget UI/state |
 | **navigation/** | `NavGraph`, `NavScreen`, `NavParam`, `NavActions`, `NavTransitions` | navigation, routes, deep links |
-| **di/** | Hilt modules: Network, Repository, Overlay, Permission, ImageLoading, PhotoPicker, Share, WorkManager, WidgetUpdateEntryPoint | DI, modules, injection |
+| **di/** | Hilt modules: Network, Repository, Overlay, Permission, ImageLoading, PhotoPicker, Share, WorkManager, WidgetUpdateEntryPoint, Database, OkHttpQualifiers | DI, modules, injection |
 | **data/datasource/remote/** | `ApiService` | API endpoints (Retrofit) |
 | **data/datasource/local/datastore/** | `DataStoreManager`, `DataStoreKeys` | local storage (DataStore) |
 | **data/repository/** | `MediaRepository(Impl)`, `UserRepository(Impl)` | media/user repositories |
 | **data/repository/auth/** | `AuthRepository`, `AuthRepositoryImpl`, `AuthState` | auth, login state, token refresh |
-| **data/repository/chat/** | `ChatRepository`, `ChatRepositoryImpl` | chat REST + socket coordination |
+| **data/repository/chat/** | `ChatRepository`, `ChatRepositoryImpl`, `MessageRemoteMediator` | chat REST + socket coordination + Paging3 remote mediator |
+| **data/repository/quickchat/** | `QuickChatEmojiRepository`, `QuickChatEmojiRepositoryImpl` | emoji data for quick chat bar |
+| **data/local/** | `AppDatabase`, `Converters`, DAOs (`ConversationDao`, `MessageDao`, `MessageRemoteKeyDao`), entities (`ConversationEntity`, `MessageEntity`, `MessageRemoteKeyEntity`) | Room DB for offline chat storage |
 | **data/repository/device/** | `DeviceRepository`, `DeviceRepositoryImpl`, `DeviceInfo` | device fingerprint/identifiers |
 | **data/repository/post/** | `PostRepository`, `PostRepositoryImpl` | posts, feed, reactions, unread |
 | **data/model/** | `BaseResponse`, auth/request DTOs, `Relationship` | API contracts, shared DTOs |
-| **data/model/chat/** | `Message`, `Conversation`, `MessageReadEvent`, `ChatTypingEvent` | chat payloads + real-time events |
+| **data/model/chat/** | `Message`, `Conversation`, `MessageReaction`, `SocketPayload` | chat payloads + real-time events |
 | **data/model/user/** | `UserProfile`, `UserSearchResult`, `AvatarUpload`, `AvatarUrls`, `DisplayName`, `UpdateFcmTokenRequest` | user payloads |
 | **data/model/media/** | `Media`, `MediaUpload`, `ImageTransform` | media payloads |
 | **data/model/post/** | `Post`, `PostActivity`, `PostAudience`, `PostReactionUser`, `ReactToPostRequest`, `ReactToPostResponse`, `NewPostUpdate` | post/feed/reaction payloads |
 | **data/model/emoji/** | `EmojiEntry`, `EmojiLoader` | emoji data |
 | **domain/post/** | `UploadPostUseCase`, `ValidateUploadPostUseCase`, `DeletePostUseCase`, `CreateTempPostUseCase`, `GetAvailablePostActionsUseCase`, `ValidateRetryUploadUseCase`, `BuildPostShareContentUseCase`, `MapPostReactionUsersUseCase`, `PostCreateAudience` | post upload, delete, share, reactions |
 | **domain/relationship/** | `RemoveFriendUseCase`, `RemoveRelationshipUseCase`, `GetRelationshipsByStatusesUseCase`, `AcceptFriendRequestUseCase`, `ResolveRelationshipActionUseCase`, `GetRelationshipActionUseCase`, `FormatFriendSearchResultsUseCase`, `ObserveFriendRequestReceivedUseCase` | friend graph, relationship flows, realtime friend requests |
-| **domain/chat/** | `SendMessageUseCase`, `LoadInitialMessagesUseCase` | chat message sending (optimistic), initial load |
+| **domain/chat/** | `SendMessageUseCase`, `LoadInitialMessagesUseCase`, `MarkMessageReadUseCase`, `ObserveNewMessageUseCase`, `ObserveUnreadCountUseCase`, `SyncConversationsUseCase` | chat message sending (optimistic), initial load, read state, unread count, conversation sync |
 | **domain/media/** | `ValidateCaptureReadinessUseCase` | capture readiness |
-| **domain/feed/** | `ShouldTriggerLoadMoreUseCase`, `GetNewsfeedUseCase`, `FetchNewerFeedUseCase`, `ObserveNewPostEventUseCase` | feed, load more, new post events |
+| **domain/feed/** | `ShouldTriggerLoadMoreUseCase`, `GetNewsfeedUseCase`, `FetchNewerFeedUseCase`, `ObserveNewPostEventUseCase`, `ShouldMarkLatestPostAsSeenUseCase` | feed, load more, new post events, seen state |
 | **domain/user/** | `UploadAvatarUseCase` | avatar upload |
 | **domain/notification/** | `RegisterFcmTokenUseCase`, `PushNotificationType` | FCM token registration, notification type |
 | **domain/model/** | `PostAction`, `RelationshipAction`, `NewerFeedResult`, `FriendSearchActionItem`, `CaptureReadiness`, `EmojiParticle`, `ReactionUserUi`, `UploadAvatarResult`, `UploadPostResult` | domain/UI models, mappers |
@@ -128,18 +133,23 @@ Main data flow: `ApiService` → `RepositoryImpl` (`safeApiCall`) → `UseCase` 
 | **platform/permission/** | `PermissionManager`, `PermissionState` | runtime permissions |
 | **platform/share/** | `ShareManager` | share intent |
 | **platform/deeplink/** | `DeepLinkManager`, `DeepLinkEvent`, `DeepLinkUtils` | deep links |
-| **platform/notification/** | `NotificationHelper`, `FcmTokenRegistrar`, `SnapletFirebaseMessagingService` | push notifications, FCM |
+| **platform/notification/** | `NotificationHelper`, `FcmTokenRegistrar`, `SnapletFirebaseMessagingService`, `ChatQuickReplyReceiver`, `ChatSyncWorker` | push notifications, FCM, chat quick reply from notification, background chat sync |
 | **platform/network/** | `ConnectivityObserver` | network connectivity |
-| **platform/socket/** | `SocketManager`, `SocketEvent`, `SocketMessage`, `SocketConfig`, `SocketConnectionState` | realtime socket (WebSocket) — app-level events |
+| **platform/socket/** | `SocketManager`, `SocketEvent`, `SocketMessage`, `SocketConfig`, `SocketConnectionState`, `SocketReconnectController` | realtime socket (WebSocket) — app-level events |
 | **platform/socket/ChatSocketManager.kt** | Chat-specific Socket.io manager (`/chat` namespace) | chat real-time events |
 | **platform/widget/** | `WidgetAddLauncher`, `WidgetPinnedReceiver`, `WidgetUpdateManager`, `WidgetUpdateWorker`, `WidgetWork` | widget scheduling/update workers |
 | **network/** | `TokenAuthenticator`, `TokenRefreshCoordinator`, `SessionController`, `FingerprintInterceptor` | token refresh, session lifecycle, auth headers |
-| **utils/** | `Logger`, `CrashlyticsLogger`, `FileUtils`, `CommonExtensions`, `ValidationConstants`, `InviteConstants`, `EmojiParticleEngine`, `MinLoadingTime`, `UtcDateDeserializer` | utilities, validation, logging, emoji animation engine |
+| **utils/** | `Logger`, `CrashlyticsLogger`, `FileUtils`, `CommonExtensions`, `ValidationConstants`, `InviteConstants`, `EmojiParticleEngine`, `MinLoadingTime`, `UtcDateDeserializer`, `Throttler` | utilities, validation, logging, emoji animation engine, event throttling |
 | **utils/network/** | `ApiResult`, `ApiError`, `ApiErrorCode`, `NetworkExtensions`, `JsonHolder` | `safeApiCall`, API error mapping |
 
 ## Routing Hints
 
 - **Chat screen / messaging** → `ui/screens/chat/` + `domain/chat/` + `data/repository/chat/` + `platform/socket/ChatSocketManager.kt`
+- **Conversation list / inbox** → `ui/screens/conversation_list/` + `domain/chat/SyncConversationsUseCase.kt` + `data/local/dao/ConversationDao.kt`
+- **Chat pagination / offline storage** → `data/local/` + `data/repository/chat/MessageRemoteMediator.kt` + `di/DatabaseModule.kt`
+- **Message reactions** → `data/model/chat/MessageReaction.kt` + `ui/screens/chat/components/MessageReactionsBottomSheet.kt`
+- **Chat quick reply from notification** → `platform/notification/ChatQuickReplyReceiver.kt` + `platform/notification/NotificationHelper.kt`
+- **Quick chat emoji** → `data/repository/quickchat/` + `ui/screens/home/components/QuickChatBar.kt` + `ui/components/EmojiTabGrid.kt`
 - **Friend search / accept / remove** → `domain/relationship/` + `data/repository/UserRepository(Impl)` + `ui/screens/home/components/FriendBottomSheet.kt`
 - **Friend request received (realtime)** → `domain/relationship/ObserveFriendRequestReceivedUseCase` + `platform/socket/` + `ui/overlay/modal/FriendRequestModal.kt`
 - **Reactions / unread / new posts** → `data/repository/post/` + `domain/feed/` + `ui/screens/home/`

@@ -269,4 +269,7 @@ interface ApiService {
     suspend fun getMessageReactions(
         @Path("messageId") messageId: String,
     ): Response<BaseResponse<List<MessageReactionWithUserInfo>>>
+
+    @GET("presence/online-friends")
+    suspend fun getOnlineFriends(): Response<BaseResponse<List<String>>>
 }

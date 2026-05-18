@@ -22,6 +22,7 @@ import com.thinh.snaplet.data.model.chat.MessageReaction
 import com.thinh.snaplet.data.model.chat.MessageReactionUpdatedEvent
 import com.thinh.snaplet.data.model.chat.MessageReactionWithUserInfo
 import com.thinh.snaplet.data.model.chat.MessageReadEvent
+import com.thinh.snaplet.data.model.chat.PartnerPresencePayload
 import com.thinh.snaplet.data.model.chat.MessageType
 import com.thinh.snaplet.data.model.chat.ReactToMessageRequest
 import com.thinh.snaplet.data.model.chat.SendMessageRequest
@@ -33,6 +34,7 @@ import com.thinh.snaplet.platform.socket.SocketConnectionState
 import com.thinh.snaplet.platform.socket.SocketEvent
 import com.thinh.snaplet.platform.socket.SocketManager
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.network.ApiError
 import com.thinh.snaplet.utils.network.ApiResult
 import com.thinh.snaplet.utils.network.GsonHolder.gson
 import com.thinh.snaplet.utils.network.onFailure
@@ -42,6 +44,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -64,7 +67,7 @@ class ChatRepositoryImpl @Inject constructor(
     private val messageRemoteKeyDao: MessageRemoteKeyDao,
     private val appDatabase: AppDatabase,
     private val chatSocketManager: ChatSocketManager,
-    socketManager: SocketManager,
+    private val socketManager: SocketManager,
 ) : ChatRepository {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -211,6 +214,18 @@ class ChatRepositoryImpl @Inject constructor(
 
     override fun observeUnreadCount(myUserId: String): Flow<Int> =
         conversationDao.observeUnreadCount(myUserId).distinctUntilChanged()
+
+    override suspend fun fetchOnlineFriends(): ApiResult<List<String>> =
+        safeApiCall(apiCall = { apiService.getOnlineFriends() })
+
+    override fun observePartnerOnline(): Flow<PartnerPresencePayload> =
+        socketManager.observePartnerOnline()
+
+    override fun observePartnerOffline(): Flow<PartnerPresencePayload> =
+        socketManager.observePartnerOffline()
+
+    override suspend fun getParticipantId(conversationId: String): String? =
+        conversationDao.getById(conversationId)?.participantId
 
     @Volatile
     private var activeConversationId: String = ""
@@ -446,7 +461,11 @@ class ChatRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun sendTextMessage(convId: String, senderId: String, text: String) {
+    override suspend fun sendTextMessage(
+        convId: String,
+        senderId: String,
+        text: String,
+    ): ApiResult<Unit> {
         val localId = UUID.randomUUID().toString()
         val now = Date()
         messageDao.insert(
@@ -474,7 +493,7 @@ class ChatRepositoryImpl @Inject constructor(
             text,
             MessageType.TEXT.name.lowercase()
         )
-        scope.launch(NonCancellable) { executeSend(localId) }
+        return withContext(NonCancellable) { executeSend(localId) }
     }
 
     override suspend fun sendMediaMessage(
@@ -509,14 +528,18 @@ class ChatRepositoryImpl @Inject constructor(
         retryPendingMessages(convId)
     }
 
-    private suspend fun executeSend(localId: String) {
-        val msg = messageDao.getByLocalId(localId) ?: return
+    private suspend fun executeSend(localId: String): ApiResult<Unit> {
+        val msg = messageDao.getByLocalId(localId) ?: return ApiResult.Failure(
+            ApiError(httpCode = 500, message = "Message not found"),
+        )
         val conv = conversationDao.getById(msg.conversationId) ?: run {
             Logger.e("executeSend: conversation not found for convId=${msg.conversationId}")
             messageDao.updateStatus(localId, MessageStatus.FAILED)
-            return
+            return ApiResult.Failure(
+                ApiError(httpCode = 404, message = "Conversation not found"),
+            )
         }
-        safeApiCall(
+        return safeApiCall(
             apiCall = {
                 apiService.sendMessage(
                     body = SendMessageRequest(
@@ -525,25 +548,31 @@ class ChatRepositoryImpl @Inject constructor(
                         text = msg.text,
                     ),
                 )
-            }).onSuccess { sent ->
-            messageDao.updateStatusAfterSend(
-                localId = localId,
-                serverId = sent.id,
-                status = MessageStatus.SENT,
-                serverCreatedAt = sent.createdAt,
-            )
-            conversationDao.updateLastMessage(
-                convId = msg.conversationId,
-                lastMessageId = sent.id,
-                lastMessageAt = sent.createdAt,
-                lastMessageSenderId = msg.senderId,
-                lastMessageText = msg.text,
-                lastMessageType = msg.type,
-            )
-        }.onFailure {
-            Logger.e("executeSend failed localId=$localId: ${it.message}")
-            messageDao.updateStatus(localId, MessageStatus.FAILED)
-        }
+            },
+            onSuccess = { sent ->
+                messageDao.updateStatusAfterSend(
+                    localId = localId,
+                    serverId = sent.id,
+                    status = MessageStatus.SENT,
+                    serverCreatedAt = sent.createdAt,
+                )
+                conversationDao.updateLastMessage(
+                    convId = msg.conversationId,
+                    lastMessageId = sent.id,
+                    lastMessageAt = sent.createdAt,
+                    lastMessageSenderId = msg.senderId,
+                    lastMessageText = msg.text,
+                    lastMessageType = msg.type,
+                )
+            },
+        ).fold(
+            onSuccess = { ApiResult.Success(Unit) },
+            onFailure = { err ->
+                Logger.e("executeSend failed localId=$localId: ${err.message}")
+                messageDao.updateStatus(localId, MessageStatus.FAILED)
+                ApiResult.Failure(err)
+            },
+        )
     }
 
     private suspend fun upsertIfChanged(incoming: List<Conversation>) {
