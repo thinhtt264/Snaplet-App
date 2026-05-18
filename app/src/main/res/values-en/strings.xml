@@ -220,4 +220,13 @@
     <string name="chat_notification_photo_only">📷 Photo</string>
     <string name="chat_notification_photo_with_caption">📷 Photo • %1$s</string>
     <string name="chat_notification_message_reaction">Reacted %1$s to your message</string>
+
+    <!-- Maintenance screen -->
+    <string name="maintenance_status_label">Under Maintenance</string>
+    <string name="maintenance_title">Snaplet is upgrading</string>
+    <string name="maintenance_body">The system is under maintenance to bring you a better experience.\nPlease come back later.</string>
+    <string name="maintenance_card_label">ESTIMATED COMPLETION</string>
+    <string name="maintenance_no_time">Will be announced soon</string>
+    <string name="maintenance_card_footer">Your data is fully preserved.\nThe app will reopen automatically when done.</string>
+    <string name="maintenance_status_update">Status updates at</string>
 </resources>

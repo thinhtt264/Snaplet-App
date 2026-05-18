@@ -10,6 +10,8 @@ import com.thinh.snaplet.data.repository.auth.AuthRepository
 import com.thinh.snaplet.navigation.Register
 import com.thinh.snaplet.ui.common.UiText
 import com.thinh.snaplet.utils.ValidationConstants
+import com.thinh.snaplet.utils.analytics.AnalyticsTracker
+import com.thinh.snaplet.utils.analytics.SignUpMethod
 import com.thinh.snaplet.utils.network.ApiErrorCode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.BufferOverflow
@@ -26,6 +28,7 @@ import javax.inject.Inject
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val analyticsTracker: AnalyticsTracker,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -309,6 +312,7 @@ class RegisterViewModel @Inject constructor(
 
             result.fold(
                 onSuccess = {
+                    analyticsTracker.trackSignUp(SignUpMethod.GOOGLE)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -341,6 +345,7 @@ class RegisterViewModel @Inject constructor(
 
             result.fold(
                 onSuccess = {
+                    analyticsTracker.trackSignUp(SignUpMethod.EMAIL)
                     _uiState.update {
                         it.copy(
                             isLoading = false,

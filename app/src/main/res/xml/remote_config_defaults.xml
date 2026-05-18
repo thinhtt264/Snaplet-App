@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<defaultsMap>
+    <entry>
+        <key>is_maintenance_enabled</key>
+        <value>false</value>
+    </entry>
+    <entry>
+        <key>maintenance_end_time</key>
+        <value></value>
+    </entry>
+</defaultsMap>

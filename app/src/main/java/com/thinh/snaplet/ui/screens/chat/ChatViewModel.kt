@@ -19,6 +19,7 @@ import com.thinh.snaplet.domain.chat.OnlinePresenceController
 import com.thinh.snaplet.navigation.ChatConversation
 import com.thinh.snaplet.platform.network.ConnectivityObserver
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.analytics.AnalyticsTracker
 import com.thinh.snaplet.utils.Throttler
 import com.thinh.snaplet.utils.effectiveDate
 import com.thinh.snaplet.utils.network.onFailure
@@ -61,6 +62,7 @@ class ChatViewModel @Inject constructor(
     private val markMessageSeenUseCase: MarkMessageSeenUseCase,
     private val connectivityObserver: ConnectivityObserver,
     private val onlinePresenceController: OnlinePresenceController,
+    private val analyticsTracker: AnalyticsTracker,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -163,6 +165,7 @@ class ChatViewModel @Inject constructor(
                 val recipientId = route.recipientId ?: return@launch
                 sendFirstMessageAndInit(recipientId, currentUserId, trimmed)
             } else {
+                analyticsTracker.trackMessageSent(conversationId, "text")
                 chatRepository.sendTextMessage(conversationId, currentUserId, trimmed)
                     .onFailure { error ->
                         Logger.e("sendTextMessage failed: ${error.message}")
@@ -286,6 +289,7 @@ class ChatViewModel @Inject constructor(
             .onSuccess { message ->
                 conversationId = message.conversationId
                 _activeConversationId.value = message.conversationId
+                analyticsTracker.trackMessageSent(message.conversationId, "text")
                 _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
                 viewModelScope.launch { connectSocketAndSyncMessages() }
             }
