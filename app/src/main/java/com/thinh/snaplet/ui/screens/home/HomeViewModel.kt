@@ -941,20 +941,34 @@ class HomeViewModel @Inject constructor(
                 it.copy(snackbarMessage = UiText.DynamicString("Camera is not ready"))
             }
 
-            CaptureReadiness.Ready -> {
-                val counts = _uiState.value.friendSheetState.relationshipCounts
-                if (counts != null && counts.acceptedFriendCount > 0) {
-                    takePhoto(context)
-                } else {
-                    OverlayEventBus.showConfirmDialog(
-                        title = UiText.StringResource(R.string.capture_no_friends_dialog_title),
-                        message = UiText.StringResource(R.string.capture_no_friends_dialog_message),
-                        confirmText = UiText.StringResource(R.string.capture_no_friends_dialog_add_friend),
-                        cancelText = UiText.StringResource(R.string.ok),
-                        onConfirm = { showFriendSheet() },
-                    )
-                }
+            CaptureReadiness.Ready -> withAcceptedFriendsOrShowAddFriendDialog {
+                takePhoto(context)
             }
+        }
+    }
+
+    fun onPickFromGallery() {
+        withAcceptedFriendsOrShowAddFriendDialog {
+            _uiState.update { it.copy(showGalleryPicker = true) }
+        }
+    }
+
+    fun onGalleryPickerRequestHandled() {
+        _uiState.update { it.copy(showGalleryPicker = false) }
+    }
+
+    private fun withAcceptedFriendsOrShowAddFriendDialog(onAllowed: () -> Unit) {
+        val counts = _uiState.value.friendSheetState.relationshipCounts
+        if (counts != null && counts.acceptedFriendCount > 0) {
+            onAllowed()
+        } else {
+            OverlayEventBus.showConfirmDialog(
+                title = UiText.StringResource(R.string.capture_no_friends_dialog_title),
+                message = UiText.StringResource(R.string.capture_no_friends_dialog_message),
+                confirmText = UiText.StringResource(R.string.capture_no_friends_dialog_add_friend),
+                cancelText = UiText.StringResource(R.string.ok),
+                onConfirm = { showFriendSheet() },
+            )
         }
     }
 
