@@ -16,6 +16,7 @@ jobs:
   beta-android-release:
     name: Deploy beta & release
     runs-on: ubuntu-latest
+    environment: development
     if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
 
     steps:
