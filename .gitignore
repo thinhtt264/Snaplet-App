@@ -21,3 +21,4 @@ app/release
 *.keystore
 fastlane/report.xml
 fastlane/README.md
+fastlane/snaplet-fastlane-google-key.json
