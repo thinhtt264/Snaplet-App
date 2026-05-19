@@ -28,6 +28,9 @@ interface ConversationDao {
     @Query("SELECT * FROM conversations WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): ConversationEntity?
 
+    @Query("SELECT * FROM conversations WHERE id = :id LIMIT 1")
+    fun observeById(id: String): Flow<ConversationEntity?>
+
     @Query("SELECT id, updatedAt, myLastSeenAt, partnerLastSeenAt FROM conversations")
     suspend fun getAllUpdatedAtSnapshot(): List<ConversationUpdatedAtProjection>
 
@@ -113,6 +116,9 @@ interface ConversationDao {
     """
     )
     fun observeUnreadCount(myUserId: String): Flow<Int>
+
+    @Query("UPDATE conversations SET isRestricted = :isRestricted WHERE id = :conversationId")
+    suspend fun updateRestricted(conversationId: String, isRestricted: Boolean)
 
     @Query("DELETE FROM conversations")
     suspend fun deleteAll()

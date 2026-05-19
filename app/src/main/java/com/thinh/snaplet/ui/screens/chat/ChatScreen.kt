@@ -546,6 +546,7 @@ fun ChatScreen(
                 coroutineScope.launch { listState.animateScrollToItem(0) }
             },
             onAttach = { /* TODO */ },
+            isRestricted = uiState.isRestricted,
         )
     }
 

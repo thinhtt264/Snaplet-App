@@ -36,6 +36,7 @@ import com.thinh.snaplet.platform.socket.SocketEvent
 import com.thinh.snaplet.platform.socket.SocketManager
 import com.thinh.snaplet.utils.Logger
 import com.thinh.snaplet.utils.network.ApiError
+import com.thinh.snaplet.utils.network.ApiErrorCode
 import com.thinh.snaplet.utils.network.ApiResult
 import com.thinh.snaplet.utils.network.GsonHolder.gson
 import com.thinh.snaplet.utils.network.onFailure
@@ -137,6 +138,8 @@ class ChatRepositoryImpl @Inject constructor(
     init {
         observeConversationUpdatedSocket(socketManager)
         observeConversationDeletedSocket(socketManager)
+        observeConversationRestrictedSocket()
+        observeConversationUnrestrictedSocket()
         routeIncomingMessagesToRoom()
         observeReadReceiptsToDb()
         observeMessageReactionUpdatesToDb()
@@ -177,6 +180,34 @@ class ChatRepositoryImpl @Inject constructor(
                     }.getOrNull()
                 }.collect { convId ->
                     deleteConversationLocal(convId)
+                }
+        }
+    }
+
+    private fun observeConversationRestrictedSocket() {
+        scope.launch {
+            chatSocketManager.messages.filter { it.event == SocketEvent.CHAT_CONVERSATION_RESTRICTED }
+                .mapNotNull { message ->
+                    val json = message.args ?: return@mapNotNull null
+                    runCatching {
+                        JSONObject(json).optString("conversationId").takeIf { it.isNotEmpty() }
+                    }.getOrNull()
+                }.collect { convId ->
+                    conversationDao.updateRestricted(convId, isRestricted = true)
+                }
+        }
+    }
+
+    private fun observeConversationUnrestrictedSocket() {
+        scope.launch {
+            chatSocketManager.messages.filter { it.event == SocketEvent.CHAT_CONVERSATION_UNRESTRICTED }
+                .mapNotNull { message ->
+                    val json = message.args ?: return@mapNotNull null
+                    runCatching {
+                        JSONObject(json).optString("conversationId").takeIf { it.isNotEmpty() }
+                    }.getOrNull()
+                }.collect { convId ->
+                    conversationDao.updateRestricted(convId, isRestricted = false)
                 }
         }
     }
@@ -339,6 +370,17 @@ class ChatRepositoryImpl @Inject constructor(
             transform = { it.conversationId },
         )
     }
+
+    override suspend fun markConversationRestricted(conversationId: String) {
+        conversationDao.updateRestricted(conversationId, isRestricted = true)
+    }
+
+    override suspend fun markConversationUnrestricted(conversationId: String) {
+        conversationDao.updateRestricted(conversationId, isRestricted = false)
+    }
+
+    override fun observeConversation(convId: String): Flow<ConversationEntity?> =
+        conversationDao.observeById(convId)
 
     override suspend fun deleteConversationLocal(convId: String) {
         Logger.d("deleteConversationLocal convId=$convId")
@@ -506,6 +548,8 @@ class ChatRepositoryImpl @Inject constructor(
 
     override suspend fun retryMessage(localId: String) {
         val msg = messageDao.getByLocalId(localId) ?: return
+        val conv = conversationDao.getById(msg.conversationId)
+        if (conv?.isRestricted == true) return
         messageDao.updateStatus(localId, MessageStatus.PENDING)
         when {
             msg.type == MessageType.TEXT.name.lowercase() -> executeSend(localId)
@@ -515,6 +559,7 @@ class ChatRepositoryImpl @Inject constructor(
     }
 
     override suspend fun retryPendingMessages(convId: String) {
+        if (conversationDao.getById(convId)?.isRestricted == true) return
         messageDao.getPendingByConvId(convId).forEach { msg ->
             when {
                 msg.type == MessageType.TEXT.name.lowercase() -> executeSend(msg.localId)
@@ -538,6 +583,12 @@ class ChatRepositoryImpl @Inject constructor(
             messageDao.updateStatus(localId, MessageStatus.FAILED)
             return ApiResult.Failure(
                 ApiError(httpCode = 404, message = "Conversation not found"),
+            )
+        }
+        if (conv.isRestricted) {
+            messageDao.updateStatus(localId, MessageStatus.FAILED)
+            return ApiResult.Failure(
+                ApiError(httpCode = 403, message = "Conversation is restricted", errorCode = ApiErrorCode.CONVERSATION_RESTRICTED),
             )
         }
         return safeApiCall(

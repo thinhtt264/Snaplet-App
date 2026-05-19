@@ -72,7 +72,12 @@ fun ChatInputBar(
     onValueChange: (String) -> Unit,
     onSendMessage: (text: String?) -> Unit,
     onAttach: () -> Unit,
+    isRestricted: Boolean = false,
 ) {
+    if (isRestricted) {
+        RestrictedConversationBanner()
+        return
+    }
     val context = LocalContext.current
     val density = LocalDensity.current
     val focusManager = LocalFocusManager.current
@@ -335,6 +340,25 @@ fun ChatInputBar(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RestrictedConversationBanner() {
+    HorizontalDivider(color = SeparatorColor, thickness = 1.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(ChatSurface)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        BaseText(
+            text = stringResource(R.string.chat_restricted_send_message),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            typography = Typography.bodyMedium,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

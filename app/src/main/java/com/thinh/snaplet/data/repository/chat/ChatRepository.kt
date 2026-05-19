@@ -81,6 +81,10 @@ interface ChatRepository {
 
     suspend fun lookupConversationId(targetUserId: String): ApiResult<String?>
 
+    suspend fun markConversationRestricted(conversationId: String)
+    suspend fun markConversationUnrestricted(conversationId: String)
+    fun observeConversation(convId: String): Flow<ConversationEntity?>
+
     suspend fun deleteConversationLocal(convId: String)
 
     suspend fun updateLastMessageLocal(

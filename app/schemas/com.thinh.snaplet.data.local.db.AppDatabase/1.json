@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "f71466e0a4156667f7a0be73a1326982",
+    "identityHash": "9e52f4d91dfef85a98af9aad18e684f6",
     "entities": [
       {
         "tableName": "conversations",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `participantId` TEXT NOT NULL, `participantName` TEXT NOT NULL, `participantAvatarUrl` TEXT, `lastMessageId` TEXT, `lastMessageText` TEXT, `lastMessageType` TEXT, `isLastMessageDeleted` INTEGER NOT NULL, `lastMessageSenderId` TEXT, `lastMessageAt` INTEGER, `myLastSeenAt` INTEGER, `partnerLastSeenAt` INTEGER, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `participantId` TEXT NOT NULL, `participantName` TEXT NOT NULL, `participantAvatarUrl` TEXT, `lastMessageId` TEXT, `lastMessageText` TEXT, `lastMessageType` TEXT, `isLastMessageDeleted` INTEGER NOT NULL, `lastMessageSenderId` TEXT, `lastMessageAt` INTEGER, `myLastSeenAt` INTEGER, `partnerLastSeenAt` INTEGER, `updatedAt` INTEGER NOT NULL, `isRestricted` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -75,6 +75,12 @@
           {
             "fieldPath": "updatedAt",
             "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isRestricted",
+            "columnName": "isRestricted",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -254,7 +260,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f71466e0a4156667f7a0be73a1326982')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9e52f4d91dfef85a98af9aad18e684f6')"
     ]
   }
 }

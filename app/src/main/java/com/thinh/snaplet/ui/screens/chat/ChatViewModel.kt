@@ -19,9 +19,10 @@ import com.thinh.snaplet.domain.chat.OnlinePresenceController
 import com.thinh.snaplet.navigation.ChatConversation
 import com.thinh.snaplet.platform.network.ConnectivityObserver
 import com.thinh.snaplet.utils.Logger
-import com.thinh.snaplet.utils.analytics.AnalyticsTracker
 import com.thinh.snaplet.utils.Throttler
+import com.thinh.snaplet.utils.analytics.AnalyticsTracker
 import com.thinh.snaplet.utils.effectiveDate
+import com.thinh.snaplet.utils.network.ApiErrorCode
 import com.thinh.snaplet.utils.network.onFailure
 import com.thinh.snaplet.utils.network.onSuccess
 import com.thinh.snaplet.utils.toStartOfDayMillis
@@ -40,6 +41,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -128,6 +130,7 @@ class ChatViewModel @Inject constructor(
         observeIncomingUnreadWhileScrolled()
         observeNetworkReconnect()
         observePartnerOnlineStatus()
+        observeConversationRestricted()
         loadRecentEmojis()
     }
 
@@ -156,6 +159,7 @@ class ChatViewModel @Inject constructor(
     }
 
     fun onSendMessage(text: String?) {
+        if (_uiState.value.isRestricted) return
         val trimmed = text?.trim()?.takeIf { it.isNotEmpty() } ?: return
         val currentUserId = _uiState.value.currentUserId ?: return
         _uiState.update { it.copy(draftMessage = "") }
@@ -168,6 +172,9 @@ class ChatViewModel @Inject constructor(
                 analyticsTracker.trackMessageSent(conversationId, "text")
                 chatRepository.sendTextMessage(conversationId, currentUserId, trimmed)
                     .onFailure { error ->
+                        if (error.errorCode == ApiErrorCode.CONVERSATION_RESTRICTED) {
+                            _uiState.update { it.copy(isRestricted = true) }
+                        }
                         Logger.e("sendTextMessage failed: ${error.message}")
                     }
                 chatRepository.sendTypingStop(conversationId)
@@ -337,6 +344,16 @@ class ChatViewModel @Inject constructor(
             .onEach { isOnline ->
                 _uiState.update { state -> state.copy(isPartnerOnline = isOnline) }
             }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observeConversationRestricted() {
+        _activeConversationId
+            .filter { it.isNotEmpty() }
+            .flatMapLatest { convId -> chatRepository.observeConversation(convId) }
+            .mapNotNull { it?.isRestricted }
+            .distinctUntilChanged()
+            .onEach { isRestricted -> _uiState.update { it.copy(isRestricted = isRestricted) } }
             .launchIn(viewModelScope)
     }
 

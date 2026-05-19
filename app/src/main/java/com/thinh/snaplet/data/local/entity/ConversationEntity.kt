@@ -20,6 +20,7 @@ data class ConversationEntity(
     val myLastSeenAt: Date?,
     val partnerLastSeenAt: Date?,
     val updatedAt: Date,
+    val isRestricted: Boolean = false,
 )
 
 data class ConversationUpdatedAtProjection(

@@ -198,6 +198,7 @@
     <string name="conversation_image_load_failed">Không tải được ảnh</string>
     <string name="chat_media_source_deleted">Trạng thái đã bị xóa</string>
     <string name="chat_input_placeholder">Nhắn tin…</string>
+    <string name="chat_restricted_send_message">Hiện không thể gửi tin nhắn cho người này.</string>
     <string name="chat_message_action_reply">Trả lời</string>
     <string name="chat_message_action_copy">Sao chép</string>
     <string name="chat_message_action_recall">Thu hồi</string>

@@ -194,6 +194,7 @@
     <string name="conversation_image_load_failed">Failed to load image</string>
     <string name="chat_media_source_deleted">Status has been deleted</string>
     <string name="chat_input_placeholder">Message…</string>
+    <string name="chat_restricted_send_message">You can\'t send messages to this person right now.</string>
     <string name="chat_message_action_reply">Reply</string>
     <string name="chat_message_action_copy">Copy</string>
     <string name="chat_message_action_recall">Recall</string>

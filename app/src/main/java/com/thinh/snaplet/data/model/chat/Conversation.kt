@@ -64,6 +64,8 @@ data class Conversation(
     val createdAt: Date,
     @SerializedName("syncUpdatedAt")
     val syncUpdatedAt: Date,
+    @SerializedName("isRestricted")
+    val isRestricted: Boolean = false,
 )
 
 data class ConversationLookupResult(
@@ -97,4 +99,5 @@ fun Conversation.toEntity(): ConversationEntity = ConversationEntity(
     myLastSeenAt = myLastReadAt,
     partnerLastSeenAt = partnerLastReadAt,
     updatedAt = syncUpdatedAt,
+    isRestricted = isRestricted,
 )
