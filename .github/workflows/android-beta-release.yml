@@ -59,16 +59,21 @@ jobs:
       - name: Install dependencies
         run: bundle install
 
-      - name: Setup release keystore
+      - name: Setup Keystore for signing
         run: |
           echo "${{ secrets.SNAPLET_KEYSTORE_BASE64 }}" | base64 -d > app/snaplet-release-key.jks
+
+          # Tạo local.properties với thông tin keystore từ Environment Secrets
           cat > local.properties << EOF
-          sdk.dir=$ANDROID_HOME
+          sdk.dir=\$ANDROID_HOME
           SNAPLET_KEYSTORE_FILE=snaplet-release-key.jks
           SNAPLET_KEYSTORE_PASSWORD=${{ secrets.SNAPLET_KEYSTORE_PASSWORD }}
           SNAPLET_KEY_ALIAS=${{ secrets.SNAPLET_KEY_ALIAS }}
           SNAPLET_KEY_PASSWORD=${{ secrets.SNAPLET_KEY_PASSWORD }}
           EOF
+
+          ls -lh app/snaplet-release-key.jks
+          cat local.properties | grep -v PASSWORD
 
       - name: Setup Google Play service account
         env:
