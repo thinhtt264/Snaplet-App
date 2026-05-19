@@ -1,0 +1,109 @@
+name: Android Beta Release (Play Internal)
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: android-beta-release-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  beta-android-release:
+    name: Deploy beta & release
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read app version
+        id: version
+        run: |
+          VERSION_CODE=$(grep -E 'versionCode\s*=' app/build.gradle.kts | head -1 | sed -E 's/.*versionCode\s*=\s*([0-9]+).*/\1/')
+          VERSION_NAME=$(grep -E 'versionName\s*=' app/build.gradle.kts | head -1 | sed -E 's/.*versionName\s*=\s*"([^"]+)".*/\1/')
+          echo "code=${VERSION_CODE}" >> "$GITHUB_OUTPUT"
+          echo "name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
+          echo "tag=${VERSION_NAME}(${VERSION_CODE})" >> "$GITHUB_OUTPUT"
+          echo "Deploying versionName=${VERSION_NAME} versionCode=${VERSION_CODE}"
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Ruby (Fastlane)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2.11"
+          bundler-cache: true
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Setup release keystore
+        run: |
+          echo "${{ secrets.SNAPLET_KEYSTORE_BASE64 }}" | base64 -d > app/snaplet-release-key.jks
+          cat > local.properties << EOF
+          sdk.dir=$ANDROID_HOME
+          SNAPLET_KEYSTORE_FILE=snaplet-release-key.jks
+          SNAPLET_KEYSTORE_PASSWORD=${{ secrets.SNAPLET_KEYSTORE_PASSWORD }}
+          SNAPLET_KEY_ALIAS=${{ secrets.SNAPLET_KEY_ALIAS }}
+          SNAPLET_KEY_PASSWORD=${{ secrets.SNAPLET_KEY_PASSWORD }}
+          EOF
+
+      - name: Setup Google Play service account
+        env:
+          GOOGLE_PLAY_JSON_KEY: ${{ secrets.GOOGLE_PLAY_JSON_KEY }}
+        run: printf '%s' "$GOOGLE_PLAY_JSON_KEY" > fastlane/snaplet-fastlane-google-key.json
+
+      - name: Deploy to Play Internal (beta_android)
+        run: bundle exec fastlane android beta_android
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.name }}
+          body: |
+            Play Internal testing build.
+
+            - **versionName:** ${{ steps.version.outputs.name }}
+            - **versionCode:** ${{ steps.version.outputs.code }}
+            - **commit:** ${{ github.sha }}
+          generate_release_notes: true
+
+      - name: Bump versionCode
+        id: bump
+        run: |
+          CURRENT="${{ steps.version.outputs.code }}"
+          NEXT=$((CURRENT + 1))
+          sed -i "s/versionCode = ${CURRENT}/versionCode = ${NEXT}/" app/build.gradle.kts
+          echo "next=${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "Bumped versionCode ${CURRENT} -> ${NEXT}"
+
+      - name: Commit and push version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/build.gradle.kts
+          git commit -m "chore: bump versionCode to ${{ steps.bump.outputs.next }} [skip ci]"
+          git push

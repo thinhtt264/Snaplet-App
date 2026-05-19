@@ -1,5 +1,10 @@
 default_platform(:android)
 
+GOOGLE_PLAY_PACKAGE_NAME = "com.thinh.snaplet"
+GOOGLE_PLAY_JSON_KEY_FILE = "fastlane/snaplet-fastlane-google-key.json" # JSON service account (Play Console → API access)
+PLAY_STORE_TRACK = "internal" # internal | alpha | beta | production
+PLAY_STORE_RELEASE_STATUS = "completed" # completed | draft | inProgress | halted
+
 platform :android do
   desc "Distribute app to Firebase Distribution"
   lane :build_test do |options|
@@ -58,8 +63,72 @@ platform :android do
       firebase_cli_token: ENV["FIREBASE_CLI_TOKEN"]
     )
   end
+
+  desc "Build production release AAB and upload to Google Play Internal testing"
+  lane :beta_android do |options|
+    validate_google_play_config!
+
+    gradle(
+      task: "bundleProductionRelease",
+      project_dir: "."
+    )
+
+    aab_path = production_release_aab_path
+
+    release_status = options[:release_status] || ENV["PLAY_RELEASE_STATUS"] || PLAY_STORE_RELEASE_STATUS
+
+    upload_to_play_store(
+      package_name: GOOGLE_PLAY_PACKAGE_NAME,
+      json_key: google_play_json_key_path,
+      track: PLAY_STORE_TRACK,
+      aab: aab_path,
+      release_status: release_status,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+end
+
+def validate_google_play_config!
+  if GOOGLE_PLAY_PACKAGE_NAME.to_s.strip.empty? || GOOGLE_PLAY_PACKAGE_NAME.include?("YOUR_")
+    UI.user_error!("Set GOOGLE_PLAY_PACKAGE_NAME in fastlane/Fastfile")
+  end
+
+  unless File.exist?(google_play_json_key_path)
+    UI.user_error!(
+      "Google Play service account JSON not found at #{google_play_json_key_path}. " \
+      "Set GOOGLE_PLAY_JSON_KEY_FILE in fastlane/Fastfile and add the key file."
+    )
+  end
+end
+
+def google_play_json_key_path
+  File.expand_path(GOOGLE_PLAY_JSON_KEY_FILE, project_root)
+end
+
+def project_root
+  File.expand_path("..", __dir__)
+end
+
+def production_release_aab_path
+  aab_path = lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH]
+
+  return aab_path if aab_path && File.exist?(aab_path)
+
+  fallback_dir = File.join(project_root, "app/build/outputs/bundle/productionRelease")
+  aab_path = Dir[File.join(fallback_dir, "*.aab")].max_by { |path| File.mtime(path) }
+
+  unless aab_path && File.exist?(aab_path)
+    UI.user_error!("Could not find production release AAB under #{fallback_dir}")
+  end
+
+  aab_path
 end
 
 
 ## fastlane android build_test release_notes:"Notes"
 ## fastlane android build_prod release_notes:"Notes"
+## fastlane android beta_android
+## fastlane android beta_android release_status:draft
