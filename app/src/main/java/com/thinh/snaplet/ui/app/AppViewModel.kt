@@ -11,6 +11,7 @@ import com.thinh.snaplet.domain.chat.OnlinePresenceController
 import com.thinh.snaplet.navigation.AuthGraph
 import com.thinh.snaplet.navigation.HomeGraph
 import com.thinh.snaplet.platform.deeplink.DeepLinkEvent
+import com.thinh.snaplet.platform.app.AppVisibilityTracker
 import com.thinh.snaplet.platform.deeplink.DeepLinkManager
 import com.thinh.snaplet.platform.notification.FcmTokenRegistrar
 import com.thinh.snaplet.platform.socket.SocketManager
@@ -47,6 +48,7 @@ class AppViewModel @Inject constructor(
     private val fcmTokenRegistrar: FcmTokenRegistrar,
     private val onlinePresenceController: OnlinePresenceController,
     private val analyticsTracker: AnalyticsTracker,
+    private val appVisibilityTracker: AppVisibilityTracker,
 ) : ViewModel() {
 
     val onlineUserIds = onlinePresenceController.onlineUserIds
@@ -62,7 +64,6 @@ class AppViewModel @Inject constructor(
     private var isInitialized = false
     private var isPresenceInitialized = false
     private val isAuthenticated = MutableStateFlow(false)
-    private val isForegrounded = MutableStateFlow(false)
 
 
     /** Pending friend request deeplink (userName) to show after login in this session. */
@@ -94,7 +95,7 @@ class AppViewModel @Inject constructor(
      * reactively by [observeSocketSync] based on auth + foreground.
      */
     fun onAppVisibilityChanged(isVisible: Boolean) {
-        isForegrounded.value = isVisible
+        appVisibilityTracker.setAppVisible(isVisible)
     }
 
     private fun observerIsAuthenticated() {
@@ -106,7 +107,7 @@ class AppViewModel @Inject constructor(
     }
 
     private fun observeSocketSync() {
-        combine(isAuthenticated, isForegrounded) { authenticated, foregrounded ->
+        combine(isAuthenticated, appVisibilityTracker.isForegrounded) { authenticated, foregrounded ->
             authenticated && foregrounded
         }.onEach { shouldConnect ->
             if (shouldConnect) {
@@ -120,7 +121,7 @@ class AppViewModel @Inject constructor(
     }
 
     private fun observePresenceSync() {
-        combine(isAuthenticated, isForegrounded) { authenticated, foregrounded ->
+        combine(isAuthenticated, appVisibilityTracker.isForegrounded) { authenticated, foregrounded ->
             authenticated && foregrounded
         }.onEach { shouldSync ->
             if (shouldSync) {

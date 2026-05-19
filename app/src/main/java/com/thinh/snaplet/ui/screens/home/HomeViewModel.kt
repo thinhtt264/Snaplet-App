@@ -56,7 +56,6 @@ import com.thinh.snaplet.domain.relationship.GetRelationshipsByStatusesUseCase
 import com.thinh.snaplet.domain.relationship.ObserveFriendRequestReceivedUseCase
 import com.thinh.snaplet.domain.relationship.RemoveFriendUseCase
 import com.thinh.snaplet.domain.relationship.RemoveRelationshipUseCase
-import com.thinh.snaplet.platform.network.ConnectivityObserver
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.platform.permission.PermissionManager
 import com.thinh.snaplet.platform.share.ShareApp
@@ -70,6 +69,7 @@ import com.thinh.snaplet.ui.theme.Error50
 import com.thinh.snaplet.utils.CrashlyticsLogger
 import com.thinh.snaplet.utils.FileUtils
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.RemoteStaleRefreshCoordinator
 import com.thinh.snaplet.utils.analytics.AnalyticsTracker
 import com.thinh.snaplet.utils.network.ApiErrorCode
 import com.thinh.snaplet.utils.network.onFailure
@@ -129,7 +129,7 @@ class HomeViewModel @Inject constructor(
     private val postRepository: PostRepository,
     private val shouldMarkLatestPostAsSeenUseCase: ShouldMarkLatestPostAsSeenUseCase,
     private val mapPostReactionUsersUseCase: MapPostReactionUsersUseCase,
-    private val connectivityObserver: ConnectivityObserver,
+    private val remoteStaleRefreshCoordinator: RemoteStaleRefreshCoordinator,
     private val widgetUpdateManager: WidgetUpdateManager,
     private val mediaRepository: MediaRepository,
     private val observeFriendRequestReceivedUseCase: ObserveFriendRequestReceivedUseCase,
@@ -143,6 +143,10 @@ class HomeViewModel @Inject constructor(
 
     private companion object {
         private const val DEBOUNCE_MS = 500L
+        private const val REMOTE_STALE_TIME_MS = 60_000 * 2L // 2 minutes
+        private const val SLOT_FEED = "home_feed"
+        private const val SLOT_FRIEND_LIST = "home_friend_list"
+        private const val SLOT_CHAT_CONVERSATIONS = "home_chat_conversations"
         private const val QUICK_CHAT_MAX_SLOTS = 3
         private val QUICK_CHAT_DEFAULT_EMOJIS = listOf("❤️", "🔥", "😍")
     }
@@ -218,7 +222,7 @@ class HomeViewModel @Inject constructor(
         startChatUnreadTracking()
         observeUnreadPostsUpdates()
         observeFriendRequestUpdates()
-        observeNetworkReconnect()
+        observeRemoteStaleRefresh()
     }
 
     private fun loadQuickChatEmojiSlots() {
@@ -309,7 +313,7 @@ class HomeViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun startChatUnreadTracking() {
         viewModelScope.launch {
-            syncConversationsUseCase()
+            syncChatConversations()
             val unreadCountFlow = userRepository.observeMyUserProfile()
                 .distinctUntilChanged { old, new -> old?.id == new?.id }
                 .flatMapLatest { profile ->
@@ -461,6 +465,7 @@ class HomeViewModel @Inject constructor(
                     RelationshipStatus.ACCEPTED, RelationshipStatus.PENDING
                 )
             ).onSuccess { list ->
+                remoteStaleRefreshCoordinator.markSuccess(SLOT_FRIEND_LIST)
                 val accepted = list.filter { it.status == RelationshipStatus.ACCEPTED }
                 val pending = list.filter { it.status == RelationshipStatus.PENDING }
                 val pendingWithActions = coroutineScope {
@@ -678,16 +683,36 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun observeNetworkReconnect() {
-        connectivityObserver.isInternetAvailable.onEach { isAvailable ->
-            if (!isAvailable) return@onEach
-            loadMyFriendList()
+    private fun observeRemoteStaleRefresh() {
+        remoteStaleRefreshCoordinator.observe(
+            scope = viewModelScope,
+            slots = listOf(
+                RemoteStaleRefreshCoordinator.RefreshSlot(
+                    id = SLOT_FEED,
+                    staleTimeMs = REMOTE_STALE_TIME_MS,
+                    isLoading = { _uiState.value.isLoadingPosts },
+                    onRefresh = { loadNewsfeed(isLoadMore = false) },
+                ),
+                RemoteStaleRefreshCoordinator.RefreshSlot(
+                    id = SLOT_FRIEND_LIST,
+                    staleTimeMs = REMOTE_STALE_TIME_MS,
+                    isLoading = { _uiState.value.friendSheetState.isLoadingFriendList },
+                    onRefresh = { loadMyFriendList() },
+                ),
+                RemoteStaleRefreshCoordinator.RefreshSlot(
+                    id = SLOT_CHAT_CONVERSATIONS,
+                    staleTimeMs = REMOTE_STALE_TIME_MS,
+                    onRefresh = { syncChatConversations() },
+                ),
+            ),
+        )
+    }
 
-            val state = _uiState.value
-            if (state.isLoadingPosts || state.isLoadingMore || state.posts.isNotEmpty()) return@onEach
-
-            loadNewsfeed(isLoadMore = false)
-        }.launchIn(viewModelScope)
+    private fun syncChatConversations() {
+        viewModelScope.launch {
+            syncConversationsUseCase()
+            remoteStaleRefreshCoordinator.markSuccess(SLOT_CHAT_CONVERSATIONS)
+        }
     }
 
     private fun loadNewsfeed(
@@ -716,6 +741,9 @@ class HomeViewModel @Inject constructor(
                 cursor = cursor,
                 userId = userId,
             ).fold(onSuccess = { feedData ->
+                if (!isLoadMore) {
+                    remoteStaleRefreshCoordinator.markSuccess(SLOT_FEED)
+                }
                 _uiState.update {
                     it.copy(
                         posts = if (isLoadMore) it.posts + feedData.data else feedData.data,

@@ -17,8 +17,8 @@ import com.thinh.snaplet.data.repository.quickchat.QuickChatEmojiRepository
 import com.thinh.snaplet.domain.chat.MarkMessageSeenUseCase
 import com.thinh.snaplet.domain.chat.OnlinePresenceController
 import com.thinh.snaplet.navigation.ChatConversation
-import com.thinh.snaplet.platform.network.ConnectivityObserver
 import com.thinh.snaplet.utils.Logger
+import com.thinh.snaplet.utils.RemoteStaleRefreshCoordinator
 import com.thinh.snaplet.utils.Throttler
 import com.thinh.snaplet.utils.analytics.AnalyticsTracker
 import com.thinh.snaplet.utils.effectiveDate
@@ -36,7 +36,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
@@ -51,7 +50,6 @@ import javax.inject.Inject
 
 private const val OUT_GOING_TYPING_TIMEOUT_MS = 1_500L
 private const val MARK_READ_DEBOUNCE_MS = 500L
-private const val RESUME_LOAD_THROTTLE_MS = 1_500L
 private const val CHAT_RECENT_MAX_SLOTS = 4
 private const val INITIAL_LOAD_DEBOUNCE_MS = 150L
 private val CHAT_RECENT_DEFAULT_EMOJIS = listOf("😀", "😂", "😮", "👍")
@@ -62,7 +60,7 @@ class ChatViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val quickChatEmojiRepository: QuickChatEmojiRepository,
     private val markMessageSeenUseCase: MarkMessageSeenUseCase,
-    private val connectivityObserver: ConnectivityObserver,
+    private val remoteStaleRefreshCoordinator: RemoteStaleRefreshCoordinator,
     private val onlinePresenceController: OnlinePresenceController,
     private val analyticsTracker: AnalyticsTracker,
     savedStateHandle: SavedStateHandle,
@@ -75,6 +73,7 @@ class ChatViewModel @Inject constructor(
 
     private var conversationId: String = route.conversationId ?: ""
     private val _activeConversationId = MutableStateFlow(route.conversationId ?: "")
+    private var isScreenResumed = false
 
     private val _uiState = MutableStateFlow(
         ChatUiState(
@@ -121,14 +120,18 @@ class ChatViewModel @Inject constructor(
     private var markReadJob: Job? = null
     private var messageReactionsSheetJob: Job? = null
     private val typingThrottler = Throttler(OUT_GOING_TYPING_TIMEOUT_MS)
-    private val resumeLoadThrottler = Throttler(RESUME_LOAD_THROTTLE_MS)
+
+    private companion object {
+        private const val REMOTE_STALE_TIME_MS = 1_500L
+        private const val SLOT_CHAT_MESSAGES = "chat_messages"
+    }
 
     init {
         loadCurrentUser()
         observeIncomingTypingEvents()
         observeIncomingReadReceipts()
         observeIncomingUnreadWhileScrolled()
-        observeNetworkReconnect()
+        observeRemoteStaleRefresh()
         observePartnerOnlineStatus()
         observeConversationRestricted()
         loadRecentEmojis()
@@ -140,10 +143,12 @@ class ChatViewModel @Inject constructor(
     }
 
     fun onResume() {
-        resumeLoadThrottler.run { loadMessages() }
+        isScreenResumed = true
+        loadMessages()
     }
 
     fun onPause() {
+        isScreenResumed = false
         typingThrottler.reset()
         viewModelScope.launch { chatRepository.sendTypingStop(conversationId) }
         chatRepository.disconnectChatSocket()
@@ -326,6 +331,7 @@ class ChatViewModel @Inject constructor(
                 _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = true)) }
             }
             connectSocketAndSyncMessages()
+            remoteStaleRefreshCoordinator.markSuccess(SLOT_CHAT_MESSAGES)
             loadingJob.cancel()
             _uiState.update { it.copy(messageList = it.messageList.copy(isLoading = false)) }
         }
@@ -376,14 +382,19 @@ class ChatViewModel @Inject constructor(
         chatRepository.syncOnReconnect(conversationId)
     }
 
-    private fun observeNetworkReconnect() {
-        viewModelScope.launch {
-            connectivityObserver.isInternetAvailable.filter { it }.drop(1).collect {
-                if (conversationId.isNotEmpty()) {
-                    connectSocketAndSyncMessages()
-                }
-            }
-        }
+    private fun observeRemoteStaleRefresh() {
+        remoteStaleRefreshCoordinator.observe(
+            scope = viewModelScope,
+            slots = listOf(
+                RemoteStaleRefreshCoordinator.RefreshSlot(
+                    id = SLOT_CHAT_MESSAGES,
+                    staleTimeMs = REMOTE_STALE_TIME_MS,
+                    isLoading = { _uiState.value.messageList.isLoading },
+                    canRefresh = { isScreenResumed && conversationId.isNotEmpty() },
+                    onRefresh = { loadMessages() },
+                ),
+            ),
+        )
     }
 
     private fun loadCurrentUser() {
