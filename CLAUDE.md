@@ -163,3 +163,16 @@ Main data flow: `ApiService` → `RepositoryImpl` (`safeApiCall`) → `UseCase` 
 - **Post share** → `domain/post/BuildPostShareContentUseCase.kt` + `platform/share/ShareManager.kt`
 - **Post-register widget promo** → `ui/screens/post_register_widget/PostRegisterWidgetPromoScreen.kt`
 - **Crashlytics / release logging** → `HiltApplication.kt` + `utils/CrashlyticsLogger.kt` + Gradle Firebase config
+
+## AI Collaboration Rules
+
+Before writing any code, you MUST stop and clarify with me if you encounter:
+
+- **Design decisions** – multiple valid approaches exist (architecture, patterns, abstractions)
+- **System concerns** – performance, security, scalability, or maintainability tradeoffs
+- **Forks in logic** – ambiguous requirements that could go several directions
+- **Assumptions** – anything you're inferring that isn't explicitly stated
+
+**Format:** List all questions at once, wait for my answers, then proceed.
+
+Never silently pick an approach. No code until alignment is confirmed.

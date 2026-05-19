@@ -23,6 +23,7 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.IconCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.scale
+import androidx.core.net.toUri
 import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
@@ -56,24 +57,24 @@ class NotificationHelper @Inject constructor(
     }
 
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
-    suspend fun showReactionNotification(
+    suspend fun showCustomNotification(
         title: String,
         body: String,
-        postId: String,
-        actorAvatarUrl: String?,
+        deeplink: String,
+        largeIconUrl: String?,
     ) {
-        val deepLinkUri = DeepLinkUtils.buildSpotlightDeepLink(postId)
+        val deepLinkUri = deeplink.toUri()
+        val notificationId = deeplink.hashCode()
         val tapIntent =
             Intent(Intent.ACTION_VIEW, deepLinkUri, context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra(EXTRA_POST_ID, postId)
-                putExtra(EXTRA_DEEP_LINK_URI, deepLinkUri.toString())
-                putExtra(EXTRA_NOTIFICATION_TYPE, TYPE_POST_REACTION)
+                putExtra(EXTRA_DEEP_LINK_URI, deeplink)
+                putExtra(EXTRA_NOTIFICATION_TYPE, TYPE_CUSTOM)
             }
 
         val pendingIntent = PendingIntent.getActivity(
             context,
-            postId.hashCode(),
+            notificationId,
             tapIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -86,17 +87,17 @@ class NotificationHelper @Inject constructor(
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
-        loadAvatarBitmap(actorAvatarUrl)?.let { avatar ->
+        loadAvatarBitmap(largeIconUrl)?.let { largeIcon ->
             notificationBuilder
-                .setSmallIcon(IconCompat.createWithBitmap(avatar))
-                .setLargeIcon(avatar)
+                .setSmallIcon(IconCompat.createWithBitmap(largeIcon))
+                .setLargeIcon(largeIcon)
         }
 
         val notification = notificationBuilder.build()
 
         if (!canPostNotifications()) return
 
-        NotificationManagerCompat.from(context).notify(postId.hashCode(), notification)
+        NotificationManagerCompat.from(context).notify(notificationId, notification)
     }
 
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
@@ -385,21 +386,20 @@ class NotificationHelper @Inject constructor(
 
     companion object {
         const val KEY_TYPE = "type"
-        const val KEY_POST_ID = "postId"
         const val KEY_TITLE = "title"
         const val KEY_BODY = "body"
-        const val KEY_ACTOR_AVATAR_URL = "actorAvatarUrl"
+        const val KEY_DEEPLINK = "deeplink"
+        const val KEY_LARGE_ICON_URL = "largeIconUrl"
 
         const val CHANNEL_ID = "reactions_channel"
         private const val CHANNEL_NAME = "Reactions"
-        const val EXTRA_POST_ID = "postId"
         const val EXTRA_DEEP_LINK_URI = "deepLinkUri"
         const val EXTRA_NOTIFICATION_TYPE = "notificationType"
 
         /** Shown in [com.thinh.snaplet.navigation.ChatConversation] header when opening chat from a notification tap. */
         const val EXTRA_CHAT_PARTNER_NAME = "chatPartnerName"
         const val EXTRA_CHAT_PARTNER_AVATAR_URL = "chatPartnerAvatarUrl"
-        const val TYPE_POST_REACTION = "post_reaction"
+        const val TYPE_CUSTOM = "custom"
         const val TYPE_CHAT_MESSAGE = "chat_message"
         const val KEY_CONVERSATION_ID = "conversationId"
         const val KEY_MESSAGE_ID = "messageId"

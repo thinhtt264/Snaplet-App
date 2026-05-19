@@ -42,22 +42,20 @@ class SnapletFirebaseMessagingService : FirebaseMessagingService() {
             val data = message.data
             val pushType = PushNotificationType.from(data[NotificationHelper.KEY_TYPE])
             when (pushType) {
-                PushNotificationType.POST_REACTION -> {
-                    val postId = data[NotificationHelper.KEY_POST_ID] ?: return@launch
-                    val actorAvatarUrl = data[NotificationHelper.KEY_ACTOR_AVATAR_URL]
+                PushNotificationType.CUSTOM -> {
+                    val deeplink = data[NotificationHelper.KEY_DEEPLINK] ?: ""
+                    val largeIconUrl = data[NotificationHelper.KEY_LARGE_ICON_URL]
                     val title = message.notification?.title ?: data[NotificationHelper.KEY_TITLE]
                     val body = message.notification?.body ?: data[NotificationHelper.KEY_BODY]
 
                     if (!title.isNullOrBlank() && !body.isNullOrBlank()) {
-                        notificationHelper.showReactionNotification(
+                        notificationHelper.showCustomNotification(
                             title = title,
                             body = body,
-                            postId = postId,
-                            actorAvatarUrl = actorAvatarUrl,
+                            deeplink = deeplink,
+                            largeIconUrl = largeIconUrl,
                         )
                     }
-
-                    widgetUpdateManager.scheduleImmediateUpdate(requireGlanceIds = true)
                 }
 
                 PushNotificationType.WIDGET_REFRESH -> {

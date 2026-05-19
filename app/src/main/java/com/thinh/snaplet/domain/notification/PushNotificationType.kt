@@ -1,7 +1,7 @@
 package com.thinh.snaplet.domain.notification
 
 enum class PushNotificationType {
-    POST_REACTION,
+    CUSTOM,
     WIDGET_REFRESH,
     NEW_CHAT_MESSAGE,
     NEW_MESSAGE_REACTION,
@@ -12,7 +12,7 @@ enum class PushNotificationType {
         fun from(rawType: String?): PushNotificationType {
             if (rawType.isNullOrBlank()) return UNKNOWN
             return when (rawType.trim().uppercase()) {
-                POST_REACTION.name -> POST_REACTION
+                CUSTOM.name -> CUSTOM
                 WIDGET_REFRESH.name -> WIDGET_REFRESH
                 NEW_CHAT_MESSAGE.name -> NEW_CHAT_MESSAGE
                 NEW_MESSAGE_REACTION.name -> NEW_MESSAGE_REACTION
