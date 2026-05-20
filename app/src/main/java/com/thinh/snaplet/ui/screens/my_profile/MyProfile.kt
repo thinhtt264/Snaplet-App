@@ -1,5 +1,6 @@
 package com.thinh.snaplet.ui.screens.my_profile
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -59,7 +60,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.thinh.snaplet.BuildConfig
 import com.thinh.snaplet.R
+import com.thinh.snaplet.utils.AppLinks
 import com.thinh.snaplet.navigation.CollectNavResult
 import com.thinh.snaplet.navigation.NavResultKeys
 import com.thinh.snaplet.platform.widget.launchSnapletWidgetPicker
@@ -195,6 +198,11 @@ fun MyProfile(
         onEditNameClick = viewModel::onEditNameClick,
         onAddWidgetClick = { context.launchSnapletWidgetPicker() },
         onHowToAddWidgetClick = { showWidgetGuideSheet = true },
+        onPrivacyPolicyClick = {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(AppLinks.PRIVACY_POLICY))
+            )
+        },
         displayName = uiState.displayName,
         email = uiState.email,
         strings = strings,
@@ -244,57 +252,71 @@ private fun MyProfileContent(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(scrollState)
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp, bottom = 4.dp),
-            contentAlignment = Alignment.TopEnd
+                .fillMaxSize()
+                .verticalScroll(scrollState)
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
-                contentDescription = "back",
-                tint = MaterialTheme.colorScheme.onSurface,
+            Box(
                 modifier = Modifier
-                    .padding(end = 20.dp)
-                    .size(32.dp)
-                    .pressScaleClickable(onClick = onBackClick),
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, bottom = 4.dp),
+                contentAlignment = Alignment.TopEnd
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                    contentDescription = "back",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .padding(end = 20.dp)
+                        .size(32.dp)
+                        .pressScaleClickable(onClick = onBackClick),
+                )
+            }
+
+            ProfileHeader(
+                avatarUrl = uiState.avatarUrls.forHeader(),
+                firstName = uiState.firstName,
+                displayName = uiState.displayName,
+                editPhotoLabel = editPhotoLabel,
+                onEditPhotoClick = onEditPhotoClick,
+                isAvatarUploading = uiState.isAvatarChanging
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            InviteCard(
+                avatarUrl = uiState.avatarUrls.forThumbnail(),
+                firstName = uiState.firstName,
+                userName = uiState.userName,
+                inviteTitle = inviteFriendsTitle,
+                onShareClick = onShareInviteClick,
+            )
+
+            sections.forEach { section ->
+                ProfileSectionView(section)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            BaseText(
+                text = "${BuildConfig.VERSION_NAME}(${BuildConfig.VERSION_CODE})",
+                typography = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+
+            Spacer(
+                modifier = Modifier
+                    .height(16.dp)
+                    .navigationBarsPadding()
             )
         }
-
-        ProfileHeader(
-            avatarUrl = uiState.avatarUrls.forHeader(),
-            firstName = uiState.firstName,
-            displayName = uiState.displayName,
-            editPhotoLabel = editPhotoLabel,
-            onEditPhotoClick = onEditPhotoClick,
-            isAvatarUploading = uiState.isAvatarChanging
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        InviteCard(
-            avatarUrl = uiState.avatarUrls.forThumbnail(),
-            firstName = uiState.firstName,
-            userName = uiState.userName,
-            inviteTitle = inviteFriendsTitle,
-            onShareClick = onShareInviteClick,
-        )
-
-        sections.forEach { section ->
-            ProfileSectionView(section)
-        }
-
-        Spacer(
-            modifier = Modifier
-                .height(32.dp)
-                .navigationBarsPadding()
-        )
     }
 }
 
@@ -482,6 +504,7 @@ private fun buildProfileSections(
     onEditNameClick: () -> Unit,
     onAddWidgetClick: () -> Unit,
     onHowToAddWidgetClick: () -> Unit,
+    onPrivacyPolicyClick: () -> Unit,
     displayName: String,
     email: String,
     strings: ProfileStrings,
@@ -562,6 +585,7 @@ private fun buildProfileSections(
             ProfileMenuItem.Standard(
                 icon = Icons.Outlined.Security,
                 label = strings.privacyPolicy,
+                onClick = onPrivacyPolicyClick,
             ),
         )
     ),
