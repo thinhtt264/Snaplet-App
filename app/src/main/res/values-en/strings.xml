@@ -210,6 +210,10 @@
     <string name="new_message_find_friends">Find friends</string>
     <string name="new_message_friends_load_failed">Failed to load friends</string>
 
+    <!-- Notification permission banner -->
+    <string name="notification_permission_banner_message">Push notifications are turned off?</string>
+    <string name="notification_permission_banner_action">Turn</string>
+
     <!-- Push notifications (chat) -->
     <string name="notification_action_reply">Reply</string>
     <string name="notification_reply_hint">Reply…</string>
