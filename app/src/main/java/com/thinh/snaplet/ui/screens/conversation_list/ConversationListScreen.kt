@@ -67,6 +67,7 @@ import com.thinh.snaplet.ui.components.Avatar
 import com.thinh.snaplet.ui.components.BaseText
 import com.thinh.snaplet.ui.components.IconDecoration
 import com.thinh.snaplet.ui.components.IconSpec
+import com.thinh.snaplet.ui.components.NotificationPermissionBanner
 import com.thinh.snaplet.ui.components.PrimaryButton
 import com.thinh.snaplet.ui.screens.chat.components.MessageStatusIcon
 import com.thinh.snaplet.ui.theme.MotionTokens
@@ -109,6 +110,7 @@ fun ConversationListScreen(
                 viewModel.loadFriendList()
             },
         )
+        NotificationPermissionBanner()
         ConversationSearchBar(
             query = searchQuery,
             onQueryChange = { searchQuery = it },
@@ -256,8 +258,9 @@ private fun ConversationContent(
     onConversationClick: (ConversationUiModel) -> Unit,
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
         when {
             uiState.isLoading && uiState.conversations.isEmpty() -> {
                 CircularProgressIndicator(

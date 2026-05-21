@@ -214,6 +214,10 @@
     <string name="new_message_find_friends">Tìm kiếm bạn bè</string>
     <string name="new_message_friends_load_failed">Không tải được danh sách bạn bè</string>
 
+    <!-- Notification permission banner -->
+    <string name="notification_permission_banner_message">Thông báo đẩy đang tắt?</string>
+    <string name="notification_permission_banner_action">Bật</string>
+
     <!-- Push notifications (chat) -->
     <string name="notification_action_reply">Trả lời</string>
     <string name="notification_reply_hint">Trả lời…</string>

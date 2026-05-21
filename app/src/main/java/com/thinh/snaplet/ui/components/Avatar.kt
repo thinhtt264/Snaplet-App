@@ -171,7 +171,10 @@ private fun AvatarImage(avatarUrl: String, size: Dp) {
         contentDescription = null,
         modifier = Modifier.fillMaxSize(),
         resizeSize = ImageSize.Thumbnail,
-        loadingConfig = LoadingStateConfig.Indicator(indicatorSize = size / 3),
+        loadingConfig = LoadingStateConfig.Placeholder(
+            backgroundColor = Color.Transparent,
+            painter = painterResource(CommonImages.ProfilePlaceholder)
+        ),
         errorConfig = ErrorStateConfig(
             backgroundColor = Color.Transparent, placeholder = ErrorPlaceholderConfig.WithPainter(
                 painter = painterResource(CommonImages.ProfilePlaceholder), size = size
