@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,9 @@ import com.thinh.snaplet.R
 import com.thinh.snaplet.platform.permission.Permission
 import com.thinh.snaplet.ui.theme.SnapletTheme
 import com.thinh.snaplet.ui.theme.Typography
+
+private val BannerGradientStart = Color(0xFF3A2800)
+private val BannerGradientEnd = Color(0xFF2E2000)
 
 @Composable
 fun NotificationPermissionBanner(
@@ -60,7 +64,7 @@ private fun NotificationPermissionBannerInternal(
 
     if (isGranted) return
 
-    var permissionDeniedOnce by remember { mutableStateOf(false) }
+    var permissionDeniedOnce by rememberSaveable { mutableStateOf(false) }
 
     fun openSettings() {
         context.startActivity(
@@ -89,7 +93,7 @@ private fun NotificationPermissionBannerInternal(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        Brush.horizontalGradient(listOf(Color(0xFF3A2800), Color(0xFF2E2000))),
+                        Brush.horizontalGradient(listOf(BannerGradientStart, BannerGradientEnd)),
                         shape = RoundedCornerShape(20.dp)
                     )
                     .padding(vertical = 8.dp, horizontal = 16.dp),
@@ -137,7 +141,7 @@ private fun NotificationPermissionBannerPreview() {
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    Brush.horizontalGradient(listOf(Color(0xFF3A2800), Color(0xFF2E2000))),
+                    Brush.horizontalGradient(listOf(BannerGradientStart, BannerGradientEnd)),
                 )
                 .padding(vertical = 10.dp, horizontal = 16.dp),
         ) {
