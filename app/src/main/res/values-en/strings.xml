@@ -212,7 +212,7 @@
 
     <!-- Notification permission banner -->
     <string name="notification_permission_banner_message">Push notifications are turned off?</string>
-    <string name="notification_permission_banner_action">Turn</string>
+    <string name="notification_permission_banner_action">Turn on</string>
 
     <!-- Push notifications (chat) -->
     <string name="notification_action_reply">Reply</string>
