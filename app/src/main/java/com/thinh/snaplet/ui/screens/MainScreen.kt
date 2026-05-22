@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.flow.first
 import com.thinh.snaplet.navigation.AuthGraph
 import com.thinh.snaplet.navigation.ChatConversation
 import com.thinh.snaplet.navigation.HomeGraph
@@ -60,10 +61,16 @@ fun MainScreen(
                     }
 
                     is AppUiEvent.NavigateToSpotlightPost -> {
+                        if (navController.currentDestination == null) {
+                            navController.currentBackStackEntryFlow.first()
+                        }
                         navController.navigate(SpotlightPost(postId = event.postId))
                     }
 
                     is AppUiEvent.NavigateToChat -> {
+                        if (navController.currentDestination == null) {
+                            navController.currentBackStackEntryFlow.first()
+                        }
                         navController.navigate(
                             ChatConversation(
                                 conversationId = event.conversationId,
